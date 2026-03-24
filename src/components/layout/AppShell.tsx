@@ -1,7 +1,9 @@
 'use client';
 
-import MobileShell from './MobileShell';
-import DesktopShell from './DesktopShell';
+import TopBar from './TopBar';
+import BottomNav from './BottomNav';
+import DesktopSideNav from './DesktopSideNav';
+import RightPanel from './RightPanel';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -11,13 +13,20 @@ interface AppShellProps {
 }
 
 /**
- * AppShell — CSS-driven layout switcher.
+ * AppShell — single-render layout that adapts for mobile and desktop via CSS.
  *
- * Below lg  → MobileShell (PWA-style: fixed top/bottom bars, scrolling content)
- * lg and up → DesktopShell (full-viewport 3-column web app, no page-level scroll)
+ * Mobile (< lg):
+ *   - Fixed TopBar at top
+ *   - Fixed BottomNav at bottom
+ *   - Content fills between (pages use pt-bar + pb-nav to avoid overlap)
  *
- * Pure CSS visibility — no JS/hydration issues. Both render on the server;
- * the browser hides whichever doesn't apply.
+ * Desktop (lg+):
+ *   - Fixed left sidebar (DesktopSideNav, w-64, z-40)
+ *   - Content shifts right with ml-64
+ *   - Fixed right panel (xl+, w-80) — content also shifts with xl:mr-80
+ *   - TopBar and BottomNav are hidden (lg:hidden)
+ *
+ * Children render ONCE — no hydration issues, no duplicate mounts.
  */
 export default function AppShell({
   children,
@@ -27,21 +36,30 @@ export default function AppShell({
 }: AppShellProps) {
   return (
     <>
-      {/* Mobile layout — hidden on lg+ */}
-      <div className="lg:hidden">
-        <MobileShell
-          topBarTitle={topBarTitle}
-          showTopBarLogo={showTopBarLogo}
-          topBarRight={topBarRight}
-        >
-          {children}
-        </MobileShell>
-      </div>
+      {/* Mobile top bar — fixed, hidden on desktop */}
+      <TopBar
+        title={topBarTitle}
+        showLogo={showTopBarLogo}
+        rightSlot={topBarRight}
+      />
 
-      {/* Desktop layout — hidden below lg, fills full viewport */}
-      <div className="hidden lg:flex h-dvh w-full overflow-hidden">
-        <DesktopShell>{children}</DesktopShell>
-      </div>
+      {/* Desktop sidebar — fixed left, hidden on mobile */}
+      <DesktopSideNav />
+
+      {/* Desktop right panel — fixed right, xl+ only */}
+      <aside className="hidden xl:flex flex-col fixed right-0 inset-y-0 w-80 border-l border-border bg-background overflow-y-auto z-30">
+        <div className="px-4 py-5">
+          <RightPanel />
+        </div>
+      </aside>
+
+      {/* Main content — single render, shifts with fixed panels on desktop */}
+      <main className="min-h-dvh bg-surface lg:ml-64 xl:mr-80">
+        {children}
+      </main>
+
+      {/* Mobile bottom nav — fixed, hidden on desktop */}
+      <BottomNav />
     </>
   );
 }

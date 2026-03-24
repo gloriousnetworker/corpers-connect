@@ -39,7 +39,7 @@ export default function DesktopSideNav() {
   const { unreadMessages, unreadNotifications, setCreatePostOpen } = useUIStore();
 
   return (
-    <aside className="w-64 xl:w-72 flex-shrink-0 h-full flex flex-col border-r border-border bg-surface">
+    <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-40 w-64 border-r border-border bg-surface overflow-y-auto">
       {/* Logo */}
       <div className="px-4 pt-5 pb-3 flex-shrink-0">
         <Link href="/feed" className="flex items-center px-2">
