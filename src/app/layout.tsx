@@ -68,9 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${plusJakartaSans.variable} antialiased`}>
         <Providers>
           <SplashScreen />
-          <div className="app-container">
-            {children}
-          </div>
+          {children}
           <InstallPrompt />
         </Providers>
       </body>

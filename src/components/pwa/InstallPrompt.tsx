@@ -25,10 +25,12 @@ export default function InstallPrompt() {
             onClick={dismiss}
           />
 
-          {/* Bottom sheet */}
+          {/* Bottom sheet — uses left/right/margin-auto centering so Framer Motion y-transform
+              doesn't conflict with a CSS translateX(-50%) */}
           <motion.div
             key="sheet"
-            className="bottom-sheet"
+            className="fixed bottom-0 left-0 right-0 mx-auto z-[201] w-full max-w-[480px] bg-surface rounded-t-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

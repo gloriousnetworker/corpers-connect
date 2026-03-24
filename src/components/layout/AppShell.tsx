@@ -8,49 +8,40 @@ import RightPanel from './RightPanel';
 /**
  * AppShell — single-render layout shell for the authenticated SPA dashboard.
  *
- * Mobile  (< lg): fixed TopBar + fixed BottomNav + body-scrolling content
- * Desktop (≥ lg): fixed left sidebar (w-64) + fixed right panel (xl+, w-80)
- *                 + center zone that has its OWN scroll (h-dvh overflow-y-auto)
- *                 → sidebar and right panel never scroll with content
+ * Mobile  (< lg): fixed TopBar + fixed BottomNav, body scrolls freely.
+ *                 DesktopSideNav is hidden (display:none).
+ *                 BottomNav handles all mobile navigation.
  *
- * Children render ONCE. URL stays at "/" always (SPA nav via Zustand).
+ * Desktop (≥ lg): flex row — sticky sidebar (w-64) | scrollable center (flex-1) | sticky right panel (xl, w-80).
+ *                 No manual margin shifts; flex naturally fills available space.
+ *
+ * The root layout no longer wraps in .app-container so the full viewport is available.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* ── Mobile top bar ─────────────────────────────── */}
+      {/* Mobile-only top bar — hidden on desktop via lg:hidden inside TopBar */}
       <TopBar />
 
-      {/* ── Desktop left sidebar ───────────────────────── */}
-      <DesktopSideNav />
+      {/* Three-column flex row */}
+      <div className="flex min-h-dvh">
+        {/* Left sidebar: invisible on mobile, sticky flex column on desktop */}
+        <DesktopSideNav />
 
-      {/* ── Desktop right panel (xl+) ──────────────────── */}
-      <aside className="hidden xl:flex flex-col fixed right-0 inset-y-0 w-80 border-l border-border bg-surface overflow-y-auto z-30">
-        <div className="px-4 py-6">
-          <RightPanel />
-        </div>
-      </aside>
+        {/* Center: fills all remaining space */}
+        <main className="flex-1 min-w-0 bg-surface">
+          {children}
+        </main>
 
-      {/* ── Main content area ──────────────────────────── */}
-      {/*
-          Mobile:  min-h-dvh, body scrolls naturally (pt-bar/pb-nav handle bar clearance)
-          Desktop: h-dvh overflow-y-auto so ONLY the center scrolls independently.
-                   lg:ml-64 shifts past the sidebar, xl:mr-80 shifts before right panel.
-      */}
-      <main
-        className={[
-          'bg-surface-elevated',
-          // Mobile: full-height, body scrolls
-          'min-h-dvh',
-          // Desktop: fill viewport exactly, own scroll, shift for fixed panels
-          'lg:min-h-0 lg:h-dvh lg:overflow-y-auto',
-          'lg:ml-64 xl:mr-80',
-        ].join(' ')}
-      >
-        {children}
-      </main>
+        {/* Right panel: xl+ only, sticky */}
+        <aside className="hidden xl:flex flex-col flex-shrink-0 w-80 border-l border-border bg-surface sticky top-0 h-dvh overflow-y-auto">
+          <div className="px-4 py-6">
+            <RightPanel />
+          </div>
+        </aside>
+      </div>
 
-      {/* ── Mobile bottom nav ──────────────────────────── */}
+      {/* Mobile-only bottom nav — hidden on desktop via lg:hidden inside BottomNav */}
       <BottomNav />
     </>
   );

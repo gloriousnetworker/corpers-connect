@@ -32,7 +32,7 @@ export default function DesktopSideNav() {
     useUIStore();
 
   return (
-    <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-40 w-64 border-r border-border bg-surface overflow-y-auto">
+    <aside className="hidden lg:flex flex-col flex-shrink-0 w-64 border-r border-border bg-surface overflow-y-auto sticky top-0 h-dvh">
       {/* Logo */}
       <div className="px-5 pt-6 pb-3 flex-shrink-0">
         <button onClick={() => setActiveSection('feed')} className="block">

@@ -155,15 +155,16 @@
 
 /* ── Component Classes ───────────────────────────────────────────────────── */
 @layer components {
+  /* .app-container is no longer used on the root layout.
+     Kept here for any isolated mobile-constrained component that opts in. */
   .app-container {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
+    min-height: 100dvh;
     max-width: 480px;
     margin: 0 auto;
     background: var(--surface);
     position: relative;
-    overflow: hidden;
   }
 
   .content-area {
