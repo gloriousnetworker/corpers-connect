@@ -54,7 +54,7 @@ function LoginForm() {
   });
 
   return (
-    <div className="flex flex-col min-h-dvh px-5 pt-14 pb-8">
+    <div className="flex flex-col flex-1 px-5 pt-14 pb-8">
       <div className="flex justify-center mb-10">
         <Logo size="lg" />
       </div>

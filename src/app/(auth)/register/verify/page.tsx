@@ -19,7 +19,7 @@ export default function RegisterVerifyPage() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh px-5 pt-10 pb-8">
+    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
       {/* Steps indicator */}
       <div className="flex gap-2 mb-10">
         {[1, 2, 3].map((step) => (

@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh px-5 text-center">
+      <div className="flex flex-col items-center justify-center flex-1 px-5 text-center">
         <div className="w-16 h-16 rounded-full bg-success/15 flex items-center justify-center mb-4">
           <CheckCircle2 className="h-8 w-8 text-success" />
         </div>
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh px-5 pt-10 pb-8">
+    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-foreground-muted mb-8 touch-manipulation"

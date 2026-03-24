@@ -47,11 +47,14 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Only attempt refresh on 401, not on the refresh endpoint itself
+    // Only attempt refresh on 401 when we had an active session.
+    // If _accessToken is null we are on a public endpoint (e.g. login) — just
+    // surface the server error rather than trying a pointless token refresh.
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      originalRequest.url !== '/auth/refresh'
+      originalRequest.url !== '/auth/refresh' &&
+      _accessToken !== null
     ) {
       originalRequest._retry = true;
 

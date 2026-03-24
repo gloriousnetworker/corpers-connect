@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
   });
 
   return (
-    <div className="flex flex-col min-h-dvh px-5 pt-10 pb-8">
+    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-foreground-muted mb-8 touch-manipulation"
