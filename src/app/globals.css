@@ -310,14 +310,12 @@
 
 /* ── Desktop layout overrides (lg+) ─────────────────────────────────────── */
 @media (min-width: 1024px) {
-  /* Inside the DesktopShell, pages don't have a fixed TopBar or BottomNav.
-     Strip the large mobile offsets and replace with comfortable breathing room. */
-  .desktop-main .pt-bar {
+  /* On desktop there is no fixed TopBar or BottomNav — strip the large mobile
+     offsets and replace with comfortable breathing room on every page. */
+  .pt-bar {
     padding-top: 1.5rem;
   }
-  .desktop-main .pb-nav {
+  .pb-nav {
     padding-bottom: 1.5rem;
   }
-  /* min-h-dvh inside a flex-1 overflow-y-auto column means "fill the column",
-     which is the correct desktop behaviour. No override needed. */
 }

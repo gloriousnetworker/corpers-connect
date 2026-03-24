@@ -47,14 +47,14 @@ export default function AppShell({
       <DesktopSideNav />
 
       {/* Desktop right panel — fixed right, xl+ only */}
-      <aside className="hidden xl:flex flex-col fixed right-0 inset-y-0 w-80 border-l border-border bg-background overflow-y-auto z-30">
+      <aside className="hidden xl:flex flex-col fixed right-0 inset-y-0 w-80 border-l border-border bg-surface overflow-y-auto z-30">
         <div className="px-4 py-5">
           <RightPanel />
         </div>
       </aside>
 
       {/* Main content — single render, shifts with fixed panels on desktop */}
-      <main className="min-h-dvh bg-surface lg:ml-64 xl:mr-80">
+      <main className="min-h-dvh bg-surface-elevated lg:ml-64 xl:mr-80">
         {children}
       </main>
 
