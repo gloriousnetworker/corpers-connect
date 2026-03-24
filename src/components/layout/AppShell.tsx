@@ -5,60 +5,52 @@ import BottomNav from './BottomNav';
 import DesktopSideNav from './DesktopSideNav';
 import RightPanel from './RightPanel';
 
-interface AppShellProps {
-  children: React.ReactNode;
-  topBarTitle?: string;
-  showTopBarLogo?: boolean;
-  topBarRight?: React.ReactNode;
-}
-
 /**
- * AppShell — single-render layout that adapts for mobile and desktop via CSS.
+ * AppShell — single-render layout shell for the authenticated SPA dashboard.
  *
- * Mobile (< lg):
- *   - Fixed TopBar at top
- *   - Fixed BottomNav at bottom
- *   - Content fills between (pages use pt-bar + pb-nav to avoid overlap)
+ * Mobile  (< lg): fixed TopBar + fixed BottomNav + body-scrolling content
+ * Desktop (≥ lg): fixed left sidebar (w-64) + fixed right panel (xl+, w-80)
+ *                 + center zone that has its OWN scroll (h-dvh overflow-y-auto)
+ *                 → sidebar and right panel never scroll with content
  *
- * Desktop (lg+):
- *   - Fixed left sidebar (DesktopSideNav, w-64, z-40)
- *   - Content shifts right with ml-64
- *   - Fixed right panel (xl+, w-80) — content also shifts with xl:mr-80
- *   - TopBar and BottomNav are hidden (lg:hidden)
- *
- * Children render ONCE — no hydration issues, no duplicate mounts.
+ * Children render ONCE. URL stays at "/" always (SPA nav via Zustand).
  */
-export default function AppShell({
-  children,
-  topBarTitle,
-  showTopBarLogo = true,
-  topBarRight,
-}: AppShellProps) {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* Mobile top bar — fixed, hidden on desktop */}
-      <TopBar
-        title={topBarTitle}
-        showLogo={showTopBarLogo}
-        rightSlot={topBarRight}
-      />
+      {/* ── Mobile top bar ─────────────────────────────── */}
+      <TopBar />
 
-      {/* Desktop sidebar — fixed left, hidden on mobile */}
+      {/* ── Desktop left sidebar ───────────────────────── */}
       <DesktopSideNav />
 
-      {/* Desktop right panel — fixed right, xl+ only */}
+      {/* ── Desktop right panel (xl+) ──────────────────── */}
       <aside className="hidden xl:flex flex-col fixed right-0 inset-y-0 w-80 border-l border-border bg-surface overflow-y-auto z-30">
-        <div className="px-4 py-5">
+        <div className="px-4 py-6">
           <RightPanel />
         </div>
       </aside>
 
-      {/* Main content — single render, shifts with fixed panels on desktop */}
-      <main className="min-h-dvh bg-surface-elevated lg:ml-64 xl:mr-80">
+      {/* ── Main content area ──────────────────────────── */}
+      {/*
+          Mobile:  min-h-dvh, body scrolls naturally (pt-bar/pb-nav handle bar clearance)
+          Desktop: h-dvh overflow-y-auto so ONLY the center scrolls independently.
+                   lg:ml-64 shifts past the sidebar, xl:mr-80 shifts before right panel.
+      */}
+      <main
+        className={[
+          'bg-surface-elevated',
+          // Mobile: full-height, body scrolls
+          'min-h-dvh',
+          // Desktop: fill viewport exactly, own scroll, shift for fixed panels
+          'lg:min-h-0 lg:h-dvh lg:overflow-y-auto',
+          'lg:ml-64 xl:mr-80',
+        ].join(' ')}
+      >
         {children}
       </main>
 
-      {/* Mobile bottom nav — fixed, hidden on desktop */}
+      {/* ── Mobile bottom nav ──────────────────────────── */}
       <BottomNav />
     </>
   );

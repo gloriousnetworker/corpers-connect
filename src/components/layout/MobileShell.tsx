@@ -3,31 +3,12 @@
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 
-interface MobileShellProps {
-  children: React.ReactNode;
-  topBarTitle?: string;
-  showTopBarLogo?: boolean;
-  topBarRight?: React.ReactNode;
-}
-
-/**
- * MobileShell — PWA/mobile layout.
- * Fixed TopBar at top, fixed BottomNav at bottom, scrollable content fills between.
- * Pages use pt-bar + pb-nav to avoid being hidden behind the fixed bars.
- */
-export default function MobileShell({
-  children,
-  topBarTitle,
-  showTopBarLogo = true,
-  topBarRight,
-}: MobileShellProps) {
+// MobileShell is no longer used by AppShell (AppShell is now a unified shell).
+// Kept for reference only.
+export default function MobileShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-surface">
-      <TopBar
-        title={topBarTitle}
-        showLogo={showTopBarLogo}
-        rightSlot={topBarRight}
-      />
+      <TopBar />
       <main>{children}</main>
       <BottomNav />
     </div>

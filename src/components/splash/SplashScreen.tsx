@@ -31,10 +31,16 @@ export default function SplashScreen() {
             transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
             className="flex flex-col items-center"
           >
-            {/* No-background logo looks best on the green splash */}
-            <div className="relative" style={{ width: 260, height: 120 }}>
+            {/* Logo — responsive: fills most of the screen width */}
+            <div
+              className="relative"
+              style={{
+                width: 'min(72vw, 360px)',
+                height: 'min(33vw, 165px)',
+              }}
+            >
               <Image
-                src="/corpers-connect-logo-without-background.jpg"
+                src="/corpers-connect-logo-without-background.png"
                 alt="Corpers Connect"
                 fill
                 className="object-contain"
@@ -42,15 +48,6 @@ export default function SplashScreen() {
               />
             </div>
           </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.7 }}
-            transition={{ delay: 0.45, duration: 0.4 }}
-            className="mt-4 text-white text-sm"
-          >
-            Your NYSC Community
-          </motion.p>
 
           {/* Pulse ring */}
           <motion.div

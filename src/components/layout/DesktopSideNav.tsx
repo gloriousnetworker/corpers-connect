@@ -1,48 +1,41 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
 import {
   Home,
   Compass,
+  Bell,
   MessageCircle,
   User,
-  Bell,
   PlusSquare,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/store/ui.store';
+import { useUIStore, type ActiveSection } from '@/store/ui.store';
 
 interface NavItem {
-  href: string;
+  section: ActiveSection;
   icon: LucideIcon;
   label: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/feed',          icon: Home,          label: 'Home'          },
-  { href: '/discover',      icon: Compass,       label: 'Discover'      },
-  { href: '/notifications', icon: Bell,          label: 'Notifications' },
-  { href: '/messages',      icon: MessageCircle, label: 'Messages'      },
-  { href: '/profile',       icon: User,          label: 'Profile'       },
+  { section: 'feed',          icon: Home,          label: 'Home'          },
+  { section: 'discover',      icon: Compass,       label: 'Discover'      },
+  { section: 'notifications', icon: Bell,          label: 'Notifications' },
+  { section: 'messages',      icon: MessageCircle, label: 'Messages'      },
+  { section: 'profile',       icon: User,          label: 'Profile'       },
 ];
 
-/**
- * DesktopSideNav — left sidebar for the desktop shell.
- * Lives inside a h-dvh overflow-hidden flex container, so it fills full height
- * and scrolls independently. No sticky hacks needed.
- */
 export default function DesktopSideNav() {
-  const pathname = usePathname();
-  const { unreadMessages, unreadNotifications, setCreatePostOpen } = useUIStore();
+  const { activeSection, setActiveSection, unreadMessages, unreadNotifications, setCreatePostOpen } =
+    useUIStore();
 
   return (
     <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-40 w-64 border-r border-border bg-surface overflow-y-auto">
       {/* Logo */}
-      <div className="px-4 pt-5 pb-3 flex-shrink-0">
-        <Link href="/feed" className="flex items-center px-2">
+      <div className="px-5 pt-6 pb-3 flex-shrink-0">
+        <button onClick={() => setActiveSection('feed')} className="block">
           <div className="relative h-12 w-48">
             <Image
               src="/corpersconnectlogo.jpg"
@@ -52,23 +45,23 @@ export default function DesktopSideNav() {
               priority
             />
           </div>
-        </Link>
+        </button>
       </div>
 
-      {/* Nav links — scrollable if many items */}
-      <nav className="flex-1 px-4 py-2 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+      {/* Nav links */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+        {NAV_ITEMS.map(({ section, icon: Icon, label }) => {
+          const active = activeSection === section;
           const badge =
-            label === 'Messages'      ? unreadMessages :
-            label === 'Notifications' ? unreadNotifications : 0;
+            section === 'messages'      ? unreadMessages :
+            section === 'notifications' ? unreadNotifications : 0;
 
           return (
-            <Link
-              key={href}
-              href={href}
+            <button
+              key={section}
+              onClick={() => setActiveSection(section)}
               className={cn(
-                'flex items-center gap-4 px-3 py-3 rounded-xl text-[15px] font-medium transition-colors',
+                'w-full flex items-center gap-4 px-3 py-3 rounded-xl text-[15px] font-medium transition-colors',
                 active
                   ? 'text-primary bg-primary/10'
                   : 'text-foreground hover:bg-surface-alt',
@@ -90,12 +83,12 @@ export default function DesktopSideNav() {
                 )}
               </div>
               <span>{label}</span>
-            </Link>
+            </button>
           );
         })}
       </nav>
 
-      {/* Create Post button pinned to bottom */}
+      {/* Create Post button */}
       <div className="px-4 py-5 flex-shrink-0">
         <button
           onClick={() => setCreatePostOpen(true)}

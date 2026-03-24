@@ -24,10 +24,12 @@ export interface PasswordResetState {
   maskedEmail: string;
 }
 
+export type ActiveSection = 'feed' | 'discover' | 'notifications' | 'messages' | 'profile';
+
 interface UIState {
-  // Navigation
-  activeTab: 'feed' | 'discover' | 'create' | 'messages' | 'profile';
-  setActiveTab: (tab: UIState['activeTab']) => void;
+  // Navigation — SPA section state (no route changes)
+  activeSection: ActiveSection;
+  setActiveSection: (section: ActiveSection) => void;
 
   // Modals & sheets
   createPostOpen: boolean;
@@ -73,8 +75,8 @@ const defaultPasswordReset: PasswordResetState = {
 };
 
 export const useUIStore = create<UIState>((set) => ({
-  activeTab: 'feed',
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  activeSection: 'feed',
+  setActiveSection: (section) => set({ activeSection: section }),
 
   createPostOpen: false,
   setCreatePostOpen: (open) => set({ createPostOpen: open }),

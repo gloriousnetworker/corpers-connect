@@ -11,7 +11,7 @@ const PUBLIC_PATHS = [
 ];
 
 const ONBOARDING_PATH = '/onboarding';
-const DEFAULT_AUTH_PATH = '/feed';
+const DEFAULT_AUTH_PATH = '/';
 const DEFAULT_UNAUTH_PATH = '/login';
 
 export function middleware(request: NextRequest) {
@@ -39,11 +39,12 @@ export function middleware(request: NextRequest) {
     (p) => pathname === p || pathname.startsWith(p + '/')
   );
 
-  // Root path redirect
+  // Root path — authenticated users land on dashboard, others go to login
   if (pathname === '/') {
-    return NextResponse.redirect(
-      new URL(hasSession ? DEFAULT_AUTH_PATH : DEFAULT_UNAUTH_PATH, request.url)
-    );
+    if (!hasSession) {
+      return NextResponse.redirect(new URL(DEFAULT_UNAUTH_PATH, request.url));
+    }
+    return NextResponse.next(); // authenticated: serve the dashboard
   }
 
   // Authenticated user trying to access auth pages → redirect to feed
