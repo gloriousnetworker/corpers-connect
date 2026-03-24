@@ -29,9 +29,11 @@ export default function AppShell({
         rightSlot={topBarRight}
       />
 
-      {/* Main content — offset right of sidebar on desktop */}
+      {/* Main content — offset right of sidebar on desktop.
+          On desktop: left-aligned column (Twitter-style), white bg,
+          subtle right border. Right of the column stays bg-background. */}
       <main className="content-area lg:ml-64 xl:ml-72">
-        <div className="w-full lg:max-w-2xl lg:mx-auto">
+        <div className="min-h-dvh bg-surface lg:max-w-[680px] lg:border-r lg:border-border">
           {children}
         </div>
       </main>
