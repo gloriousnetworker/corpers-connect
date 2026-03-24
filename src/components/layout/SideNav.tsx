@@ -22,21 +22,38 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/feed', icon: Home, label: 'Home' },
-  { href: '/discover', icon: Compass, label: 'Discover' },
-  { href: '/notifications', icon: Bell, label: 'Notifications' },
-  { href: '/messages', icon: MessageCircle, label: 'Messages' },
-  { href: '/profile', icon: User, label: 'Profile' },
+  { href: '/feed',          icon: Home,          label: 'Home'          },
+  { href: '/discover',      icon: Compass,       label: 'Discover'      },
+  { href: '/notifications', icon: Bell,          label: 'Notifications' },
+  { href: '/messages',      icon: MessageCircle, label: 'Messages'      },
+  { href: '/profile',       icon: User,          label: 'Profile'       },
 ];
 
+/**
+ * Desktop-only sidebar. Uses `sticky top-0 h-dvh` so it scrolls WITH the
+ * page container but stays locked to the viewport height — no position:fixed
+ * or margin-left hacks on the content area needed.
+ */
 export default function SideNav() {
   const pathname = usePathname();
   const { unreadMessages, unreadNotifications, setCreatePostOpen } = useUIStore();
 
   return (
-    <aside className="hidden lg:flex fixed top-0 left-0 h-full w-64 xl:w-72 flex-col border-r border-border bg-surface z-40 px-4 py-5">
+    <aside
+      className={cn(
+        // hidden on mobile, flex column on lg+
+        'hidden lg:flex flex-col',
+        // sticky: stays in the viewport as main content scrolls
+        'sticky top-0 h-dvh self-start',
+        // width
+        'w-64 xl:w-72 flex-shrink-0',
+        // visual
+        'border-r border-border bg-surface',
+        'px-4 py-5 overflow-y-auto',
+      )}
+    >
       {/* Logo */}
-      <Link href="/feed" className="flex items-center px-2 mb-8">
+      <Link href="/feed" className="flex items-center px-2 mb-8 flex-shrink-0">
         <div className="relative h-12 w-48">
           <Image
             src="/corpersconnectlogo.jpg"
@@ -48,16 +65,13 @@ export default function SideNav() {
         </div>
       </Link>
 
-      {/* Nav items */}
+      {/* Nav links */}
       <nav className="flex-1 space-y-0.5">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           const badge =
-            label === 'Messages'
-              ? unreadMessages
-              : label === 'Notifications'
-              ? unreadNotifications
-              : 0;
+            label === 'Messages'      ? unreadMessages :
+            label === 'Notifications' ? unreadNotifications : 0;
 
           return (
             <Link
@@ -67,16 +81,13 @@ export default function SideNav() {
                 'flex items-center gap-4 px-3 py-3 rounded-xl text-[15px] font-medium transition-colors',
                 active
                   ? 'text-primary bg-primary/10'
-                  : 'text-foreground hover:bg-surface-alt'
+                  : 'text-foreground hover:bg-surface-alt',
               )}
               aria-current={active ? 'page' : undefined}
             >
               <div className="relative flex-shrink-0">
                 <Icon
-                  className={cn(
-                    'h-[22px] w-[22px]',
-                    active ? 'text-primary' : 'text-foreground-secondary'
-                  )}
+                  className={cn('h-[22px] w-[22px]', active ? 'text-primary' : 'text-foreground-secondary')}
                   strokeWidth={active ? 2.5 : 1.8}
                 />
                 {badge > 0 && (
@@ -91,10 +102,10 @@ export default function SideNav() {
         })}
       </nav>
 
-      {/* Create post button */}
+      {/* Create post */}
       <button
         onClick={() => setCreatePostOpen(true)}
-        className="mt-4 w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+        className="mt-4 w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 flex-shrink-0"
       >
         <PlusSquare className="h-5 w-5" />
         Create Post

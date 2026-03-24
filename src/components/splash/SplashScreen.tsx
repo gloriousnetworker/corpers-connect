@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Logo from '@/components/shared/Logo';
+import Image from 'next/image';
 
 const SPLASH_DURATION = 1600; // ms
 
@@ -31,7 +31,16 @@ export default function SplashScreen() {
             transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
             className="flex flex-col items-center"
           >
-            <Logo size="xl" white />
+            {/* No-background logo looks best on the green splash */}
+            <div className="relative" style={{ width: 260, height: 120 }}>
+              <Image
+                src="/corpers-connect-logo-without-background.jpg"
+                alt="Corpers Connect"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </motion.div>
 
           <motion.p

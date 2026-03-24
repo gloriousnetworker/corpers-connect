@@ -11,6 +11,15 @@ interface AppShellProps {
   topBarRight?: React.ReactNode;
 }
 
+/**
+ * AppShell — responsive layout wrapper.
+ *
+ * Mobile  (<lg): fixed TopBar top + scrollable content + fixed BottomNav bottom
+ * Desktop (lg+): sticky sidebar left + content column (max 640px, border-r) + empty right
+ *
+ * Key: sidebar uses `sticky top-0 h-dvh` inside a flex row — no position:fixed or
+ * margin-left hacks needed. Sidebar stays visible as the right column scrolls.
+ */
 export default function AppShell({
   children,
   topBarTitle,
@@ -18,28 +27,37 @@ export default function AppShell({
   topBarRight,
 }: AppShellProps) {
   return (
-    <>
-      {/* Desktop sidebar — visible only lg+ */}
+    /* Root — flex row on lg+, stacked column on mobile */
+    <div className="flex min-h-dvh bg-background">
+
+      {/* ── Desktop sidebar (sticky, not fixed) ───────────────────────── */}
       <SideNav />
 
-      {/* Mobile top bar — hidden on lg+ */}
-      <TopBar
-        title={topBarTitle}
-        showLogo={showTopBarLogo}
-        rightSlot={topBarRight}
-      />
+      {/* ── Right of sidebar: mobile bars + content ───────────────────── */}
+      <div className="flex flex-col flex-1 min-w-0">
 
-      {/* Main content — offset right of sidebar on desktop.
-          On desktop: left-aligned column (Twitter-style), white bg,
-          subtle right border. Right of the column stays bg-background. */}
-      <main className="content-area lg:ml-64 xl:ml-72">
-        <div className="min-h-dvh bg-surface lg:max-w-[680px] lg:border-r lg:border-border">
-          {children}
-        </div>
-      </main>
+        {/* Mobile top bar (fixed, hidden lg+) */}
+        <TopBar
+          title={topBarTitle}
+          showLogo={showTopBarLogo}
+          rightSlot={topBarRight}
+        />
 
-      {/* Mobile bottom nav — hidden on lg+ */}
-      <BottomNav />
-    </>
+        {/* Main content column */}
+        <main className="flex-1">
+          {/*
+            On mobile: full width, the page itself adds pt-bar + pb-nav padding.
+            On desktop: left-aligned 640px column with a right border — Twitter style.
+            The column has white bg; area to its right stays bg-background (light gray).
+          */}
+          <div className="w-full bg-surface lg:max-w-[640px] lg:border-r lg:border-border lg:min-h-dvh">
+            {children}
+          </div>
+        </main>
+
+        {/* Mobile bottom nav (fixed, hidden lg+) */}
+        <BottomNav />
+      </div>
+    </div>
   );
 }
