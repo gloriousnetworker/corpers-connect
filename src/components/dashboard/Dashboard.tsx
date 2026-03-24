@@ -27,7 +27,10 @@ export default function Dashboard() {
 
   return (
     <div className="pt-bar pb-nav">
-      <Section />
+      {/* 12 px breathing room so content never sits flush against the mobile TopBar */}
+      <div className="py-3">
+        <Section />
+      </div>
     </div>
   );
 }

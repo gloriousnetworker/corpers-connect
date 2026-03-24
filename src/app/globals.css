@@ -54,7 +54,8 @@
   }
 
   html {
-    height: 100%;
+    height: 100dvh;
+    overflow: hidden;           /* contain scroll to child elements, kills viewport bounce */
     scrollbar-gutter: stable;
   }
 
@@ -64,9 +65,9 @@
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior-y: none;
-    overflow-x: hidden;
-    min-height: 100dvh;
+    overscroll-behavior: none;  /* belt-and-suspenders: no bounce on body either */
+    overflow: hidden;
+    height: 100dvh;
   }
 
   /* ── CRITICAL: Prevent iOS/Android keyboard zoom ──────────────────────── */

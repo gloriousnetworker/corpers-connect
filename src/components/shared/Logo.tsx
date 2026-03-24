@@ -33,7 +33,7 @@ export default function Logo({
         style={{ width: dims.markSize, height: dims.markSize }}
       >
         <Image
-          src="/icons/logo.png"
+          src="/corpers-connect-logo-without-background.png"
           alt="Corpers Connect"
           fill
           className="object-contain"

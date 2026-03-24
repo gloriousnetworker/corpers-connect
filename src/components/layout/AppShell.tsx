@@ -23,18 +23,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile-only top bar — hidden on desktop via lg:hidden inside TopBar */}
       <TopBar />
 
-      {/* Three-column flex row */}
-      <div className="flex min-h-dvh">
+      {/* Three-column flex row — h-dvh so the viewport is fully consumed and
+          overflow is handled per-column; body/html are overflow:hidden so no
+          page-level rubber-band bounce occurs on iOS/Android. */}
+      <div className="flex h-dvh overflow-hidden">
         {/* Left sidebar: invisible on mobile, sticky flex column on desktop */}
         <DesktopSideNav />
 
-        {/* Center: fills all remaining space */}
-        <main className="flex-1 min-w-0 bg-surface">
+        {/* Center: scrolls independently — overscroll-behavior:none kills bounce */}
+        <main className="flex-1 min-w-0 overflow-y-auto overscroll-y-none bg-surface">
           {children}
         </main>
 
-        {/* Right panel: xl+ only, sticky */}
-        <aside className="hidden xl:flex flex-col flex-shrink-0 w-80 border-l border-border bg-surface sticky top-0 h-dvh overflow-y-auto">
+        {/* Right panel: xl+ only, scrolls independently */}
+        <aside className="hidden xl:flex flex-col flex-shrink-0 w-80 border-l border-border bg-surface overflow-y-auto overscroll-y-none">
           <div className="px-4 py-6">
             <RightPanel />
           </div>
