@@ -310,19 +310,12 @@
 
 /* ── Desktop layout overrides (lg+) ─────────────────────────────────────── */
 @media (min-width: 1024px) {
-  /* On desktop the fixed top/bottom bars are hidden — replace their offsets
-     with simple breathing room so content doesn't hug the edges. */
+  /* On desktop the fixed TopBar and BottomNav are hidden (lg:hidden).
+     Replace the large offsets meant for those bars with a small breathing gap. */
   .pt-bar {
     padding-top: 1.5rem;
   }
   .pb-nav {
     padding-bottom: 1.5rem;
-  }
-  /* Let body scroll on desktop instead of the inner content-area element. */
-  .content-area {
-    overflow-y: visible;
-    -webkit-overflow-scrolling: auto;
-    overscroll-behavior-y: auto;
-    flex: none;
   }
 }
