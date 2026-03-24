@@ -6,3 +6,8 @@ out/
 node_modules/
 *.tsbuildinfo
 next-env.d.ts
+
+# Internal project documentation (not for version control)
+FRONTEND_IMPLEMENTATION_PROGRESS.md
+FRONTEND_PLAN.md
+FRONTEND_USER_STORY.md

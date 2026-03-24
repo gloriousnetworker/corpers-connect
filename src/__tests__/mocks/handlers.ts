@@ -23,11 +23,45 @@ const mockUser = {
   followersCount: 0,
   followingCount: 0,
   postsCount: 0,
+  corperTag: false,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
+const mockPost = {
+  id: 'post-123',
+  authorId: 'user-123',
+  author: mockUser,
+  content: 'Hello from Lagos! First day at PPA.',
+  mediaUrls: [],
+  visibility: 'PUBLIC',
+  postType: 'REGULAR',
+  isEdited: false,
+  isFlagged: false,
+  reactionsCount: 3,
+  commentsCount: 1,
+  myReaction: null,
+  isBookmarked: false,
+  createdAt: '2024-01-15T10:00:00Z',
+  updatedAt: '2024-01-15T10:00:00Z',
+};
+
+const mockComment = {
+  id: 'comment-123',
+  postId: 'post-123',
+  authorId: 'user-123',
+  author: mockUser,
+  content: 'Great post!',
+  isEdited: false,
+  replies: [],
+  repliesCount: 0,
+  createdAt: '2024-01-15T11:00:00Z',
+  updatedAt: '2024-01-15T11:00:00Z',
+};
+
 export const handlers = [
+  // ── Auth ────────────────────────────────────────────────────────────────
+
   // Login — success
   http.post(`${API_URL}/auth/login`, async ({ request }) => {
     const body = await request.json() as { identifier: string; password: string };
@@ -147,6 +181,152 @@ export const handlers = [
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
       },
+    });
+  }),
+
+  // ── Feed ────────────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/feed`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        items: [mockPost],
+        nextCursor: null,
+        hasMore: false,
+      },
+    });
+  }),
+
+  // ── Posts ────────────────────────────────────────────────────────────────
+
+  http.post(`${API_URL}/posts`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    if (!body.content && (!body.mediaUrls || (body.mediaUrls as string[]).length === 0)) {
+      return HttpResponse.json(
+        { success: false, message: 'Post must have content or media' },
+        { status: 400 }
+      );
+    }
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...mockPost,
+        id: 'post-new',
+        content: body.content as string ?? '',
+        mediaUrls: (body.mediaUrls as string[]) ?? [],
+        visibility: (body.visibility as string) ?? 'PUBLIC',
+        reactionsCount: 0,
+        commentsCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  }),
+
+  http.get(`${API_URL}/posts/:postId`, ({ params }) => {
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockPost, id: params.postId },
+    });
+  }),
+
+  http.patch(`${API_URL}/posts/:postId`, async ({ params, request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockPost, id: params.postId, ...body, isEdited: true },
+    });
+  }),
+
+  http.delete(`${API_URL}/posts/:postId`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  // ── Reactions ─────────────────────────────────────────────────────────────
+
+  http.post(`${API_URL}/posts/:postId/react`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.delete(`${API_URL}/posts/:postId/react`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.get(`${API_URL}/posts/:postId/reactions`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: { items: [], nextCursor: null, hasMore: false },
+    });
+  }),
+
+  // ── Comments ──────────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/posts/:postId/comments`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        items: [mockComment],
+        nextCursor: null,
+        hasMore: false,
+      },
+    });
+  }),
+
+  http.post(`${API_URL}/posts/:postId/comments`, async ({ params, request }) => {
+    const body = await request.json() as { content: string; parentId?: string };
+    if (!body.content?.trim()) {
+      return HttpResponse.json(
+        { success: false, message: 'Comment cannot be empty' },
+        { status: 400 }
+      );
+    }
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...mockComment,
+        id: 'comment-new',
+        postId: params.postId,
+        content: body.content,
+        parentId: body.parentId ?? null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  }),
+
+  http.delete(`${API_URL}/posts/:postId/comments/:commentId`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  // ── Bookmarks ─────────────────────────────────────────────────────────────
+
+  http.post(`${API_URL}/posts/:postId/bookmark`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.delete(`${API_URL}/posts/:postId/bookmark`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.get(`${API_URL}/users/me/bookmarks`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: { items: [], nextCursor: null, hasMore: false },
+    });
+  }),
+
+  // ── Report ────────────────────────────────────────────────────────────────
+
+  http.post(`${API_URL}/posts/:postId/report`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  // ── User posts ────────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/users/:userId/posts`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: { items: [mockPost], nextCursor: null, hasMore: false },
     });
   }),
 ];
