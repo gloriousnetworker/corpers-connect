@@ -300,13 +300,29 @@
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
 }
 
-/* ── Desktop sidebar layout ──────────────────────────────────────────────── */
+/* ── Scrollbar styling (sm+) ─────────────────────────────────────────────── */
 @media (min-width: 640px) {
-  .app-container {
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
-  }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+}
+
+/* ── Desktop layout overrides (lg+) ─────────────────────────────────────── */
+@media (min-width: 1024px) {
+  /* On desktop the fixed top/bottom bars are hidden — replace their offsets
+     with simple breathing room so content doesn't hug the edges. */
+  .pt-bar {
+    padding-top: 1.5rem;
+  }
+  .pb-nav {
+    padding-bottom: 1.5rem;
+  }
+  /* Let body scroll on desktop instead of the inner content-area element. */
+  .content-area {
+    overflow-y: visible;
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior-y: auto;
+    flex: none;
+  }
 }

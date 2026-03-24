@@ -24,7 +24,7 @@ export default function TopBar({
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-border',
+        'fixed top-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-border lg:hidden',
         'pt-[env(safe-area-inset-top)]',
         className
       )}

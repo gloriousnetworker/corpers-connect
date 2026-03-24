@@ -9,10 +9,10 @@ interface LogoProps {
 }
 
 const sizeMap = {
-  sm: { width: 80, height: 24, markSize: 28 },
-  md: { width: 120, height: 36, markSize: 40 },
-  lg: { width: 160, height: 48, markSize: 56 },
-  xl: { width: 200, height: 60, markSize: 72 },
+  sm: { width: 140, height: 36, markSize: 28 },
+  md: { width: 180, height: 44, markSize: 40 },
+  lg: { width: 220, height: 56, markSize: 56 },
+  xl: { width: 260, height: 68, markSize: 72 },
 };
 
 export default function Logo({
@@ -46,10 +46,10 @@ export default function Logo({
   return (
     <div className={cn('relative flex-shrink-0', className)} style={{ width: dims.width, height: dims.height }}>
       <Image
-        src="/logo.png"
+        src="/corpersconnectlogo.jpg"
         alt="Corpers Connect"
         fill
-        className={cn('object-contain', white && 'brightness-0 invert')}
+        className={cn('object-contain object-left', white && 'brightness-0 invert')}
         priority
       />
     </div>
