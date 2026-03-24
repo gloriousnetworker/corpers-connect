@@ -2,7 +2,7 @@
   "name": "Corpers Connect",
   "short_name": "CorpersCC",
   "description": "The social platform for Nigerian NYSC corps members — connect, chat, and thrive.",
-  "start_url": "/feed",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
