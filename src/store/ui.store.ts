@@ -1,0 +1,108 @@
+import { create } from 'zustand';
+
+// Registration state persisted between steps
+export interface RegistrationState {
+  stateCode: string;
+  password: string;
+  nyscData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    maskedEmail: string;
+    servingState: string;
+    batch: string;
+    phone?: string;
+  } | null;
+  otpToken: string;
+  maskedEmail: string;
+}
+
+// Password reset state persisted between steps
+export interface PasswordResetState {
+  email: string;
+  otpToken: string;
+  maskedEmail: string;
+}
+
+interface UIState {
+  // Navigation
+  activeTab: 'feed' | 'discover' | 'create' | 'messages' | 'profile';
+  setActiveTab: (tab: UIState['activeTab']) => void;
+
+  // Modals & sheets
+  createPostOpen: boolean;
+  setCreatePostOpen: (open: boolean) => void;
+
+  // Registration flow state (in-memory, cleared on completion)
+  registration: RegistrationState;
+  setRegistration: (data: Partial<RegistrationState>) => void;
+  clearRegistration: () => void;
+
+  // Password reset flow state
+  passwordReset: PasswordResetState;
+  setPasswordReset: (data: Partial<PasswordResetState>) => void;
+  clearPasswordReset: () => void;
+
+  // 2FA challenge state
+  twoFAChallenge: { challengeToken: string; userId: string } | null;
+  setTwoFAChallenge: (data: { challengeToken: string; userId: string } | null) => void;
+
+  // Notifications badge
+  unreadNotifications: number;
+  setUnreadNotifications: (count: number) => void;
+  incrementUnread: () => void;
+
+  // Unread messages badge
+  unreadMessages: number;
+  setUnreadMessages: (count: number) => void;
+  incrementUnreadMessages: () => void;
+}
+
+const defaultRegistration: RegistrationState = {
+  stateCode: '',
+  password: '',
+  nyscData: null,
+  otpToken: '',
+  maskedEmail: '',
+};
+
+const defaultPasswordReset: PasswordResetState = {
+  email: '',
+  otpToken: '',
+  maskedEmail: '',
+};
+
+export const useUIStore = create<UIState>((set) => ({
+  activeTab: 'feed',
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  createPostOpen: false,
+  setCreatePostOpen: (open) => set({ createPostOpen: open }),
+
+  registration: defaultRegistration,
+  setRegistration: (data) =>
+    set((state) => ({
+      registration: { ...state.registration, ...data },
+    })),
+  clearRegistration: () => set({ registration: defaultRegistration }),
+
+  passwordReset: defaultPasswordReset,
+  setPasswordReset: (data) =>
+    set((state) => ({
+      passwordReset: { ...state.passwordReset, ...data },
+    })),
+  clearPasswordReset: () => set({ passwordReset: defaultPasswordReset }),
+
+  twoFAChallenge: null,
+  setTwoFAChallenge: (data) => set({ twoFAChallenge: data }),
+
+  unreadNotifications: 0,
+  setUnreadNotifications: (count) => set({ unreadNotifications: count }),
+  incrementUnread: () =>
+    set((state) => ({ unreadNotifications: state.unreadNotifications + 1 })),
+
+  unreadMessages: 0,
+  setUnreadMessages: (count) => set({ unreadMessages: count }),
+  incrementUnreadMessages: () =>
+    set((state) => ({ unreadMessages: state.unreadMessages + 1 })),
+}));

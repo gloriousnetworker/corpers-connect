@@ -1,0 +1,927 @@
+# Corpers Connect — Frontend (PWA) Implementation Plan
+
+**Project:** `corpers-connect-users`
+**Framework:** Next.js 15 (App Router) · TypeScript · Tailwind CSS
+**Target:** PWA · Mobile-First · Native App Feel
+**Backend:** `https://corpers-connect-server-production.up.railway.app/api/v1`
+**Created:** 2026-03-24
+**Status:** Active
+
+---
+
+## Design Philosophy
+
+This app must feel like a **native mobile app installed from the App Store**. The benchmark is:
+- WhatsApp for messaging UX and reliability
+- Instagram for stories, reels, and discovery
+- Facebook for social feed and community features
+
+Core UX commitments:
+1. **Zero keyboard zoom** — All inputs have `font-size: 16px` minimum (prevents iOS/Android zoom)
+2. **Instant feedback** — Optimistic UI on every action; no waiting spinners for mutations
+3. **Smooth 60fps** — CSS transforms only; no layout-thrashing animations
+4. **App-shell architecture** — Bottom nav never flickers; only content area updates
+5. **Offline-first** — Cached content visible even with no network
+6. **Touch-native** — All interactive targets ≥ 44×44px; no hover-dependent UI
+
+---
+
+## Brand & Design System
+
+### Color Palette
+
+```
+Primary Green:    #008751   (NYSC green — buttons, active states, brand)
+Primary Dark:     #006640   (pressed state, dark mode active)
+Primary Light:    #E8F5EE   (backgrounds, tints, chips)
+Accent Gold:      #C8992A   (premium/CORPER badge, highlights)
+Accent Gold Light:#FFF8E7   (premium tints)
+
+Surface:          #FFFFFF   (cards, sheets)
+Surface Elevated: #F8F9FA   (page backgrounds, tabs)
+Surface Alt:      #F1F3F4   (input backgrounds, dividers)
+
+Text Primary:     #111827   (headings)
+Text Secondary:   #6B7280   (subtext, placeholders)
+Text Muted:       #9CA3AF   (timestamps, counts)
+
+Success:          #10B981
+Warning:          #F59E0B
+Error:            #EF4444
+Info:             #3B82F6
+
+Dark Mode Primary: #00B368  (slightly lighter for dark backgrounds)
+Dark Surface:      #111827
+Dark Surface Elevated: #1F2937
+Dark Surface Alt:  #374151
+```
+
+### Typography
+
+**Font:** `Plus Jakarta Sans` (Google Fonts) — modern, highly legible, feels premium
+- Fallback: `Inter`, `system-ui`, `-apple-system`, `sans-serif`
+
+```
+Font sizes (all ≥ 16px for inputs to prevent mobile zoom):
+  xs:   12px  (timestamps, meta, badges)
+  sm:   14px  (captions, helper text)
+  base: 16px  (body, inputs — MINIMUM)
+  lg:   18px  (subheadings)
+  xl:   20px  (card titles)
+  2xl:  24px  (screen titles)
+  3xl:  30px  (hero text)
+
+Font weights:
+  normal: 400
+  medium: 500
+  semibold: 600
+  bold: 700
+  extrabold: 800
+```
+
+### Iconography
+
+- **Lucide React** — primary icon library (consistent, tree-shakeable)
+- Custom SVG for: Corper Tag badge, NYSC emblem, level indicators, reaction emojis
+
+### Animation Principles
+
+- Page transitions: slide (horizontal for drill-down, vertical for modals/sheets)
+- List items: stagger-fade on initial load
+- Reactions: spring bounce
+- Story progress: linear timing
+- Loading: skeleton shimmer (not spinners)
+- Micro-interactions: scale + opacity on tap
+- Duration: 150ms (micro) · 250ms (normal) · 350ms (full page)
+
+---
+
+## Tech Stack (Locked)
+
+| Layer | Library | Version | Purpose |
+|---|---|---|---|
+| Framework | Next.js | 15.x | App Router, Server Components, Image optimization |
+| Language | TypeScript | 5.x | Type safety |
+| Styling | Tailwind CSS | 3.x | Utility-first CSS |
+| Components | shadcn/ui | latest | Accessible headless components |
+| State | Zustand | 5.x | Global client state (auth, UI) |
+| Server State | TanStack Query | 5.x | API cache, mutations, infinite scroll |
+| Real-time | Socket.IO Client | 4.x | Messaging, notifications, calls |
+| Forms | React Hook Form | 7.x | Form state management |
+| Validation | Zod | 3.x | Schema validation (matches backend) |
+| Animations | Framer Motion | 11.x | Page transitions, micro-interactions |
+| Icons | Lucide React | latest | UI icons |
+| Media Upload | Cloudinary | 2.x | Image/video upload |
+| Calls | Agora Web SDK | 4.x | Voice/video calls |
+| Push | Firebase JS | 10.x | FCM push notifications |
+| Payments | Paystack.js | inline | Subscription payments |
+| PWA | next-pwa | 5.x | Service worker, manifest, offline |
+| HTTP | Axios | 1.x | API client with interceptors |
+| Date | date-fns | 3.x | Date formatting (no moment.js bloat) |
+| Testing | Jest + Testing Library | latest | Unit + integration tests |
+| E2E | Playwright | latest | End-to-end tests |
+| Linting | ESLint + Prettier | latest | Code quality |
+
+---
+
+## File & Folder Structure
+
+```
+corpers-connect-users/
+├── public/
+│   ├── icons/                    # PWA icons (72→512, apple-touch-icon)
+│   │   └── [all sizes from corpers-connect-pwa-icons/]
+│   ├── manifest.json             # PWA manifest
+│   ├── sw.js                     # Service worker (generated by next-pwa)
+│   ├── logo.png                  # Full logo
+│   ├── logo-mark.png             # Icon only (for small screens)
+│   └── NYSC_LOGO.png
+│
+├── src/
+│   ├── app/                      # Next.js App Router
+│   │   ├── layout.tsx            # Root layout (fonts, theme, providers)
+│   │   ├── page.tsx              # Landing/redirect (→ /feed or /login)
+│   │   ├── globals.css           # Global styles + CSS variables
+│   │   │
+│   │   ├── (auth)/               # Auth route group (no bottom nav)
+│   │   │   ├── layout.tsx        # Auth layout (centered, logo top)
+│   │   │   ├── login/page.tsx
+│   │   │   ├── register/
+│   │   │   │   ├── page.tsx      # Step 1: state code lookup
+│   │   │   │   ├── confirm/page.tsx   # Step 2: confirm NYSC details + password
+│   │   │   │   └── verify/page.tsx    # Step 3: OTP verification
+│   │   │   ├── forgot-password/page.tsx
+│   │   │   ├── reset-password/page.tsx
+│   │   │   └── 2fa/page.tsx      # 2FA challenge
+│   │   │
+│   │   ├── (onboarding)/         # First-time onboarding
+│   │   │   ├── layout.tsx
+│   │   │   └── onboarding/page.tsx   # Multi-step: avatar, bio, follow suggestions
+│   │   │
+│   │   ├── (app)/                # Main app (with bottom nav)
+│   │   │   ├── layout.tsx        # App shell: bottom nav + header
+│   │   │   │
+│   │   │   ├── feed/page.tsx     # Home feed (infinite scroll)
+│   │   │   │
+│   │   │   ├── discover/page.tsx # Discover + search
+│   │   │   │
+│   │   │   ├── create/
+│   │   │   │   └── page.tsx      # Create post/story/reel picker
+│   │   │   │
+│   │   │   ├── messages/
+│   │   │   │   ├── page.tsx      # Conversations list
+│   │   │   │   └── [conversationId]/page.tsx  # Chat screen
+│   │   │   │
+│   │   │   ├── notifications/page.tsx
+│   │   │   │
+│   │   │   ├── profile/
+│   │   │   │   ├── page.tsx      # Own profile
+│   │   │   │   └── edit/page.tsx # Edit profile
+│   │   │   │
+│   │   │   ├── user/
+│   │   │   │   └── [userId]/page.tsx  # Other user's profile
+│   │   │   │
+│   │   │   ├── post/
+│   │   │   │   └── [postId]/page.tsx  # Single post detail
+│   │   │   │
+│   │   │   ├── stories/
+│   │   │   │   └── [userId]/page.tsx  # Story viewer (full-screen)
+│   │   │   │
+│   │   │   ├── reels/page.tsx    # Reels feed (vertical scroll)
+│   │   │   │
+│   │   │   ├── marketplace/
+│   │   │   │   ├── page.tsx      # Market home
+│   │   │   │   ├── [listingId]/page.tsx
+│   │   │   │   ├── my-listings/page.tsx
+│   │   │   │   ├── create/page.tsx
+│   │   │   │   └── apply-seller/page.tsx
+│   │   │   │
+│   │   │   ├── opportunities/
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── [opportunityId]/page.tsx
+│   │   │   │   ├── create/page.tsx
+│   │   │   │   └── my-applications/page.tsx
+│   │   │   │
+│   │   │   ├── subscriptions/page.tsx
+│   │   │   │
+│   │   │   └── settings/
+│   │   │       ├── page.tsx      # Settings menu
+│   │   │       ├── account/page.tsx
+│   │   │       ├── privacy/page.tsx
+│   │   │       ├── notifications/page.tsx
+│   │   │       ├── security/page.tsx
+│   │   │       └── sessions/page.tsx
+│   │   │
+│   │   └── api/                  # Next.js API routes
+│   │       └── auth/[...nextauth]/  # (if using NextAuth)
+│   │
+│   ├── components/
+│   │   ├── ui/                   # shadcn/ui primitives
+│   │   │   ├── button.tsx
+│   │   │   ├── input.tsx         # PATCHED: font-size 16px min
+│   │   │   ├── textarea.tsx      # PATCHED: font-size 16px min
+│   │   │   ├── sheet.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── avatar.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── skeleton.tsx
+│   │   │   ├── tabs.tsx
+│   │   │   └── ...
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── AppShell.tsx      # Bottom nav + header wrapper
+│   │   │   ├── BottomNav.tsx     # Mobile bottom navigation bar
+│   │   │   ├── TopBar.tsx        # Per-screen title + actions
+│   │   │   ├── PageContainer.tsx # Scrollable content area
+│   │   │   └── Sidebar.tsx       # Desktop left nav
+│   │   │
+│   │   ├── auth/
+│   │   │   ├── OtpInput.tsx      # 6-box OTP input with autofocus
+│   │   │   ├── PasswordInput.tsx # Password with show/hide
+│   │   │   └── StateCodeInput.tsx
+│   │   │
+│   │   ├── feed/
+│   │   │   ├── PostCard.tsx      # Full post card
+│   │   │   ├── PostCardSkeleton.tsx
+│   │   │   ├── ReactionBar.tsx   # Like/Love/Fire/Clap + counts
+│   │   │   ├── ReactionPicker.tsx # Long-press emoji picker
+│   │   │   ├── CommentSheet.tsx  # Bottom sheet comment list
+│   │   │   ├── CommentInput.tsx
+│   │   │   ├── PostMenu.tsx      # 3-dot menu (edit, delete, report)
+│   │   │   ├── CreatePostSheet.tsx  # Bottom sheet create
+│   │   │   ├── VisibilityPicker.tsx
+│   │   │   └── FeedList.tsx      # Infinite scroll wrapper
+│   │   │
+│   │   ├── stories/
+│   │   │   ├── StoryTray.tsx     # Horizontal stories strip
+│   │   │   ├── StoryRing.tsx     # Avatar with colored ring
+│   │   │   ├── StoryViewer.tsx   # Full-screen story viewer
+│   │   │   ├── StoryProgress.tsx # Top progress bars
+│   │   │   └── StoryCreator.tsx  # Create story screen
+│   │   │
+│   │   ├── messaging/
+│   │   │   ├── ConversationList.tsx
+│   │   │   ├── ConversationItem.tsx
+│   │   │   ├── ChatScreen.tsx
+│   │   │   ├── MessageBubble.tsx
+│   │   │   ├── MessageInput.tsx
+│   │   │   ├── TypingIndicator.tsx
+│   │   │   ├── VoiceNotePlayer.tsx
+│   │   │   ├── VoiceNoteRecorder.tsx
+│   │   │   └── MediaMessage.tsx
+│   │   │
+│   │   ├── calls/
+│   │   │   ├── CallScreen.tsx    # Active call UI
+│   │   │   ├── IncomingCall.tsx  # Incoming call overlay
+│   │   │   └── CallControls.tsx
+│   │   │
+│   │   ├── notifications/
+│   │   │   ├── NotificationItem.tsx
+│   │   │   └── NotificationBadge.tsx
+│   │   │
+│   │   ├── profile/
+│   │   │   ├── ProfileHeader.tsx
+│   │   │   ├── ProfileStats.tsx
+│   │   │   ├── CorperTagBadge.tsx  # State serving tag overlay
+│   │   │   ├── LevelBadge.tsx      # OTONDO/KOPA/CORPER
+│   │   │   ├── FollowButton.tsx
+│   │   │   └── ProfilePostGrid.tsx
+│   │   │
+│   │   ├── marketplace/
+│   │   │   ├── ListingCard.tsx
+│   │   │   ├── ListingGrid.tsx
+│   │   │   ├── ListingDetail.tsx
+│   │   │   ├── CategoryChips.tsx
+│   │   │   └── PriceInput.tsx
+│   │   │
+│   │   ├── opportunities/
+│   │   │   ├── OpportunityCard.tsx
+│   │   │   └── ApplicationStatus.tsx
+│   │   │
+│   │   ├── subscriptions/
+│   │   │   ├── PlanCard.tsx
+│   │   │   ├── PremiumGate.tsx   # Blur overlay for locked features
+│   │   │   └── PaystackButton.tsx
+│   │   │
+│   │   └── shared/
+│   │       ├── Logo.tsx           # SVG/Image logo component
+│   │       ├── Avatar.tsx         # User avatar with fallback
+│   │       ├── UserCard.tsx       # Follow suggestion card
+│   │       ├── EmptyState.tsx     # Empty list illustrations
+│   │       ├── ErrorState.tsx     # Error with retry
+│   │       ├── LoadingSpinner.tsx
+│   │       ├── PullToRefresh.tsx
+│   │       ├── InfiniteScroll.tsx # Intersection Observer wrapper
+│   │       ├── MediaPicker.tsx    # Image/video picker
+│   │       ├── ImageViewer.tsx    # Full-screen image viewer
+│   │       ├── ConfirmDialog.tsx
+│   │       └── Toast.tsx          # Custom toast (not browser default)
+│   │
+│   ├── hooks/
+│   │   ├── useAuth.ts            # Auth state, login, logout
+│   │   ├── useSocket.ts          # Socket.IO connection management
+│   │   ├── useFeed.ts            # Infinite feed with React Query
+│   │   ├── useMessages.ts        # Conversation message cursor
+│   │   ├── useNotifications.ts   # Notification list + unread count
+│   │   ├── useCall.ts            # Agora call state machine
+│   │   ├── useMediaUpload.ts     # Cloudinary upload hook
+│   │   ├── usePullToRefresh.ts
+│   │   ├── useIntersectionObserver.ts
+│   │   ├── useDebounce.ts
+│   │   └── useLocalStorage.ts
+│   │
+│   ├── lib/
+│   │   ├── api/
+│   │   │   ├── client.ts         # Axios instance + interceptors + token refresh
+│   │   │   ├── auth.ts           # Auth API calls
+│   │   │   ├── users.ts
+│   │   │   ├── posts.ts
+│   │   │   ├── feed.ts
+│   │   │   ├── stories.ts
+│   │   │   ├── reels.ts
+│   │   │   ├── messaging.ts
+│   │   │   ├── notifications.ts
+│   │   │   ├── marketplace.ts
+│   │   │   ├── opportunities.ts
+│   │   │   ├── calls.ts
+│   │   │   ├── subscriptions.ts
+│   │   │   └── discover.ts
+│   │   │
+│   │   ├── socket/
+│   │   │   ├── socket.ts         # Socket.IO instance singleton
+│   │   │   └── events.ts         # Event name constants
+│   │   │
+│   │   ├── firebase/
+│   │   │   └── firebase.ts       # Firebase app + messaging init
+│   │   │
+│   │   ├── agora/
+│   │   │   └── agora.ts          # Agora client init
+│   │   │
+│   │   ├── query-keys.ts         # TanStack Query key factory
+│   │   ├── utils.ts              # cn(), formatDate(), formatPrice(), etc.
+│   │   ├── validators.ts         # Zod schemas (mirrored from backend)
+│   │   └── constants.ts          # API_URL, app name, enums
+│   │
+│   ├── store/
+│   │   ├── auth.store.ts         # Zustand: user, tokens, isAuthenticated
+│   │   ├── ui.store.ts           # Zustand: modals, sheets, dark mode
+│   │   ├── socket.store.ts       # Zustand: socket status, connected
+│   │   ├── call.store.ts         # Zustand: active call state
+│   │   └── notification.store.ts # Zustand: unread count, badge
+│   │
+│   ├── providers/
+│   │   ├── Providers.tsx         # Combines all providers
+│   │   ├── QueryProvider.tsx     # TanStack Query client
+│   │   ├── ThemeProvider.tsx     # Dark/light mode
+│   │   ├── AuthProvider.tsx      # Token refresh + persist
+│   │   ├── SocketProvider.tsx    # Socket.IO connection lifecycle
+│   │   └── NotificationProvider.tsx  # FCM + in-app notifications
+│   │
+│   ├── types/
+│   │   ├── api.ts                # API response shapes
+│   │   ├── models.ts             # User, Post, Message etc. types
+│   │   ├── enums.ts              # All enum values
+│   │   └── socket.ts             # Socket event payload types
+│   │
+│   └── __tests__/
+│       ├── unit/
+│       │   ├── components/       # Component render tests
+│       │   ├── hooks/            # Hook tests
+│       │   └── lib/              # Utility function tests
+│       ├── integration/
+│       │   ├── auth.test.tsx     # Full auth flow
+│       │   ├── feed.test.tsx
+│       │   └── messaging.test.tsx
+│       ├── e2e/                  # Playwright tests
+│       │   ├── auth.spec.ts
+│       │   ├── feed.spec.ts
+│       │   └── messaging.spec.ts
+│       └── setup.ts
+│
+├── FRONTEND_PLAN.md              # This file
+├── FRONTEND_IMPLEMENTATION_PROGRESS.md
+├── FRONTEND_USER_STORY.md
+├── next.config.mjs
+├── tailwind.config.ts
+├── tsconfig.json
+├── jest.config.ts
+├── playwright.config.ts
+└── package.json
+```
+
+---
+
+## Mobile-First Rules (Non-Negotiable)
+
+### 1. Prevent Keyboard Zoom (Critical)
+```css
+/* globals.css — applied to ALL inputs, textareas, selects */
+input, textarea, select {
+  font-size: 16px !important; /* prevents iOS/Android zoom */
+}
+
+/* viewport meta tag in layout.tsx */
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+```
+
+### 2. Safe Area Insets (Notch/Home Bar)
+```css
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.top-bar {
+  padding-top: env(safe-area-inset-top);
+}
+```
+
+### 3. Touch Targets
+```css
+/* Minimum 44×44px for all interactive elements */
+.touch-target { min-height: 44px; min-width: 44px; }
+```
+
+### 4. Disable Pull-to-Refresh on Body
+```css
+body { overscroll-behavior-y: none; }
+/* Enable custom pull-to-refresh only in feed container */
+```
+
+### 5. Prevent Text Selection on UI Elements
+```css
+.no-select { -webkit-user-select: none; user-select: none; }
+```
+
+---
+
+## PWA Configuration
+
+### manifest.json
+```json
+{
+  "name": "Corpers Connect",
+  "short_name": "CorpersCC",
+  "description": "The social platform for Nigerian NYSC corps members",
+  "start_url": "/feed",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#008751",
+  "theme_color": "#008751",
+  "categories": ["social", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png" },
+    { "src": "/icons/icon-96x96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
+```
+
+### Service Worker Strategy
+- **Network-first** for API requests (freshness > cache)
+- **Cache-first** for static assets (JS, CSS, fonts, images)
+- **Stale-while-revalidate** for feed (show cached, refresh in background)
+- Background sync for failed mutations (pending messages, reactions)
+
+---
+
+## API Integration Layer
+
+### Axios Client (`src/lib/api/client.ts`)
+- Base URL from `NEXT_PUBLIC_API_URL` env var
+- Request interceptor: attaches `Authorization: Bearer <token>`
+- Response interceptor: auto-refreshes expired access tokens (silent token rotation)
+- 401 handling: redirect to `/login` after refresh failure
+- Error normalisation: all errors become `{ message, status, errors? }`
+
+### React Query Keys (`src/lib/query-keys.ts`)
+```typescript
+export const queryKeys = {
+  feed: (cursor?: string) => ['feed', cursor],
+  post: (id: string) => ['post', id],
+  user: (id: string) => ['user', id],
+  me: () => ['me'],
+  messages: (convId: string) => ['messages', convId],
+  conversations: () => ['conversations'],
+  notifications: () => ['notifications'],
+  unreadCount: () => ['notifications', 'unread-count'],
+  marketplace: (filters: object) => ['marketplace', filters],
+  opportunities: (filters: object) => ['opportunities', filters],
+  // ...
+}
+```
+
+---
+
+## Authentication Architecture
+
+### Token Storage
+- `accessToken` → in-memory (Zustand store) — never in localStorage
+- `refreshToken` → `httpOnly` cookie (set via API call) **OR** encrypted localStorage
+- `user` profile → Zustand + localStorage (for fast load on app open)
+
+### Token Refresh Flow
+1. App starts → check localStorage for user data, set in store
+2. First API call → interceptor attaches access token
+3. If 401 → interceptor calls `/auth/refresh` silently
+4. New tokens saved → original request retried
+5. If refresh fails → clear store + redirect to `/login`
+
+### Route Protection
+- `(app)` group: middleware checks for valid session, redirects to `/login`
+- `(auth)` group: if already logged in, redirect to `/feed`
+- `(onboarding)` group: only accessible if `!isOnboarded`
+
+---
+
+## Real-time Architecture (Socket.IO)
+
+### Connection Lifecycle
+1. User logs in → socket connects with auth token
+2. Socket authenticates on server → joins user's personal room
+3. On reconnect → re-joins all active conversation rooms
+4. On logout → socket disconnects
+
+### Events Handled
+| Event | Action |
+|---|---|
+| `new_message` | Append to message list, update conversation preview, increment badge |
+| `message_updated` | Update message in list |
+| `message_deleted` | Remove/redact message |
+| `new_notification` | Show toast, increment bell badge, prepend to list |
+| `call_initiated` | Show `IncomingCall` overlay |
+| `call_accepted` | Enter Agora channel |
+| `call_ended` / `call_rejected` | Dismiss call UI |
+| `user_typing` | Show typing indicator |
+
+---
+
+## Implementation Phases
+
+### Phase 1 — Foundation & Auth (Week 1)
+**Goal:** App boots, users can register, login, and reach the feed shell.
+
+- [ ] Upgrade deps: React Query v5, Zustand v5, Framer Motion, etc.
+- [ ] Configure PWA (next-pwa + manifest.json + icons)
+- [ ] Set up design tokens in `tailwind.config.ts`
+- [ ] Global CSS: CSS vars, font-size fix, safe area insets, scrollbar styles
+- [ ] Root layout: font loading, theme provider, React Query provider
+- [ ] Auth store (Zustand)
+- [ ] Axios client with interceptors + token refresh
+- [ ] Auth API module (`/auth/*` endpoints)
+- [ ] Auth layout (centered, logo, full-height)
+- [ ] **Login screen**: state code/email + password, validation, error states
+- [ ] **Register Step 1**: state code lookup with NYSC detail card
+- [ ] **Register Step 2**: confirm details + set password + terms
+- [ ] **Register Step 3**: OTP verification (6-box input, countdown timer, resend)
+- [ ] **Forgot Password**: email → OTP → new password
+- [ ] **2FA Challenge screen**: 6-digit code
+- [ ] Route protection middleware
+- [ ] App shell layout (bottom nav + top bar)
+- [ ] **Onboarding flow**: avatar upload + bio + follow suggestions
+- [ ] Unit tests: auth forms, OTP input component
+- [ ] Integration tests: login flow, register flow
+
+### Phase 2 — Feed, Posts & Stories (Week 2)
+**Goal:** Users can see, create, and interact with posts and stories.
+
+- [ ] Feed API module + React Query infinite scroll
+- [ ] `FeedList` with virtual list (good performance at 1000+ posts)
+- [ ] `PostCard`: avatar, name, level badge, content, media grid, timestamp
+- [ ] Reaction bar: tap-to-like, long-press emoji picker (spring animation)
+- [ ] Optimistic reactions (instant update → sync with server)
+- [ ] Comments: bottom sheet, paginated, reply threads (2 levels)
+- [ ] `CreatePostSheet`: text + media upload + visibility picker
+- [ ] Post detail page (`/post/[postId]`)
+- [ ] Stories tray (horizontal scroll, colored ring = unseen)
+- [ ] Story viewer: full-screen, progress bars, swipe left/right, tap to advance
+- [ ] Story creator: camera/gallery pick + caption
+- [ ] Story highlights on profile
+- [ ] Bookmark toggle (optimistic)
+- [ ] Pull-to-refresh on feed
+- [ ] "New posts available" banner
+- [ ] Share sheet (copy link, share to DM)
+- [ ] Unit tests: PostCard, ReactionBar, StoryRing
+- [ ] Integration tests: create post, react to post, view story
+
+### Phase 3 — Profile & Discover (Week 2-3)
+**Goal:** Full profile pages, follow/unfollow, search, and discover.
+
+- [ ] Own profile: header, stats, tabs (Posts | Reels | Highlights | Bookmarks)
+- [ ] Edit profile: avatar upload, bio edit, corper tag toggle
+- [ ] `LevelBadge`: OTONDO/KOPA/CORPER with distinct colors
+- [ ] `CorperTagBadge`: state serving overlay on avatar
+- [ ] Verified badge (blue checkmark)
+- [ ] Other user profile: follow/unfollow button, message button
+- [ ] Followers/following lists (paginated)
+- [ ] Block/unblock user
+- [ ] Discover page: search bar + corpers in state + suggestions
+- [ ] Search: users, posts, listings (debounced, cursor-paginated)
+- [ ] Reels feed (vertical full-screen scroll, TikTok-style)
+- [ ] Unit tests: ProfileHeader, LevelBadge, FollowButton
+
+### Phase 4 — Messaging (Week 3)
+**Goal:** Real-time DMs and group chats feel as smooth as WhatsApp.
+
+- [ ] Socket.IO provider (connect on auth, disconnect on logout)
+- [ ] Conversations list (ordered by latest, pinned at top)
+- [ ] Conversation item: avatar, last message, timestamp, unread badge
+- [ ] Long-press sheet: archive, pin, mute, delete
+- [ ] DM chat screen: message bubbles, read status, reply-to
+- [ ] Message types: text, image, voice note, video, file
+- [ ] Voice note recorder (hold to record, swipe to cancel, waveform)
+- [ ] Voice note player with progress bar
+- [ ] "Typing…" indicator
+- [ ] Optimistic messages (show immediately, confirm on delivery)
+- [ ] Failed message retry
+- [ ] Group chat: sender name on bubbles, group info sheet
+- [ ] Add/remove participants (admin only)
+- [ ] Media preview (full-screen tap to zoom)
+- [ ] Create DM / Create Group screen
+- [ ] Online / last seen status
+- [ ] Read receipts (single/double/blue ticks)
+- [ ] Unit tests: MessageBubble, VoiceNoteRecorder
+- [ ] Integration tests: send message, receive via socket, read receipt
+
+### Phase 5 — Notifications (Week 3-4)
+**Goal:** In-app and push notifications working end to end.
+
+- [ ] Notification list (cursor-paginated)
+- [ ] Notification types with proper icons and deep links
+- [ ] Unread count badge on bottom nav bell
+- [ ] Mark as read (individual + all)
+- [ ] Firebase FCM integration (request permission, register token)
+- [ ] FCM token registration on login, removal on logout
+- [ ] Background push handling (Next.js service worker + Firebase)
+- [ ] In-app toast for new notifications while app is open
+- [ ] Unit tests: NotificationItem, badge count
+
+### Phase 6 — Calls (Week 4)
+**Goal:** Voice and video calls via Agora feel native.
+
+- [ ] Agora Web SDK integration
+- [ ] Call initiation (REST API call + enter Agora channel)
+- [ ] Incoming call overlay (full-screen, green accept / red reject)
+- [ ] Active call screen: video feed, mute, speaker, flip, end
+- [ ] Call duration timer
+- [ ] Call log in conversation header
+- [ ] Missed call notification
+- [ ] Token refresh mid-call
+- [ ] Graceful handling of permissions denied (microphone/camera)
+- [ ] Unit tests: CallControls component
+
+### Phase 7 — Marketplace (Week 4-5)
+**Goal:** Mami Market fully functional.
+
+- [ ] Market home: category chips, search, filter/sort, listing grid
+- [ ] Listing card: image, title, price, seller, state, time
+- [ ] Listing detail: image gallery, seller card, inquiry button
+- [ ] Create listing form (multipart upload to Cloudinary)
+- [ ] My listings (active/sold/inactive tabs)
+- [ ] Edit / delete listing
+- [ ] Send inquiry → opens DM with context
+- [ ] Seller application form (ID upload)
+- [ ] Application status screen
+- [ ] Unit tests: ListingCard, CategoryChips, PriceInput
+
+### Phase 8 — Opportunities (Week 5)
+**Goal:** Opportunities board like LinkedIn Lite.
+
+- [ ] Opportunities feed (filter by type)
+- [ ] Create opportunity form
+- [ ] Opportunity detail page
+- [ ] Save/unsave opportunity
+- [ ] Apply (cover letter input)
+- [ ] My saved + my applications tabs
+- [ ] Application status updates
+- [ ] Unit tests: OpportunityCard, ApplicationStatus
+
+### Phase 9 — Subscriptions & Premium Features (Week 5)
+**Goal:** Users can subscribe via Paystack; premium features gate correctly.
+
+- [ ] Plans page with clear benefit comparison
+- [ ] Paystack payment modal (inline embed)
+- [ ] Payment success/failure screens
+- [ ] `PremiumGate` component (blur + CTA overlay for locked features)
+- [ ] Current subscription status display
+- [ ] Cancel subscription flow
+- [ ] Subscription history
+- [ ] Level display and progression card on profile
+- [ ] Unit tests: PlanCard, PremiumGate
+
+### Phase 10 — Settings & Security (Week 5-6)
+**Goal:** Complete settings screens.
+
+- [ ] Settings main menu (grouped sections)
+- [ ] Change password form
+- [ ] 2FA enable/disable flow (QR code display, TOTP input)
+- [ ] Active sessions list + revoke
+- [ ] Block list management
+- [ ] Notifications settings (toggles per event type)
+- [ ] Dark mode toggle (persisted to localStorage)
+- [ ] Delete account confirmation flow
+- [ ] Logout
+
+### Phase 11 — PWA, Performance & Polish (Week 6)
+**Goal:** App is installable, fast, and polished.
+
+- [ ] Service worker caching strategies finalized
+- [ ] Install prompt ("Add to Home Screen") — custom UI
+- [ ] Offline fallback page
+- [ ] Skeleton loaders on all list/card components
+- [ ] Image lazy loading with blur placeholder
+- [ ] Bundle analysis + code splitting audit
+- [ ] Core Web Vitals: LCP < 2.5s, FID < 100ms, CLS < 0.1
+- [ ] Lighthouse PWA score ≥ 90
+- [ ] All inputs verified no-zoom on iOS Safari + Android Chrome
+- [ ] Dark mode complete across all screens
+- [ ] Accessibility audit (WCAG AA contrast, ARIA labels, keyboard nav)
+- [ ] Haptic feedback on key actions (via navigator.vibrate)
+
+### Phase 12 — Testing & Deployment (Week 6)
+**Goal:** Full test coverage, deployed on Vercel/Railway.
+
+- [ ] Unit test coverage ≥ 80% on components and hooks
+- [ ] Integration tests for all major user flows
+- [ ] Playwright E2E: register, login, post, message, marketplace
+- [ ] Local server final smoke test
+- [ ] Production deployment (Vercel recommended)
+- [ ] Environment variables configured
+- [ ] Railway backend CORS updated to include Vercel URL
+- [ ] PWA install test on physical iOS + Android device
+- [ ] Production smoke test for all phases
+
+---
+
+## Environment Variables
+
+```env
+# .env.local
+NEXT_PUBLIC_API_URL=https://corpers-connect-server-production.up.railway.app
+NEXT_PUBLIC_WS_URL=https://corpers-connect-server-production.up.railway.app
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=do4przxhk
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=corpers_connect
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_live_xxxx
+NEXT_PUBLIC_AGORA_APP_ID=xxxx
+NEXT_PUBLIC_FIREBASE_API_KEY=xxxx
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=xxxx
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=xxxx
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=xxxx
+NEXT_PUBLIC_FIREBASE_APP_ID=xxxx
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=xxxx
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+---
+
+## Testing Strategy
+
+### Unit Tests (Jest + React Testing Library)
+- All shared UI components (render, props, interaction)
+- All custom hooks (via `renderHook`)
+- All utility functions
+- Auth form validation
+
+### Integration Tests (Jest + MSW for API mocking)
+- Auth flow: register → OTP → onboarding
+- Feed: load posts, react, comment
+- Messaging: send message, receive via socket mock
+- Marketplace: browse, create listing
+
+### E2E Tests (Playwright)
+- Full happy path: register → login → create post → react → message → logout
+- Marketplace: create listing → send inquiry
+- Subscription: view plans (payment flow skipped in CI)
+
+### Test file convention
+```
+src/__tests__/unit/components/PostCard.test.tsx
+src/__tests__/unit/hooks/useFeed.test.ts
+src/__tests__/integration/auth.test.tsx
+src/__tests__/e2e/auth.spec.ts
+```
+
+---
+
+## Key Technical Decisions
+
+| Decision | Choice | Reason |
+|---|---|---|
+| App Router vs Pages Router | App Router | Server Components, layouts, streaming |
+| State management | Zustand | Simple, no boilerplate, works with SSR |
+| Server state | TanStack Query v5 | Best-in-class caching, infinite scroll, optimistic UI |
+| Animations | Framer Motion | Spring physics, layout animations, easy gesture handling |
+| Font | Plus Jakarta Sans | Modern, highly legible at small sizes, works on all platforms |
+| Icons | Lucide React | Tree-shakeable, consistent stroke width, large set |
+| Uploadcare vs Cloudinary | Cloudinary | Already in use on backend, image transformation URL API |
+| Bottom nav vs top nav | Bottom nav | Thumb-friendly; industry standard for mobile social apps |
+| Dark mode | CSS variables + Tailwind dark: | Instant switch, no flash on load |
+| Token storage | Access in memory + refresh in cookie | Best security/UX tradeoff |
+| Infinite scroll | Intersection Observer | Native, performant, no extra library |
+| Virtual list | TanStack Virtual | Required for 1000+ post feeds without jank |
+
+---
+
+## Splash Screen
+
+Every cold start of the app shows an animated splash screen before the main UI:
+
+### Behavior
+1. Shows immediately on app load (before React hydrates)
+2. Logo scales from 0.85 → 1.0 + fade-in (Framer Motion spring)
+3. App name fades in 200ms after logo
+4. Tagline "Connecting Nigeria's Corps Members" fades in 400ms after
+5. Animated green pulse ring around logo
+6. Minimum visible duration: **1.5 seconds** (even if app loads faster)
+7. Smooth opacity fade-out transitions to the app
+8. Only shown on **cold start** (not on page navigations within the app)
+
+### Native PWA Splash (Install experience)
+- `manifest.json` sets `background_color: #008751` + `theme_color: #008751`
+- iOS: `apple-touch-startup-image` meta tags for all screen sizes
+- Android: Manifest splash generated from `icon-512x512.png` + `background_color`
+- This covers the native OS-level splash when launching from home screen
+
+### Implementation
+```
+src/components/splash/SplashScreen.tsx   — animated component
+src/app/layout.tsx                        — renders <SplashScreen> outside main content
+```
+
+---
+
+## PWA Install Prompt
+
+A custom native-feeling install prompt replaces the browser's default install banner.
+
+### Behavior
+- **Android Chrome / Edge**: Captures `beforeinstallprompt` event → shows custom bottom sheet
+- **iOS Safari**: Detects iOS + not in standalone → shows custom instructions sheet ("Tap Share → Add to Home Screen")
+- **Already installed**: Detects `display-mode: standalone` → never shows
+- **Timing**: Appears after **5 seconds** of first visit (user has had a chance to look around)
+- **Dismiss logic**:
+  - "Install Now" → triggers native install or shows iOS instructions
+  - "Maybe Later" → hides for **7 days** (stored in localStorage)
+  - "Don't show again" → hides permanently (stored in localStorage)
+- **Settings menu** always has an "Install App" option regardless of dismiss state
+
+### Visual Design
+- Bottom sheet slides up from bottom (Framer Motion)
+- App icon (64px) + name + tagline
+- Two CTAs: green "Install App" button + grey "Maybe Later" link
+- Pill handle at top (drag-to-dismiss)
+- Backdrop overlay (semi-transparent)
+
+### Implementation
+```
+src/hooks/usePWAInstall.ts               — captures event, detects iOS, stores dismiss state
+src/components/pwa/InstallPrompt.tsx     — bottom sheet UI
+src/app/layout.tsx                        — renders <InstallPrompt> globally
+```
+
+---
+
+## Phase Status Overview
+
+| Phase | Feature | Status |
+|---|---|---|
+| Phase 1 | Foundation + Auth | 🔴 Not Started |
+| Phase 2 | Feed, Posts, Stories | 🔴 Not Started |
+| Phase 3 | Profile + Discover | 🔴 Not Started |
+| Phase 4 | Messaging | 🔴 Not Started |
+| Phase 5 | Notifications | 🔴 Not Started |
+| Phase 6 | Calls | 🔴 Not Started |
+| Phase 7 | Marketplace | 🔴 Not Started |
+| Phase 8 | Opportunities | 🔴 Not Started |
+| Phase 9 | Subscriptions | 🔴 Not Started |
+| Phase 10 | Settings + Security | 🔴 Not Started |
+| Phase 11 | PWA + Performance | 🔴 Not Started |
+| Phase 12 | Testing + Deploy | 🔴 Not Started |
+
+---
+
+## Backend API Quick Reference
+
+**Base:** `https://corpers-connect-server-production.up.railway.app/api/v1`
+
+| Module | Endpoints |
+|---|---|
+| Auth | POST /auth/login, /auth/register/initiate, /auth/register/verify, /auth/refresh, /auth/logout, etc. |
+| Users | GET/PATCH /users/me, POST /users/me/avatar, GET /users/:id, POST /users/:id/follow, etc. |
+| Feed | GET /feed |
+| Posts | POST/GET/PATCH/DELETE /posts/:id, reactions, comments, bookmarks |
+| Stories | POST/GET /stories, view, highlight |
+| Reels | POST/GET /reels, /reels/explore |
+| Messaging | POST/GET /conversations, messages, participants |
+| Notifications | GET /notifications, mark read, unread count |
+| Marketplace | GET/POST /marketplace/listings, apply seller, inquire |
+| Calls | POST/GET /calls, accept, reject, end |
+| Opportunities | GET/POST /opportunities, save, apply |
+| Subscriptions | GET /subscriptions/plans, initialize, verify |
+| Discover | GET /discover/corpers, /discover/suggestions, /discover/search |
+
+Full API docs: `../corpers-connect-backend/API_DOCS.md`
+Postman collection: `../corpers-connect-backend/POSTMAN_COLLECTION.json`
+External docs: `../corpers-connect-backend/EXTERNAL_API_DOCS.md`
