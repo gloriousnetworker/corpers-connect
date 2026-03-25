@@ -89,9 +89,10 @@ export function isValidStateCode(code: string): boolean {
 
 // ── Number formatting ─────────────────────────────────────────────────────
 export function formatCount(count: number): string {
-  if (count < 1000) return count.toString();
-  if (count < 1_000_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-  return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  const n = Number.isFinite(count) ? count : 0;
+  if (n < 1000) return n.toString();
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
 }
 
 // ── File utilities ────────────────────────────────────────────────────────
