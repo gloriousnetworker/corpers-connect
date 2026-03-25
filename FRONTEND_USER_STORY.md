@@ -1,8 +1,8 @@
 # Corpers Connect — Frontend (User App) User Story Document
 
-**Version:** 2.0.0
+**Version:** 4.0.0
 **Date:** 2026-03-25
-**Status:** Phase 2 Complete — Active Development
+**Status:** Phase 4 Complete — Messaging Live
 
 ---
 
@@ -678,3 +678,69 @@ This section documents the manual testing checklist for each completed phase. Us
 | 1 | Upload a high-resolution photo as a story | Photo displayed at full quality (`quality={95}`, Cloudinary `q_auto:best,f_auto`) |
 | 2 | Upload a video | Video plays in full quality; no compression artifacts visible |
 | 3 | Open a story on desktop | Image displayed sharp and correctly sized within max-width 480px container |
+
+---
+
+### Phase 4 — Messaging
+
+#### 7.20 Messages Layout
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap the Messages tab (mobile) | Full-screen messages section; no TopBar overlap; BottomNav hidden behind chat UI |
+| 2 | Open on desktop (≥ 1024px) | Left column (w-80) shows conversation list; right panel shows chat or empty state |
+| 3 | Open Messages with no conversations | Empty state: icon + "No conversations yet" + prompt text |
+| 4 | Tap the pencil/compose icon | New Conversation modal opens |
+| 5 | Search for a user in New Conversation modal | Results list updates in real time |
+| 6 | Select a user and tap "Message" | Modal closes; chat view opens for the new conversation |
+
+#### 7.21 Conversation List
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Have multiple conversations | Listed most recent first; each shows avatar, name, last message preview, timestamp |
+| 2 | Conversation with unread messages | Bold name + green badge with count |
+| 3 | Count exceeds 99 | Badge shows "99+" |
+| 4 | Other user is online | Small green dot on their avatar |
+| 5 | Last message was an image | Preview shows "📷 Photo" |
+| 6 | Last message was deleted | Preview shows "Message deleted" |
+| 7 | Own last message | Preview prefixed with "You: ..." |
+| 8 | Type in the search bar | List filters to matching names in real time |
+| 9 | Search term matches nothing | "No results found" empty state |
+| 10 | Click/tap a conversation | Chat view opens for that conversation; item gets active highlight (green tint) |
+
+#### 7.22 Chat View
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open a conversation | Header shows partner avatar, name, online status; messages load from bottom (most recent visible) |
+| 2 | Scroll up | Older messages load automatically (infinite scroll pagination) |
+| 3 | Reach the top | "Beginning of conversation" label appears |
+| 4 | Type a message and send | Message appears immediately (optimistic, slightly dimmed), then confirmed once server responds |
+| 5 | Other user sends a message while chat is open | New bubble appears at the bottom in real time via Socket.IO |
+| 6 | Other user starts typing | "Typing…" indicator appears below messages |
+| 7 | Other user stops typing | Indicator disappears after a short delay |
+
+#### 7.23 Message Bubbles
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Own message | Right-aligned, green bubble |
+| 2 | Other user's message | Left-aligned, surface-colored bubble with avatar |
+| 3 | Group conversation | Sender first name shown above each message bubble (others only) |
+| 4 | Long-press / right-click own message | Context menu: Reply, Edit (text only), Delete |
+| 5 | Long-press / right-click other's message | Context menu: Reply only |
+| 6 | Tap Reply in menu | "Replying to: [original text]" strip appears above input |
+| 7 | Send reply | Reply preview shown inside the new bubble |
+| 8 | Tap Edit | Input pre-filled; sends `PATCH /messages/:id`; bubble shows "(edited)" label |
+| 9 | Tap Delete | Message content replaced with "This message was deleted" |
+| 10 | Deleted message from list preview | Shows "Message deleted" in conversation list |
+
+#### 7.24 Real-Time & Connection
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open two browser tabs as different users | Message sent in tab 1 appears instantly in tab 2 |
+| 2 | Lose internet briefly and reconnect | Socket reconnects automatically; no UI stuck in error state |
+| 3 | Log out | Socket disconnects cleanly; no lingering event listeners |
+| 4 | Log back in | Socket reconnects with fresh token |

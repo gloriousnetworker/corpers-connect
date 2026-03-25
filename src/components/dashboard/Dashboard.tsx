@@ -25,6 +25,18 @@ export default function Dashboard() {
   const activeSection = useUIStore((s) => s.activeSection);
   const Section = SECTIONS[activeSection] ?? FeedSection;
 
+  // Messages section needs full-height layout — no scroll padding wrappers
+  if (activeSection === 'messages') {
+    return (
+      <div
+        className="flex flex-col overflow-hidden"
+        style={{ height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))' }}
+      >
+        <MessagesSection />
+      </div>
+    );
+  }
+
   return (
     <div className="pt-bar pb-nav">
       {/* 12 px breathing room so content never sits flush against the mobile TopBar */}

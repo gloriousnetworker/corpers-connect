@@ -312,6 +312,12 @@
 
 /* ── Desktop layout overrides (lg+) ─────────────────────────────────────── */
 @media (min-width: 1024px) {
+  :root {
+    /* No fixed bars on desktop — zero out so height calcs work correctly */
+    --top-bar-height: 0px;
+    --bottom-nav-height: 0px;
+  }
+
   /* On desktop there is no fixed TopBar or BottomNav — strip the large mobile
      offsets and replace with comfortable breathing room on every page. */
   .pt-bar {

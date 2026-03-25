@@ -1,0 +1,260 @@
+import api from './client';
+import type { ApiResponse, PaginatedData } from '@/types/api';
+import type { Conversation, ConversationParticipant, Message } from '@/types/models';
+import { ConversationType, MessageType, ParticipantRole } from '@/types/enums';
+
+// ── Raw backend shapes ────────────────────────────────────────────────────────
+
+interface RawUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string | null;
+  isVerified: boolean;
+}
+
+interface RawMessageRead {
+  userId: string;
+  readAt: string;
+}
+
+interface RawMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  sender: RawUser;
+  content?: string | null;
+  type: string;
+  mediaUrl?: string | null;
+  replyToId?: string | null;
+  replyTo?: Omit<RawMessage, 'replyTo'> | null;
+  isEdited: boolean;
+  isDeleted: boolean;
+  deliveredAt?: string | null;
+  reads?: RawMessageRead[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RawParticipant {
+  conversationId: string;
+  userId: string;
+  user: RawUser;
+  role: string;
+  joinedAt: string;
+  isArchived: boolean;
+  isPinned: boolean;
+  isMuted: boolean;
+  mutedUntil?: string | null;
+  lastReadAt?: string | null;
+}
+
+interface RawConversation {
+  id: string;
+  type: string;
+  name?: string | null;
+  picture?: string | null;
+  description?: string | null;
+  inviteToken?: string | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+  participants: RawParticipant[];
+  messages: RawMessage[];
+}
+
+interface RawParticipantEntry {
+  conversationId: string;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  isArchived: boolean;
+  isPinned: boolean;
+  isMuted: boolean;
+  mutedUntil?: string | null;
+  lastReadAt?: string | null;
+  conversation: RawConversation;
+}
+
+// ── Normalise helpers ─────────────────────────────────────────────────────────
+
+export function normalizeMessage(m: RawMessage): Message {
+  return {
+    id: m.id,
+    conversationId: m.conversationId,
+    senderId: m.senderId,
+    sender: m.sender as Message['sender'],
+    content: m.content,
+    type: (m.type as MessageType) ?? MessageType.TEXT,
+    mediaUrl: m.mediaUrl,
+    replyToId: m.replyToId,
+    replyTo: m.replyTo ? normalizeMessage(m.replyTo as RawMessage) : null,
+    isEdited: m.isEdited,
+    isDeleted: m.isDeleted,
+    deliveredAt: m.deliveredAt,
+    readBy: (m.reads ?? []).map((r) => r.userId),
+    createdAt: m.createdAt,
+    updatedAt: m.updatedAt,
+  };
+}
+
+function normalizeParticipant(p: RawParticipant): ConversationParticipant {
+  return {
+    conversationId: p.conversationId,
+    userId: p.userId,
+    user: p.user as ConversationParticipant['user'],
+    role: (p.role as ParticipantRole) ?? ParticipantRole.MEMBER,
+    joinedAt: p.joinedAt,
+    isArchived: p.isArchived,
+    isPinned: p.isPinned,
+    isMuted: p.isMuted,
+    lastReadAt: p.lastReadAt,
+  };
+}
+
+function normalizeConvFromEntry(entry: RawParticipantEntry): Conversation {
+  const c = entry.conversation;
+  return {
+    id: c.id,
+    type: (c.type as ConversationType) ?? ConversationType.DM,
+    name: c.name,
+    picture: c.picture,
+    description: c.description,
+    participants: c.participants.map(normalizeParticipant),
+    lastMessage: c.messages.length > 0 ? normalizeMessage(c.messages[0]) : null,
+    unreadCount: c.unreadCount ?? 0,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+function normalizeConvDirect(c: RawConversation): Conversation {
+  return {
+    id: c.id,
+    type: (c.type as ConversationType) ?? ConversationType.DM,
+    name: c.name,
+    picture: c.picture,
+    description: c.description,
+    participants: c.participants.map(normalizeParticipant),
+    lastMessage: c.messages.length > 0 ? normalizeMessage(c.messages[0]) : null,
+    unreadCount: c.unreadCount ?? 0,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+// ── API functions ─────────────────────────────────────────────────────────────
+
+/** GET /conversations — list all conversations, sorted by latest activity */
+export async function getConversations(): Promise<Conversation[]> {
+  const { data } = await api.get<ApiResponse<RawParticipantEntry[]>>('/conversations');
+  return (data.data ?? []).map(normalizeConvFromEntry);
+}
+
+/** GET /conversations/:id */
+export async function getConversation(conversationId: string): Promise<Conversation> {
+  const { data } = await api.get<ApiResponse<RawParticipantEntry>>(`/conversations/${conversationId}`);
+  return normalizeConvFromEntry(data.data);
+}
+
+/** POST /conversations — create DM or GROUP */
+export async function createConversation(
+  payload:
+    | { type: 'DM'; participantId: string }
+    | { type: 'GROUP'; name: string; description?: string; participantIds: string[] }
+): Promise<Conversation> {
+  const { data } = await api.post<ApiResponse<RawConversation>>('/conversations', payload);
+  return normalizeConvDirect(data.data);
+}
+
+/** GET /conversations/:id/messages — cursor-paginated, newest first */
+export async function getMessages(
+  conversationId: string,
+  params: { cursor?: string; limit?: number } = {}
+): Promise<PaginatedData<Message>> {
+  const { data } = await api.get<ApiResponse<PaginatedData<RawMessage>>>(
+    `/conversations/${conversationId}/messages`,
+    { params: { cursor: params.cursor, limit: params.limit ?? 30 } }
+  );
+  return {
+    items: (data.data.items ?? []).map(normalizeMessage),
+    nextCursor: data.data.nextCursor,
+    hasMore: data.data.hasMore,
+  };
+}
+
+/** POST /conversations/:id/messages */
+export async function sendMessage(
+  conversationId: string,
+  payload: {
+    content?: string;
+    type?: string;
+    mediaUrl?: string;
+    replyToId?: string;
+  }
+): Promise<Message> {
+  const { data } = await api.post<ApiResponse<RawMessage>>(
+    `/conversations/${conversationId}/messages`,
+    payload
+  );
+  return normalizeMessage(data.data);
+}
+
+/** PATCH /conversations/:id/messages/:msgId — edit message */
+export async function editMessage(
+  conversationId: string,
+  messageId: string,
+  content: string
+): Promise<Message> {
+  const { data } = await api.patch<ApiResponse<RawMessage>>(
+    `/conversations/${conversationId}/messages/${messageId}`,
+    { content }
+  );
+  return normalizeMessage(data.data);
+}
+
+/** DELETE /conversations/:id/messages/:msgId */
+export async function deleteMessage(
+  conversationId: string,
+  messageId: string,
+  forAll = false
+): Promise<void> {
+  await api.delete(
+    `/conversations/${conversationId}/messages/${messageId}`,
+    { params: { for: forAll ? 'all' : 'me' } }
+  );
+}
+
+/** POST /conversations/:id/read — mark messages as read */
+export async function markRead(conversationId: string, messageIds: string[]): Promise<void> {
+  await api.post(`/conversations/${conversationId}/read`, { messageIds });
+}
+
+/** PATCH /conversations/:id/settings — archive, pin, mute */
+export async function updateConversationSettings(
+  conversationId: string,
+  settings: {
+    isArchived?: boolean;
+    isPinned?: boolean;
+    isMuted?: boolean;
+    mutedUntil?: string;
+  }
+): Promise<void> {
+  await api.patch(`/conversations/${conversationId}/settings`, settings);
+}
+
+/** DELETE /conversations/:id/participants/me — leave group */
+export async function leaveConversation(conversationId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}/participants/me`);
+}
+
+/** GET /users/search — search users to start a DM */
+export async function searchUsers(
+  query: string
+): Promise<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; stateCode: string; servingState: string }[]> {
+  const { data } = await api.get<ApiResponse<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; stateCode: string; servingState: string }[]>>(
+    '/users',
+    { params: { search: query, limit: 20 } }
+  );
+  return data.data ?? [];
+}

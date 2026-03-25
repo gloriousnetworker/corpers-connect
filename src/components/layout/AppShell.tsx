@@ -4,6 +4,7 @@ import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 import DesktopSideNav from './DesktopSideNav';
 import RightPanel from './RightPanel';
+import SocketInitializer from './SocketInitializer';
 
 /**
  * AppShell — single-render layout shell for the authenticated SPA dashboard.
@@ -20,6 +21,9 @@ import RightPanel from './RightPanel';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
+      {/* Socket.IO connection for real-time messaging */}
+      <SocketInitializer />
+
       {/* Mobile-only top bar — hidden on desktop via lg:hidden inside TopBar */}
       <TopBar />
 

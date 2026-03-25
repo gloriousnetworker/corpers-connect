@@ -80,6 +80,82 @@ const mockComment = {
   updatedAt: '2024-01-15T11:00:00Z',
 };
 
+const mockOtherUser = {
+  id: 'user-456',
+  firstName: 'Amaka',
+  lastName: 'Obi',
+  profilePicture: null,
+  isVerified: false,
+};
+
+const mockConversation = {
+  id: 'conv-1',
+  type: 'DM',
+  name: null,
+  picture: null,
+  description: null,
+  inviteToken: null,
+  unreadCount: 0,
+  createdAt: '2024-01-15T10:00:00Z',
+  updatedAt: '2024-01-15T10:00:00Z',
+  participants: [
+    {
+      conversationId: 'conv-1',
+      // Use the same ID that tests mock for the current user
+      userId: 'user-123',
+      user: { ...mockUser, id: 'user-123' },
+      role: 'MEMBER',
+      joinedAt: '2024-01-15T10:00:00Z',
+      isArchived: false,
+      isPinned: false,
+      isMuted: false,
+      lastReadAt: null,
+    },
+    {
+      conversationId: 'conv-1',
+      userId: 'user-456',
+      user: mockOtherUser,
+      role: 'MEMBER',
+      joinedAt: '2024-01-15T10:00:00Z',
+      isArchived: false,
+      isPinned: false,
+      isMuted: false,
+      lastReadAt: null,
+    },
+  ],
+  messages: [],
+};
+
+const mockParticipantEntry = {
+  conversationId: 'conv-1',
+  userId: 'user-123',
+  role: 'MEMBER',
+  joinedAt: '2024-01-15T10:00:00Z',
+  isArchived: false,
+  isPinned: false,
+  isMuted: false,
+  lastReadAt: null,
+  conversation: mockConversation,
+};
+
+const mockMessage = {
+  id: 'msg-1',
+  conversationId: 'conv-1',
+  senderId: 'user-123',
+  sender: mockUser,
+  content: 'Hello there!',
+  type: 'TEXT',
+  mediaUrl: null,
+  replyToId: null,
+  replyTo: null,
+  isEdited: false,
+  isDeleted: false,
+  deliveredAt: '2024-01-15T10:01:00Z',
+  reads: [],
+  createdAt: '2024-01-15T10:01:00Z',
+  updatedAt: '2024-01-15T10:01:00Z',
+};
+
 export const handlers = [
   // ── Auth ────────────────────────────────────────────────────────────────
 
@@ -395,5 +471,107 @@ export const handlers = [
 
   http.get(`${API_URL}/stories/users/:userId/highlights`, () => {
     return HttpResponse.json({ success: true, data: [] });
+  }),
+
+  // ── Users search ──────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/users`, ({ request }) => {
+    const url = new URL(request.url);
+    const search = url.searchParams.get('search') ?? '';
+    const results = search.length >= 2
+      ? [
+          {
+            id: 'user-456',
+            firstName: 'Amaka',
+            lastName: 'Obi',
+            profilePicture: null,
+            isVerified: false,
+            stateCode: 'AB/23A/0042',
+            servingState: 'Abia',
+          },
+        ]
+      : [];
+    return HttpResponse.json({ success: true, data: results });
+  }),
+
+  // ── Conversations ─────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/conversations`, () => {
+    return HttpResponse.json({ success: true, data: [mockParticipantEntry] });
+  }),
+
+  http.get(`${API_URL}/conversations/:conversationId`, ({ params }) => {
+    return HttpResponse.json({
+      success: true,
+      data: { ...mockParticipantEntry, conversationId: params.conversationId },
+    });
+  }),
+
+  http.post(`${API_URL}/conversations`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...mockConversation,
+        id: 'conv-new',
+        type: (body.type as string) ?? 'DM',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }, { status: 201 });
+  }),
+
+  // ── Messages ──────────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/conversations/:conversationId/messages`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: { items: [mockMessage], nextCursor: null, hasMore: false },
+    });
+  }),
+
+  http.post(`${API_URL}/conversations/:conversationId/messages`, async ({ params, request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...mockMessage,
+        id: 'msg-new',
+        conversationId: params.conversationId,
+        content: (body.content as string) ?? '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }, { status: 201 });
+  }),
+
+  http.patch(`${API_URL}/conversations/:conversationId/messages/:messageId`, async ({ params, request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...mockMessage,
+        id: params.messageId,
+        conversationId: params.conversationId,
+        content: (body.content as string) ?? mockMessage.content,
+        isEdited: true,
+      },
+    });
+  }),
+
+  http.delete(`${API_URL}/conversations/:conversationId/messages/:messageId`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.post(`${API_URL}/conversations/:conversationId/read`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.patch(`${API_URL}/conversations/:conversationId/settings`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.delete(`${API_URL}/conversations/:conversationId/participants/me`, () => {
+    return HttpResponse.json({ success: true, data: null });
   }),
 ];
