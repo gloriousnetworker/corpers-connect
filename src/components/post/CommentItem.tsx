@@ -15,10 +15,11 @@ interface CommentItemProps {
   postId: string;
   comment: Comment;
   onReply?: (comment: Comment) => void;
+  onDeleted?: () => void;
   isReply?: boolean;
 }
 
-export default function CommentItem({ postId, comment, onReply, isReply = false }: CommentItemProps) {
+export default function CommentItem({ postId, comment, onReply, onDeleted, isReply = false }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(false);
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
@@ -30,6 +31,7 @@ export default function CommentItem({ postId, comment, onReply, isReply = false 
       queryClient.invalidateQueries({ queryKey: queryKeys.postComments(postId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) });
       toast.success('Comment deleted');
+      onDeleted?.();
     },
     onError: () => toast.error('Failed to delete comment'),
   });

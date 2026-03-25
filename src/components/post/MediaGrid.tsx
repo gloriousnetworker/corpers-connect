@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { getOptimisedUrl } from '@/lib/utils';
 
 interface MediaGridProps {
   urls: string[];
@@ -38,9 +39,10 @@ export default function MediaGrid({ urls }: MediaGridProps) {
             aria-label={`View image ${i + 1}`}
           >
             <Image
-              src={url}
+              src={getOptimisedUrl(url)}
               alt={`Post image ${i + 1}`}
               fill
+              quality={90}
               className="object-cover"
               sizes="(max-width: 680px) 50vw, 340px"
             />
@@ -54,26 +56,30 @@ export default function MediaGrid({ urls }: MediaGridProps) {
         ))}
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox — full-resolution viewer */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
           onClick={() => setLightbox(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white p-2 rounded-full bg-black/50 hover:bg-black/70"
+            className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             onClick={() => setLightbox(null)}
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="relative max-w-3xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={lightbox}
+          <div
+            className="relative w-full max-w-3xl"
+            style={{ maxHeight: '90dvh', aspectRatio: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getOptimisedUrl(lightbox)}
               alt="Full size"
-              width={800}
-              height={600}
-              className="object-contain w-full h-auto max-h-[85vh] rounded-xl"
+              className="object-contain w-full h-full max-h-[90dvh] rounded-xl"
+              style={{ maxHeight: '90dvh' }}
             />
           </div>
         </div>

@@ -6,6 +6,8 @@ import { X } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { reportPost } from '@/lib/api/posts';
+import ClientPortal from '@/components/ui/ClientPortal';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface ReportModalProps {
   postId: string;
@@ -38,15 +40,12 @@ export default function ReportModal({ postId, open, onClose }: ReportModalProps)
     onError: () => toast.error('Failed to submit report'),
   });
 
+  useBodyScrollLock(open);
+
   return (
+    <ClientPortal>
     <AnimatePresence>
       {open && (
-        /*
-         * Single overlay handles backdrop + centering via flexbox.
-         * Avoids the Framer Motion CSS-transform conflict that occurs when combining
-         * Tailwind's `top-1/2 -translate-y-1/2` (CSS transform) with Framer Motion
-         * animations (which overwrite the transform property entirely).
-         */
         <motion.div
           key="report-overlay"
           initial={{ opacity: 0 }}
@@ -124,5 +123,6 @@ export default function ReportModal({ postId, open, onClose }: ReportModalProps)
         </motion.div>
       )}
     </AnimatePresence>
+    </ClientPortal>
   );
 }

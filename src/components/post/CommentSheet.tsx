@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, CornerDownRight } from 'lucide-react';
+import EmojiPickerPopover from '@/components/ui/EmojiPickerPopover';
+import { useEmojiInsertion } from '@/hooks/useEmojiInsertion';
 import {
   useInfiniteQuery,
   useMutation,
@@ -17,12 +19,16 @@ import { getInitials } from '@/lib/utils';
 import CommentItem from './CommentItem';
 import type { Comment } from '@/types/models';
 import Image from 'next/image';
+import ClientPortal from '@/components/ui/ClientPortal';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface CommentSheetProps {
   postId: string;
   commentsCount: number;
   open: boolean;
   onClose: () => void;
+  onCommentAdded?: () => void;
+  onCommentDeleted?: () => void;
 }
 
 export default function CommentSheet({
@@ -30,10 +36,13 @@ export default function CommentSheet({
   commentsCount,
   open,
   onClose,
+  onCommentAdded,
+  onCommentDeleted,
 }: CommentSheetProps) {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const insertEmoji = useEmojiInsertion(inputRef, text, setText);
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
@@ -59,6 +68,7 @@ export default function CommentSheet({
       queryClient.invalidateQueries({ queryKey: queryKeys.postComments(postId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
+      onCommentAdded?.();
     },
     onError: () => toast.error('Failed to post comment'),
   });
@@ -80,7 +90,10 @@ export default function CommentSheet({
     ? getInitials(currentUser.firstName, currentUser.lastName)
     : 'C';
 
+  useBodyScrollLock(open);
+
   return (
+    <ClientPortal>
     <AnimatePresence>
       {open && (
         <>
@@ -160,6 +173,7 @@ export default function CommentSheet({
                     setReplyTo(c);
                     inputRef.current?.focus();
                   }}
+                  onDeleted={onCommentDeleted}
                 />
               ))}
 
@@ -217,15 +231,18 @@ export default function CommentSheet({
                 )}
               </div>
 
-              <input
-                ref={inputRef}
-                type="text"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={replyTo ? `Reply to ${replyTo.author.firstName}...` : 'Write a comment...'}
-                className="flex-1 bg-surface-alt rounded-full px-4 py-2 text-sm text-foreground placeholder:text-foreground-muted outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary/30 transition-all"
-                maxLength={500}
-              />
+              <div className="flex-1 flex items-center gap-1 bg-surface-alt rounded-full px-4 py-2 border border-transparent focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={replyTo ? `Reply to ${replyTo.author.firstName}...` : 'Write a comment...'}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-foreground-muted outline-none"
+                  maxLength={500}
+                />
+                <EmojiPickerPopover onEmojiSelect={insertEmoji} placement="above" />
+              </div>
 
               <button
                 type="submit"
@@ -240,5 +257,6 @@ export default function CommentSheet({
         </>
       )}
     </AnimatePresence>
+    </ClientPortal>
   );
 }

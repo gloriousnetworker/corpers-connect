@@ -71,6 +71,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <InstallPrompt />
         </Providers>
+        {/* Portal root — all modals/sheets/overlays render here to escape stacking contexts */}
+        <div id="modal-root" />
       </body>
     </html>
   );

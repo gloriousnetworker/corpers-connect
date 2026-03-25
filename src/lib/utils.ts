@@ -106,6 +106,18 @@ export function getFileExtension(filename: string): string {
 }
 
 // ── URL utilities ─────────────────────────────────────────────────────────
+
+/**
+ * Inserts Cloudinary delivery transformations (high-quality auto-format) into
+ * a full Cloudinary URL so images are served at best quality without re-uploading.
+ * Non-Cloudinary URLs are returned unchanged.
+ */
+export function getOptimisedUrl(url: string): string {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  // Insert quality/format transforms right after /upload/
+  return url.replace('/upload/', '/upload/q_auto:best,f_auto/');
+}
+
 export function buildCloudinaryUrl(
   publicId: string,
   options: { width?: number; height?: number; quality?: number } = {}

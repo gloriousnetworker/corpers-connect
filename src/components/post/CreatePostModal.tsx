@@ -18,6 +18,10 @@ import {
 } from '@/lib/constants';
 import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
+import ClientPortal from '@/components/ui/ClientPortal';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import EmojiPickerPopover from '@/components/ui/EmojiPickerPopover';
+import { useEmojiInsertion } from '@/hooks/useEmojiInsertion';
 
 interface CreatePostModalProps {
   editPost?: Post;
@@ -58,6 +62,8 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const [uploading, setUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const insertEmoji = useEmojiInsertion(textareaRef, content, setContent);
 
   const userInitials = currentUser
     ? getInitials(currentUser.firstName, currentUser.lastName)
@@ -134,7 +140,10 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const selectedVisibility = VISIBILITY_OPTIONS.find((o) => o.value === visibility)!;
   const VisIcon = selectedVisibility.icon;
 
+  useBodyScrollLock(isOpen);
+
   return (
+    <ClientPortal>
     <AnimatePresence>
       {isOpen && (
         /*
@@ -222,6 +231,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
 
               {/* Text area */}
               <textarea
+                ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={`What's on your mind, ${currentUser?.firstName ?? 'Corper'}?`}
@@ -236,7 +246,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                 <div className="grid grid-cols-3 gap-2">
                   {existingMediaUrls.map((url, i) => (
                     <div key={`existing-${i}`} className="relative aspect-square rounded-xl overflow-hidden bg-surface-alt">
-                      <Image src={url} alt="" fill className="object-cover" />
+                      <Image src={url} alt="" fill quality={90} className="object-cover" />
                       <button
                         onClick={() => removeExistingMedia(i)}
                         className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
@@ -285,6 +295,8 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                   className="hidden"
                   onChange={handleFileChange}
                 />
+                {/* Emoji picker */}
+                <EmojiPickerPopover onEmojiSelect={insertEmoji} placement="above" />
               </div>
 
               <div className="flex items-center gap-3">
@@ -316,5 +328,6 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
         </motion.div>
       )}
     </AnimatePresence>
+    </ClientPortal>
   );
 }
