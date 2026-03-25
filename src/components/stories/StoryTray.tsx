@@ -47,6 +47,8 @@ export default function StoryTray() {
             author={ownGroup.author}
             hasUnviewed={ownGroup.hasUnviewed}
             label="Your story"
+            previewUrl={ownGroup.stories[0]?.mediaUrl}
+            previewMediaType={ownGroup.stories[0]?.mediaType}
             onClick={() => {
               const idx = groups.findIndex((g) => g.author.id === user.id);
               if (idx !== -1) handleViewGroup(idx);
@@ -64,6 +66,8 @@ export default function StoryTray() {
         {/* Other users' story groups */}
         {otherGroups.map((group) => {
           const idx = groups.findIndex((g) => g.author.id === group.author.id);
+          // Show the first (most recent) story as a thumbnail in the ring
+          const latestStory = group.stories[0];
           return (
             <StoryRing
               key={group.author.id}
@@ -71,6 +75,8 @@ export default function StoryTray() {
               hasUnviewed={group.hasUnviewed}
               allViewed={!group.hasUnviewed}
               label={group.author.firstName}
+              previewUrl={latestStory?.mediaUrl}
+              previewMediaType={latestStory?.mediaType}
               onClick={() => handleViewGroup(idx)}
             />
           );
