@@ -34,9 +34,12 @@ api.interceptors.request.use(
     if (_accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${_accessToken}`;
     }
-    // Disable timeout for file uploads so large videos don't time out
+    // For file uploads: remove the instance-level Content-Type so the browser's
+    // XHR layer sets the correct multipart/form-data; boundary=... automatically.
+    // Also disable the timeout so large videos don't abort mid-upload.
     if (config.data instanceof FormData) {
       config.timeout = 0;
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
     }
     return config;
   },
