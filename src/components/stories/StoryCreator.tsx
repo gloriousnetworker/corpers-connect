@@ -26,14 +26,18 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
 
   useBodyScrollLock(open);
 
+  // Variables passed to mutate() so the mutation doesn't close over stale state
   const mutation = useMutation({
-    mutationFn: () => createStory(selectedFile!, caption || undefined),
-    onSuccess: () => {
+    mutationFn: ({ file, cap }: { file: File; cap?: string }) =>
+      createStory(file, cap),
+    onMutate: () => toast.loading('Uploading your story…'),
+    onSuccess: (_data, _vars, toastId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
-      toast.success('Story posted!');
-      handleClose();
+      toast.success('Your story is live!', { id: toastId });
     },
-    onError: () => toast.error('Failed to post story. Please try again.'),
+    onError: (_err, _vars, toastId) => {
+      toast.error('Story upload failed. Please try again.', { id: toastId });
+    },
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +53,6 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
     const fileIsVideo =
       videoTypes.includes(file.type) || file.name.match(/\.(mp4|webm|mov|ogg)$/i) !== null;
 
-    // Revoke previous object URL to avoid memory leaks
     if (previewUrl) URL.revokeObjectURL(previewUrl);
 
     setSelectedFile(file);
@@ -72,17 +75,16 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
       toast.error('Please select a photo or video first');
       return;
     }
-    mutation.mutate();
+    // Capture values before handleClose() clears them
+    const vars = { file: selectedFile, cap: caption || undefined };
+    handleClose(); // dismiss modal immediately — user is free to browse
+    mutation.mutate(vars); // upload runs in background
   };
 
   if (!open) return null;
 
   return (
     <ClientPortal>
-      {/*
-       * Full-screen modal — no horizontal margin so the preview fills edge-to-edge.
-       * On mobile: occupies the full viewport. On desktop: caps at 480px and centres.
-       */}
       <div
         className="fixed inset-0 z-[9000] bg-black flex flex-col"
         role="dialog"
@@ -101,24 +103,16 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
           </button>
         </div>
 
-        {/* ── Media preview — fills the entire screen ── */}
+        {/* ── Media preview ── */}
         <div className="flex-1 relative bg-black w-full h-full">
           {previewUrl ? (
             isVideo ? (
-              /*
-               * Video preview with full native controls so the user can:
-               *   - Play / pause to review the clip
-               *   - Scrub through it
-               *   - Check audio
-               * Native controls are the most reliable cross-platform solution.
-               */
               <video
                 key={previewUrl}
                 src={previewUrl}
                 className="w-full h-full object-contain"
                 controls
                 playsInline
-                /* Autoplay once so users immediately see what they selected */
                 autoPlay
                 loop
               />
@@ -156,7 +150,6 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
             </button>
           )}
 
-          {/* Change media button — shown when a file is already selected */}
           {previewUrl && (
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -167,9 +160,8 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
           )}
         </div>
 
-        {/* ── Bottom controls — float over the media on mobile ── */}
+        {/* ── Bottom controls ── */}
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pt-8 pb-6 flex flex-col gap-3">
-          {/* Caption input */}
           <input
             type="text"
             value={caption}
@@ -180,7 +172,6 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
             style={{ fontSize: '16px' }}
           />
 
-          {/* Action buttons */}
           <div className="flex gap-3">
             <button
               onClick={handleClose}
@@ -190,20 +181,11 @@ export default function StoryCreator({ open, onClose }: StoryCreatorProps) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!selectedFile || mutation.isPending}
+              disabled={!selectedFile}
               className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {mutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Posting…
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  Post Story
-                </>
-              )}
+              <Upload className="w-4 h-4" />
+              Post Story
             </button>
           </div>
         </div>

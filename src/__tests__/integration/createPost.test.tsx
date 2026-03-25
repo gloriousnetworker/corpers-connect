@@ -123,7 +123,7 @@ describe('CreatePostModal — integration', () => {
     });
   });
 
-  it('handles API error gracefully — stays open', async () => {
+  it('closes immediately on submit — modal dismisses before API responds', async () => {
     server.use(
       http.post(`${BASE}/posts`, () =>
         HttpResponse.json({ success: false, message: 'Rate limit exceeded' }, { status: 429 })
@@ -136,9 +136,9 @@ describe('CreatePostModal — integration', () => {
     await user.type(textarea, 'Test post');
     const postBtn = screen.getByRole('button', { name: /^Post$/i });
     await user.click(postBtn);
+    // Modal closes immediately on submit regardless of the API outcome
     await waitFor(() => {
-      // setCreatePostOpen should NOT have been called with false (modal stays open)
-      expect(mockSetCreatePostOpen).not.toHaveBeenCalledWith(false);
+      expect(mockSetCreatePostOpen).toHaveBeenCalledWith(false);
     }, { timeout: 5000 });
   });
 });

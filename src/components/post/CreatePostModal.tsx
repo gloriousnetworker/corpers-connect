@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Globe, Users, Lock, MapPin, Loader2 } from 'lucide-react';
+import { X, Image as ImageIcon, Globe, Users, Lock, MapPin } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -29,6 +29,15 @@ interface CreatePostModalProps {
   onClose?: () => void;
 }
 
+interface PostVars {
+  files: File[];
+  existingUrls: string[];
+  content: string;
+  visibility: PostVisibility;
+  isEdit: boolean;
+  editPostId?: string;
+}
+
 const VISIBILITY_OPTIONS = [
   { value: PostVisibility.PUBLIC, label: 'Public', icon: Globe },
   { value: PostVisibility.STATE, label: 'My State', icon: MapPin },
@@ -43,13 +52,6 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const currentUser = useAuthStore((s) => s.user);
 
   const isOpen = editPost ? true : createPostOpen;
-  const close = () => {
-    if (editPost) {
-      onClose?.();
-    } else {
-      setCreatePostOpen(false);
-    }
-  };
 
   const [content, setContent] = useState(editPost?.content ?? '');
   const [visibility, setVisibility] = useState<PostVisibility>(
@@ -60,7 +62,6 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>(
     editPost?.mediaUrls ?? []
   );
-  const [uploading, setUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,6 +70,55 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const userInitials = currentUser
     ? getInitials(currentUser.firstName, currentUser.lastName)
     : 'C';
+
+  const resetForm = useCallback(() => {
+    mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setContent(editPost?.content ?? '');
+    setVisibility(editPost?.visibility ?? PostVisibility.PUBLIC);
+    setMediaFiles([]);
+    setMediaPreviews([]);
+    setExistingMediaUrls(editPost?.mediaUrls ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaPreviews, editPost]);
+
+  const close = useCallback(() => {
+    if (editPost) {
+      onClose?.();
+    } else {
+      setCreatePostOpen(false);
+    }
+  }, [editPost, onClose, setCreatePostOpen]);
+
+  const mutation = useMutation({
+    mutationFn: async ({ files, existingUrls, content, visibility, isEdit, editPostId }: PostVars) => {
+      let uploadedUrls: string[] = [];
+      if (files.length > 0) {
+        try {
+          uploadedUrls = await Promise.all(files.map(uploadToCloudinary));
+        } catch {
+          throw new Error('Media upload failed. Please try again.');
+        }
+      }
+      const allMediaUrls = [...existingUrls, ...uploadedUrls];
+      if (isEdit && editPostId) {
+        return updatePost(editPostId, { content: content || undefined, visibility });
+      }
+      return createPost({
+        content: content || undefined,
+        mediaUrls: allMediaUrls,
+        visibility,
+      });
+    },
+    onMutate: ({ isEdit }) => toast.loading(isEdit ? 'Saving your post…' : 'Sharing your post…'),
+    onSuccess: (_data, { isEdit }, toastId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
+      toast.success(isEdit ? 'Post updated!' : 'Your post is live!', { id: toastId });
+    },
+    onError: (err: Error, _vars, toastId) => {
+      toast.error(err.message || 'Something went wrong', { id: toastId });
+    },
+  });
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -100,43 +150,25 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
     setExistingMediaUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      setUploading(true);
-      let uploadedUrls: string[] = [];
-      try {
-        uploadedUrls = await Promise.all(mediaFiles.map(uploadToCloudinary));
-      } catch {
-        throw new Error('Image upload failed. Please try again.');
-      } finally {
-        setUploading(false);
-      }
-
-      const allMediaUrls = [...existingMediaUrls, ...uploadedUrls];
-
-      if (editPost) {
-        return updatePost(editPost.id, { content: content.trim() || undefined, visibility });
-      }
-
-      return createPost({
-        content: content.trim() || undefined,
-        mediaUrls: allMediaUrls,
-        visibility,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
-      toast.success(editPost ? 'Post updated!' : 'Post shared!');
-      close();
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Something went wrong');
-    },
-  });
-
   const canSubmit =
     (content.trim().length > 0 || existingMediaUrls.length > 0 || mediaFiles.length > 0) &&
     content.length <= MAX_POST_LENGTH;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    // Capture all values before resetting form state
+    const vars: PostVars = {
+      files: mediaFiles,
+      existingUrls: existingMediaUrls,
+      content: content.trim(),
+      visibility,
+      isEdit: !!editPost,
+      editPostId: editPost?.id,
+    };
+    resetForm();  // revoke preview URLs, clear form
+    close();      // dismiss modal immediately — user can browse freely
+    mutation.mutate(vars); // upload + create/update runs in background
+  };
 
   const totalMedia = existingMediaUrls.length + mediaFiles.length;
   const selectedVisibility = VISIBILITY_OPTIONS.find((o) => o.value === visibility)!;
@@ -148,13 +180,6 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
     <ClientPortal>
     <AnimatePresence>
       {isOpen && (
-        /*
-         * Single overlay element handles BOTH the dark backdrop AND the flex centering.
-         * This avoids the Framer Motion transform conflict: Tailwind's `top-1/2 -translate-y-1/2`
-         * uses CSS `transform: translateY(-50%)` which Framer Motion overwrites with its own
-         * scale/y animation transform, destroying the centering. Using flexbox centering on the
-         * outer container + only scale/y animation on the inner content fixes this completely.
-         */
         <motion.div
           key="create-post-overlay"
           initial={{ opacity: 0 }}
@@ -188,7 +213,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
               </button>
             </div>
 
-            {/* Body — scrollable, grows to fill available space */}
+            {/* Body */}
             <div className="flex-1 overflow-y-auto overscroll-y-none p-4 space-y-4 min-h-0">
               {/* Author row */}
               <div className="flex items-center gap-3">
@@ -279,10 +304,9 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
               )}
             </div>
 
-            {/* Footer — always visible */}
+            {/* Footer */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-border flex-shrink-0 gap-3">
               <div className="flex items-center gap-2">
-                {/* Add photo button */}
                 {!editPost && totalMedia < MAX_MEDIA_PER_POST && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -301,7 +325,6 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                   className="hidden"
                   onChange={handleFileChange}
                 />
-                {/* Emoji picker */}
                 <EmojiPickerPopover onEmojiSelect={insertEmoji} placement="above" />
               </div>
 
@@ -319,13 +342,10 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                 )}
 
                 <button
-                  onClick={() => mutation.mutate()}
-                  disabled={!canSubmit || mutation.isPending || uploading}
-                  className="px-5 py-2 rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors flex items-center gap-2"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className="px-5 py-2 rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
                 >
-                  {(mutation.isPending || uploading) && (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  )}
                   {editPost ? 'Save' : 'Post'}
                 </button>
               </div>
