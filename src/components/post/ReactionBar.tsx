@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle, Bookmark, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { reactToPost, removeReaction } from '@/lib/api/posts';
+import { reactToPost, removeReaction, sharePost } from '@/lib/api/posts';
 import { bookmarkPost, unbookmarkPost } from '@/lib/api/posts';
 import { REACTION_EMOJI } from '@/lib/constants';
 import { queryKeys } from '@/lib/query-keys';
@@ -98,6 +98,7 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
   };
 
   const handleShare = async () => {
+    let shared = false;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -105,12 +106,27 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
           text: post.content?.slice(0, 100) ?? 'Check out this post',
           url: window.location.href,
         });
+        shared = true;
       } else {
         await navigator.clipboard.writeText(window.location.href);
         toast.success('Link copied!');
+        shared = true;
       }
     } catch {
-      // user cancelled or not supported
+      // user cancelled share sheet — do not record
+    }
+
+    if (shared) {
+      // Optimistic increment
+      onOptimisticUpdate({ sharesCount: (post.sharesCount || 0) + 1 });
+      try {
+        const result = await sharePost(post.id);
+        // Sync with server value
+        onOptimisticUpdate({ sharesCount: result.sharesCount });
+      } catch {
+        // Roll back on error
+        onOptimisticUpdate({ sharesCount: post.sharesCount || 0 });
+      }
     }
   };
 
@@ -169,7 +185,11 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
         aria-label="Share post"
       >
         <Share2 className="w-4 h-4" />
-        <span>Share</span>
+        {(post.sharesCount || 0) > 0 ? (
+          <span>{formatCount(post.sharesCount || 0)}</span>
+        ) : (
+          <span>Share</span>
+        )}
       </button>
 
       {/* Bookmark button */}

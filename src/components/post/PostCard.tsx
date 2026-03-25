@@ -127,19 +127,24 @@ export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
         )}
 
         {/* Reactions summary */}
-        {(post.reactionsCount > 0 || post.commentsCount > 0) && (
+        {(post.reactionsCount > 0 || post.commentsCount > 0 || (post.sharesCount || 0) > 0) && (
           <div className="flex items-center justify-between text-xs text-foreground-muted pt-1">
             {post.reactionsCount > 0 && (
               <span>{post.reactionsCount} {post.reactionsCount === 1 ? 'reaction' : 'reactions'}</span>
             )}
-            {post.commentsCount > 0 && (
-              <button
-                onClick={() => setCommentOpen(true)}
-                className="hover:underline ml-auto"
-              >
-                {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
-              </button>
-            )}
+            <div className="flex items-center gap-3 ml-auto">
+              {(post.sharesCount || 0) > 0 && (
+                <span>{post.sharesCount} {post.sharesCount === 1 ? 'share' : 'shares'}</span>
+              )}
+              {post.commentsCount > 0 && (
+                <button
+                  onClick={() => setCommentOpen(true)}
+                  className="hover:underline"
+                >
+                  {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

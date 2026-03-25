@@ -128,6 +128,17 @@ export async function getUserPosts(
   return data.data;
 }
 
+// ── Share ──────────────────────────────────────────────────────────────────
+
+export async function sharePost(
+  postId: string
+): Promise<{ id: string; sharesCount: number }> {
+  const { data } = await api.post<ApiResponse<{ id: string; sharesCount: number }>>(
+    `/posts/${postId}/share`
+  );
+  return data.data;
+}
+
 // ── Report ────────────────────────────────────────────────────────────────
 
 export async function reportPost(

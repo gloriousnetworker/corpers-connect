@@ -64,6 +64,7 @@ export interface Post {
   isFlagged: boolean;
   reactionsCount: number;
   commentsCount: number;
+  sharesCount: number;
   myReaction?: ReactionType | null;
   isBookmarked?: boolean;
   createdAt: string;

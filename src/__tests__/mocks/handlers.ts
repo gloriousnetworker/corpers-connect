@@ -40,6 +40,7 @@ const mockPost = {
   isFlagged: false,
   reactionsCount: 3,
   commentsCount: 1,
+  sharesCount: 0,
   myReaction: null,
   isBookmarked: false,
   createdAt: '2024-01-15T10:00:00Z',
@@ -217,6 +218,7 @@ export const handlers = [
         visibility: (body.visibility as string) ?? 'PUBLIC',
         reactionsCount: 0,
         commentsCount: 0,
+        sharesCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -312,6 +314,15 @@ export const handlers = [
     return HttpResponse.json({
       success: true,
       data: { items: [], nextCursor: null, hasMore: false },
+    });
+  }),
+
+  // ── Share ─────────────────────────────────────────────────────────────────
+
+  http.post(`${API_URL}/posts/:postId/share`, ({ params }) => {
+    return HttpResponse.json({
+      success: true,
+      data: { id: params.postId as string, sharesCount: 1 },
     });
   }),
 
