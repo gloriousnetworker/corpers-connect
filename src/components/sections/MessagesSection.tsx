@@ -5,7 +5,6 @@ import { Edit3 } from 'lucide-react';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatView from '@/components/messages/ChatView';
 import NewConversationModal from '@/components/messages/NewConversationModal';
-import { useSocket } from '@/hooks/useSocket';
 import { useMessagesStore } from '@/store/messages.store';
 import type { Conversation } from '@/types/models';
 
@@ -14,12 +13,15 @@ import type { Conversation } from '@/types/models';
  *
  * Desktop (≥ lg): two-column split — conversation list (w-80) | chat panel (flex-1)
  * Mobile        : single column — list OR chat (slide via activeConversationId)
+ *
+ * NOTE: Socket.IO is initialised once by SocketInitializer in AppShell — do NOT
+ * call useSocket() here or socket event handlers will be registered twice.
  */
 export default function MessagesSection() {
-  // Initialise Socket.IO for real-time messaging
-  useSocket();
-
-  const { activeConversationId, setActiveConversation } = useMessagesStore();
+  // Use targeted selectors — subscribing to the full store causes MessagesSection
+  // to re-render on every typing/online event, which cascades unnecessarily.
+  const activeConversationId = useMessagesStore((s) => s.activeConversationId);
+  const setActiveConversation = useMessagesStore((s) => s.setActiveConversation);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 

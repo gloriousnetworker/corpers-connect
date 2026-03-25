@@ -38,10 +38,14 @@ function getDmPartner(conv: Conversation, currentUserId: string) {
 let _tempIdCounter = 0;
 function newTempId() { return `temp-${++_tempIdCounter}`; }
 
+// Stable empty array so the typingUsers selector doesn't return a new reference
+// on every store tick when there are no typing users (which would cause infinite re-renders).
+const EMPTY_TYPING: string[] = [];
+
 export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const typingUsers = useMessagesStore((s) => s.typingUsers[conversation.id] ?? []);
+  const typingUsers = useMessagesStore((s) => s.typingUsers[conversation.id] ?? EMPTY_TYPING);
   const onlineUsers = useMessagesStore((s) => s.onlineUsers);
   const setTyping = useMessagesStore((s) => s.setTyping);
 

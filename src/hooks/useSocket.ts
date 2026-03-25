@@ -15,7 +15,11 @@ import type { PaginatedData } from '@/types/api';
 export function useSocket() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const { setTyping, setUserOnline, setUserOffline } = useMessagesStore();
+  // Use targeted selectors so this hook only triggers when the specific actions change
+  // (Zustand actions are stable, so this effectively never re-runs the effect from here)
+  const setTyping = useMessagesStore((s) => s.setTyping);
+  const setUserOnline = useMessagesStore((s) => s.setUserOnline);
+  const setUserOffline = useMessagesStore((s) => s.setUserOffline);
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
