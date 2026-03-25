@@ -47,6 +47,26 @@ const mockPost = {
   updatedAt: '2024-01-15T10:00:00Z',
 };
 
+const mockStory = {
+  id: 'story-123',
+  authorId: 'user-123',
+  author: mockUser,
+  mediaUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+  mediaType: 'image',
+  caption: 'Life at the PPA!',
+  expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+  createdAt: '2024-01-15T08:00:00Z',
+  viewed: false,
+  _count: { views: 0 },
+};
+
+const mockStoryGroup = {
+  author: mockUser,
+  authorId: 'user-123',
+  stories: [mockStory],
+  hasUnviewed: true,
+};
+
 const mockComment = {
   id: 'comment-123',
   postId: 'post-123',
@@ -339,5 +359,41 @@ export const handlers = [
       success: true,
       data: { items: [mockPost], nextCursor: null, hasMore: false },
     });
+  }),
+
+  // ── Stories ───────────────────────────────────────────────────────────────
+
+  http.get(`${API_URL}/stories`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: [mockStoryGroup],
+    });
+  }),
+
+  http.post(`${API_URL}/stories`, async () => {
+    return HttpResponse.json(
+      {
+        success: true,
+        data: {
+          ...mockStory,
+          id: 'story-new',
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        },
+      },
+      { status: 201 }
+    );
+  }),
+
+  http.post(`${API_URL}/stories/:storyId/view`, () => {
+    return HttpResponse.json({ success: true, data: mockStory });
+  }),
+
+  http.delete(`${API_URL}/stories/:storyId`, () => {
+    return HttpResponse.json({ success: true, data: null });
+  }),
+
+  http.get(`${API_URL}/stories/users/:userId/highlights`, () => {
+    return HttpResponse.json({ success: true, data: [] });
   }),
 ];

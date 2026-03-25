@@ -2,7 +2,7 @@
 
 **Project:** `corpers-connect-users` (Next.js 15 PWA)
 **Last Updated:** 2026-03-25
-**Overall Status:** ✅ Phase 1 Complete & Deployed — Ready for Phase 2
+**Overall Status:** ✅ Phase 3 Complete — Stories Live
 
 ---
 
@@ -11,12 +11,12 @@
 | Metric | Value |
 |---|---|
 | Total Phases | 12 |
-| Completed Phases | 1 |
-| In Progress | Phase 2 (Feed & Posts) |
-| Test Suites | 6 |
-| Unit Tests | 46 |
-| Integration Tests | 13 |
-| Total Tests | 59 / 59 ✅ |
+| Completed Phases | 3 |
+| In Progress | Phase 4 (Messaging) |
+| Test Suites | 14 |
+| Unit Tests | 74 |
+| Integration Tests | 50 |
+| Total Tests | 124 / 124 ✅ |
 | E2E Tests | 0 (Phase 12) |
 | Build Status | ✅ exit 0, no warnings |
 | Vercel Deployment | ✅ Live at corpersconnectapp.vercel.app |
@@ -203,21 +203,149 @@ All routes verified wired correctly:
 
 ---
 
-## Phase 2 — Feed & Posts 🔴 Not Started
+## Phase 2 — Feed & Posts ✅ COMPLETE
 
 **Goal:** Real posts from the backend, create post modal, like/comment, image upload.
 
-Planned features:
-- [ ] `GET /posts` — infinite scroll feed with TanStack Query `useInfiniteQuery`
-- [ ] `POST /posts` — create post modal (text + image, Cloudinary upload)
-- [ ] Like / unlike (optimistic UI)
-- [ ] Comment thread (basic, collapsible)
-- [ ] Post card component with skeleton loading
-- [ ] Empty feed → suggest connections
+---
+
+### API Layer ✅
+- [x] `src/lib/api/feed.ts` — `getFeed` with cursor pagination
+- [x] `src/lib/api/posts.ts` — full CRUD + reactions + comments + bookmarks + report + Cloudinary upload
+
+### Components ✅
+- [x] `PostCard` — full card with author info, visibility badge, edited flag, reactions summary
+- [x] `PostCardSkeleton` — shimmer skeleton loader (3 cards on initial load)
+- [x] `MediaGrid` — 1–4 image grid with lightbox viewer, +N overflow badge
+- [x] `ReactionBar` — like/love/fire/clap with optimistic UI, long-press opens picker
+- [x] `ReactionPicker` — animated emoji picker overlay (400ms long-press trigger)
+- [x] `CommentSheet` — bottom sheet with infinite scroll, reply threading (2 levels), send
+- [x] `CommentItem` — author avatar, content, reply button, delete (own), nested replies toggle
+- [x] `PostMenu` — 3-dot dropdown: bookmark/unbookmark, edit (own), delete (own), report (others)
+- [x] `ReportModal` — radio reason selector + optional details textarea
+- [x] `CreatePostModal` — text + image upload (Cloudinary), visibility selector, char counter
+- [x] `InfiniteFeed` — TanStack Query `useInfiniteQuery`, IntersectionObserver sentinel, error/empty/end states
+- [x] `FeedSection` — updated to use InfiniteFeed + CreatePostModal (driven by Zustand)
+
+### Features ✅
+- [x] Infinite scroll feed (`GET /feed` cursor pagination)
+- [x] Create post (text + images, Cloudinary upload, visibility control)
+- [x] Edit post (own posts only, 15-minute server-side window)
+- [x] Delete post (own posts only, optimistic removal)
+- [x] React to post: LIKE / LOVE / FIRE / CLAP (optimistic UI + long-press picker)
+- [x] Remove reaction (tap own reaction)
+- [x] Comments — infinite scroll, post/delete, 2-level threading
+- [x] Bookmark / unbookmark (optimistic UI in both ReactionBar and PostMenu)
+- [x] Report post (modal with reason + details)
+- [x] Share post (native Web Share API with clipboard fallback)
+- [x] Image lightbox viewer
+
+### Tests ✅ 100 / 100 Passing
+
+| Suite | Type | Tests | Status |
+|---|---|---|---|\
+| `utils.test.ts` | Unit | 17 | ✅ |
+| `validators.test.ts` | Unit | 14 | ✅ |
+| `OtpInput.test.tsx` | Unit | 8 | ✅ |
+| `PasswordInput.test.tsx` | Unit | 7 | ✅ |
+| `PostCard.test.tsx` | Unit | 14 | ✅ |
+| `PostCardSkeleton.test.tsx` | Unit | 3 | ✅ |
+| `CommentItem.test.tsx` | Unit | 8 | ✅ |
+| `login.test.tsx` | Integration | 7 | ✅ |
+| `register.test.tsx` | Integration | 6 | ✅ |
+| `feed.test.tsx` | Integration | 7 | ✅ |
+| `createPost.test.tsx` | Integration | 9 | ✅ |
+| **Total** | | **100** | **✅ All Pass** |
+
+### Technical Notes
+- `getInitials(firstName, lastName)` — two-arg signature; all new components pass args separately
+- Media upload in `CreatePostModal` — proxied through backend `POST /api/v1/media/upload` (server-side signed Cloudinary upload). Requires no Cloudinary env vars on frontend. Backend module added: `src/modules/media/media.{controller,routes}.ts`.
+- `IntersectionObserver` used for infinite scroll sentinel (200px root margin)
+- `staleTime: 2min` on feed query — prevents excessive re-fetches on section tab-switch
+- Reaction optimistic update: correct count math (adding first reaction vs changing type vs removing)
+- Edit post: `CreatePostModal` accepts optional `editPost` prop — bypasses Zustand state, uses `onClose` callback
+- All mutations invalidate `queryKeys.feed()` + `queryKeys.post(id)` on settle
+- Modal backdrops use `bg-black/70` (increased from 45–50%) to eliminate white-bar bleed-through from TopBar and page background
+
+### Video / Reel Support (Backend Confirmed)
+- Backend supports image AND video uploads (max 50 MB) for Stories (`POST /api/v1/stories`) and Reels (`POST /api/v1/reels`) — both use `multipart/form-data` with a `media` field
+- `resource_type: 'auto'` on Cloudinary — auto-detects image vs video, returns `mediaType` in response
+- Video integration deferred to Phase 3 (Stories) and future Reels phase
 
 ---
 
-## Phase 3 — Stories 🔴 Not Started
+## Phase 3 — Stories ✅ COMPLETE
+
+**Goal:** Stories tray on feed, full-screen viewer, story creation (image + video), view tracking.
+
+---
+
+### API Layer ✅
+- [x] `src/lib/api/stories.ts` — `getStories`, `createStory`, `viewStory`, `deleteStory`, `getUserHighlights`
+- [x] Normalises backend `{ viewed, _count }` → `{ isViewed, viewCount }` for the frontend `Story` type
+- [x] `createStory` sends multipart/form-data directly to backend (server-side Cloudinary upload, same pattern as posts)
+
+### Components ✅
+- [x] `StoryRing` — avatar with colored ring (green gradient = has unviewed, gray = all viewed), + badge for "Add Story"
+- [x] `StoryTray` — horizontal scroll strip; "Your Story / Add Story" always first, followed by other users
+- [x] `StoryProgress` — segmented progress bars (one per story in the group); fills completed bars, animates active bar
+- [x] `StoryViewer` — full-screen portal viewer:
+  - React Portal via `ClientPortal` + `useBodyScrollLock` (no white-bar or scroll issues)
+  - Progress bars with 5-second auto-advance (images) or `onEnded` trigger (videos)
+  - Tap left third = previous, tap right third = next; keyboard arrow key + Escape support
+  - Hold (pointerDown) pauses the timer
+  - Author header with avatar, name, timestamp
+  - View count badge (own stories only)
+  - Delete with confirmation (own stories only)
+  - "Add to story" CTA when viewing own group
+  - Black gradient overlays (top + bottom) for readability
+  - Desktop chevron navigation arrows
+- [x] `StoryCreator` — upload modal (React Portal + body scroll lock):
+  - Image and video support (accept="image/*,video/*", max 50 MB)
+  - Live preview (video: `<video>` tag; image: Next.js `<Image>`)
+  - Caption input (max 200 chars)
+  - Backend multipart upload → Cloudinary server-side
+  - Optimistic query invalidation on success
+
+### Integration ✅
+- [x] `FeedSection` — `<StoryTray>` rendered in a card above the create-post card
+- [x] View story marked via `POST /stories/:id/view` (idempotent, not called for own stories)
+- [x] Delete story refreshes stories cache via `queryClient.invalidateQueries`
+
+### MSW Test Fixtures ✅
+- [x] `mockStory` + `mockStoryGroup` added to `handlers.ts`
+- [x] Handlers: `GET /stories`, `POST /stories`, `POST /stories/:id/view`, `DELETE /stories/:id`, `GET /stories/users/:userId/highlights`
+
+### Tests ✅ 124 / 124 Passing
+
+| Suite | Type | Tests | Status |
+|---|---|---|---|
+| `utils.test.ts` | Unit | 17 | ✅ |
+| `validators.test.ts` | Unit | 14 | ✅ |
+| `OtpInput.test.tsx` | Unit | 8 | ✅ |
+| `PasswordInput.test.tsx` | Unit | 7 | ✅ |
+| `PostCard.test.tsx` | Unit | 14 | ✅ |
+| `PostCardSkeleton.test.tsx` | Unit | 3 | ✅ |
+| `CommentItem.test.tsx` | Unit | 8 | ✅ |
+| `StoryRing.test.tsx` | Unit | 8 | ✅ |
+| `StoryProgress.test.tsx` | Unit | 5 | ✅ |
+| `login.test.tsx` | Integration | 7 | ✅ |
+| `register.test.tsx` | Integration | 6 | ✅ |
+| `feed.test.tsx` | Integration | 7 | ✅ |
+| `createPost.test.tsx` | Integration | 9 | ✅ |
+| `stories.test.tsx` | Integration | 11 | ✅ |
+| **Total** | | **124** | **✅ All Pass** |
+
+### Technical Notes
+- `StoryViewer` uses the same `ClientPortal` + `useBodyScrollLock` pattern as `CreatePostModal` — modals render to `#modal-root` and escape TopBar's stacking context
+- Image auto-advance uses `setInterval` with 50ms ticks (100 steps over 5 seconds) for smooth progress animation
+- Video auto-advance uses the `<video onEnded>` event and `onTimeUpdate` to drive the progress bar
+- `markViewed` uses a `useRef<Set<string>>` to deduplicate view events within a single viewer session (API is idempotent via `upsert` but avoids unnecessary requests)
+- Story groups are sorted: own group first (if exists), others by backend order (most-recently-created first)
+- Skeleton placeholders (3× `animate-pulse` rings) shown while stories are loading
+
+---
+
 ## Phase 4 — Messaging 🔴 Not Started
 ## Phase 5 — Notifications 🔴 Not Started
 ## Phase 6 — Profile 🔴 Not Started

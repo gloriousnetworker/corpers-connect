@@ -7,6 +7,7 @@ import { getInitials } from '@/lib/utils';
 import Image from 'next/image';
 import InfiniteFeed from '@/components/feed/InfiniteFeed';
 import CreatePostModal from '@/components/post/CreatePostModal';
+import StoryTray from '@/components/stories/StoryTray';
 
 export default function FeedSection() {
   const user = useAuthStore((s) => s.user);
@@ -16,6 +17,11 @@ export default function FeedSection() {
 
   return (
     <div className="max-w-[680px] mx-auto px-4 space-y-4">
+      {/* Stories tray */}
+      <div className="bg-surface rounded-2xl border border-border shadow-card p-4">
+        <StoryTray />
+      </div>
+
       {/* Create post card */}
       <div className="bg-surface rounded-2xl border border-border shadow-card p-4">
         <div className="flex items-center gap-3">

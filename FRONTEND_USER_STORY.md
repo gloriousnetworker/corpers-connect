@@ -1,8 +1,8 @@
 # Corpers Connect — Frontend (User App) User Story Document
 
-**Version:** 1.0.0
-**Date:** 2026-03-22
-**Status:** Planning Phase
+**Version:** 2.0.0
+**Date:** 2026-03-25
+**Status:** Phase 2 Complete — Active Development
 
 ---
 
@@ -414,3 +414,267 @@ Top bar:
 ---
 
 *This document is a living reference. Update as the design evolves.*
+
+---
+
+## 7. QA Testing Guide — What to Look For
+
+This section documents the manual testing checklist for each completed phase. Use this when verifying builds on both mobile (iOS/Android) and desktop (Chrome, Safari).
+
+---
+
+### Phase 1 — Foundation, Auth & Dashboard Shell
+
+#### 7.1 App Boot & PWA
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open the app URL in mobile Chrome | Green splash screen with logo appears for ~1.6s, then fades into the dashboard |
+| 2 | Wait 3–5 seconds after first visit (Android Chrome) | "Add to Home Screen" install prompt slides up from the bottom |
+| 3 | Tap the install prompt dismiss button | Prompt disappears; will not reappear for 7 days |
+| 4 | Open in iOS Safari | No native install prompt (iOS limitation); the prompt shows step-by-step "tap Share → Add to Home Screen" instructions |
+| 5 | Install the PWA and open it | App opens in standalone mode (no browser chrome), green background behind notch |
+| 6 | Resize browser to desktop width | Layout switches to 3-column view: sidebar left, feed center, right panel |
+
+#### 7.2 Registration Flow
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Navigate to `/register`, enter a valid NYSC state code (e.g. `LA/23A/1234`) | NYSC data (name, email, state, batch) is pre-filled on the next screen |
+| 2 | Enter an invalid state code (e.g. `INVALID`) | Inline validation error appears below the field |
+| 3 | Set a password — type less than 8 characters | 4-bar strength indicator stays red, "Weak" label shows |
+| 4 | Type a strong password (mix of upper, lower, number, symbol) | Strength bar fills green, "Strong" label |
+| 5 | Confirm password mismatch | "Passwords do not match" error on submit |
+| 6 | Submit valid registration | OTP screen loads; 6 boxes autofocus on first box |
+| 7 | Type a digit in the OTP box | Focus auto-advances to next box |
+| 8 | Press Backspace on a box | Focus moves back to previous box |
+| 9 | Paste a 6-digit code | All 6 boxes fill instantly |
+| 10 | Submit wrong OTP | Error message shown, boxes reset |
+| 11 | Submit correct OTP | NYSC data confirmation screen loads |
+| 12 | Confirm NYSC details | Redirected to onboarding |
+| 13 | Complete onboarding (bio + corper tag) or tap "Skip" | Redirected to dashboard `/` |
+
+#### 7.3 Login Flow
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Visit `/login`, enter valid email + password | Redirected to dashboard feed |
+| 2 | Enter valid state code instead of email | Login succeeds the same way |
+| 3 | Enter wrong password | "Invalid credentials" error toast |
+| 4 | Tap "Forgot Password?" | Redirected to `/forgot-password` |
+| 5 | Enter email on forgot password page | OTP screen shown with masked email |
+| 6 | Enter correct OTP + new password | Password reset success, redirected to login |
+| 7 | Login with account that has 2FA enabled | Redirected to `/2fa` page for TOTP entry |
+| 8 | Enter correct 6-digit TOTP | Redirected to dashboard |
+| 9 | Navigate to `/login` while already logged in | Redirected away to dashboard |
+| 10 | Navigate to `/` while NOT logged in | Redirected to `/login` |
+
+#### 7.4 Dashboard Layout & Navigation
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open the app logged in — mobile | TopBar at top (logo + bell), BottomNav at bottom (5 tabs) |
+| 2 | Tap each BottomNav tab | Section content changes without any URL change or page reload |
+| 3 | Tap the bell icon in TopBar | Switches to Notifications section |
+| 4 | Tap BottomNav "+" (create) button | Create post modal opens |
+| 5 | Open app on desktop (≥ 1024px) | Left sidebar visible, TopBar and BottomNav hidden |
+| 6 | Click sidebar nav items on desktop | Section content changes, URL stays `/` |
+| 7 | Scroll down in feed on mobile | Content scrolls; TopBar stays fixed at top; BottomNav stays fixed at bottom |
+| 8 | Try to scroll on iOS — swipe up/down vigorously | No rubber-band bounce; content stops at edges |
+| 9 | Focus any input field on iOS | Page does NOT zoom in (16px font-size fix is in place) |
+
+---
+
+### Phase 2 — Feed & Posts
+
+#### 7.5 Feed Loading
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open the app and navigate to Home | 3 skeleton shimmer cards appear while posts load |
+| 2 | Wait for feed to load | Skeleton cards replace with real post cards |
+| 3 | Scroll to the bottom of the feed | More posts load automatically (infinite scroll) |
+| 4 | Reach the very end of all posts | "You're all caught up 🎉" message appears |
+| 5 | Open app with no internet / bad connection | "Failed to load feed" error state with Retry button |
+| 6 | Tap Retry | Feed attempts to reload |
+| 7 | Log in with a new account with no follows | "Your feed is quiet" empty state with prompt to follow or post |
+| 8 | Switch to Discover and back to Home | Feed does NOT reload if data is still fresh (within 2 minutes) |
+
+#### 7.6 Create Post
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap the create-post card at top of feed | Create Post modal opens, centered on screen |
+| 2 | Tap "Photo" shortcut on create card | Same — modal opens |
+| 3 | Tap "+" in BottomNav (mobile) | Same — modal opens |
+| 4 | Open modal — check backdrop | Entire screen behind modal is blurred/darkened, including TopBar — no white gap |
+| 5 | Tap outside the modal | Modal closes |
+| 6 | Try to tap "Post" with empty textarea and no media | Post button is disabled (greyed out) |
+| 7 | Type text in the textarea | Post button becomes enabled |
+| 8 | Type 1600+ characters | Character countdown appears (e.g. "400") |
+| 9 | Type 2001 characters | Counter turns red, Post button disabled |
+| 10 | Change visibility dropdown | Selected option updates (Public / My State / Friends / Only Me) |
+| 11 | Tap Photo button | File picker opens |
+| 12 | Select 1 image | Preview thumbnail appears above footer; Post button still visible |
+| 13 | Select 3 more images (4 total) | All 4 previews shown; Photo button disappears (limit reached) |
+| 14 | Tap X on a preview image | That image is removed from the grid |
+| 15 | Tap Post with text | Modal closes, new post appears at top of feed |
+| 16 | Tap Post with only images (no text) | Post succeeds |
+| 17 | Edit an existing post (own post → 3-dot menu → Edit) | Modal opens with existing content pre-filled |
+| 18 | Change text and tap Save | Post updates inline; "edited" label appears on card |
+
+#### 7.7 Reactions
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap the Like button on a post | Icon fills/highlights, count increments immediately (optimistic) |
+| 2 | Tap the same Like button again | Reaction removed, count decrements |
+| 3 | Long-press the Like button (≥ 400ms) | Emoji picker slides up (👍 ❤️ 🔥 👏) |
+| 4 | Pick a different emoji (e.g. Fire 🔥) | Post shows fire emoji as active reaction |
+| 5 | Tap the Fire emoji again on the reaction bar | Reaction is removed |
+| 6 | Tap outside the picker without picking | Picker closes, no reaction change |
+| 7 | Check reaction count on a post with 999 reactions | Shows "999" |
+| 8 | Check a post with 1500 reactions | Shows "1.5K" |
+
+#### 7.8 Comments
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap the Comment button on a post | Comments bottom sheet slides up from the bottom |
+| 2 | Sheet title shows correct count | "3 Comments" (not "NaNM Comments") |
+| 3 | View existing comments | Each comment shows author avatar, name, content, time |
+| 4 | Scroll comment list | Sheet scrolls independently; backdrop stays in place |
+| 5 | Type a comment and tap Send | Comment appears at the end of the list |
+| 6 | Tap Reply on a comment | Reply indicator shows ("Replying to [Name]") above input |
+| 7 | Submit a reply | Reply is nested under the parent comment |
+| 8 | Tap "View X replies" on a comment with replies | Replies expand inline below the parent |
+| 9 | Tap "Hide replies" | Replies collapse |
+| 10 | Long-tap own comment | Delete button appears |
+| 11 | Delete own comment | Comment removed from list |
+| 12 | Tap X or backdrop | Comment sheet closes |
+| 13 | Comment count on post card updates | After posting a comment, the "X comments" summary on the card reflects the new count |
+
+#### 7.9 Bookmarks
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap the bookmark icon on a post (bottom right of reaction bar) | Icon fills (solid), turns gold |
+| 2 | Tap filled bookmark | Icon empties (outline), returns to secondary color |
+| 3 | Open post 3-dot menu → Bookmark | Same toggle behavior as reaction bar |
+| 4 | Open post 3-dot menu on already-bookmarked post | Shows "Remove bookmark" option |
+
+#### 7.10 Share
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap Share on a post (mobile) | Native OS share sheet opens |
+| 2 | Tap Share on a post (desktop) | "Link copied!" toast appears |
+
+#### 7.11 Post Menu (3-dot)
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap 3-dot on someone else's post | Menu shows: Bookmark, Report |
+| 2 | Tap 3-dot on your own post | Menu shows: Bookmark, Edit Post, Delete Post |
+| 3 | Tap Delete Post | Confirmation dialog appears |
+| 4 | Confirm delete | Post is removed from feed immediately |
+| 5 | Tap Report on another user's post | Report modal opens (centered, backdrop covers full screen) |
+| 6 | Select a reason and tap Submit Report | Success toast, modal closes |
+| 7 | Tap outside Report modal | Modal closes |
+
+#### 7.12 Media & Images
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | View a post with 1 image | Full-width 16:9 image |
+| 2 | View a post with 2 images | Side-by-side square grid |
+| 3 | View a post with 3 images | Three equal-width columns |
+| 4 | View a post with 4 images | 2×2 square grid |
+| 5 | View a post with 5+ images | 2×2 grid with "+N" overlay on 4th |
+| 6 | Tap any image | Lightbox opens (full-screen, black background) |
+| 7 | Tap X or backdrop in lightbox | Lightbox closes |
+
+#### 7.13 Visual & Layout Checks
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open any modal (create post, report) on mobile | Modal is CENTERED on screen — not at top, not at bottom |
+| 2 | Open any modal on desktop | Modal centered with dark backdrop covering entire viewport |
+| 3 | Add 4 images in Create Post on mobile | Post button (footer) remains visible — images scroll in the body area |
+| 4 | View a post from an edited post | Small "edited" label shows next to timestamp |
+| 5 | View a state-only post | MapPin icon + "State" label in the post header |
+| 6 | View a post from a corper with a tag | Tag label shows next to name in gold color |
+
+---
+
+### Phase 3 — Stories
+
+#### 7.14 Stories Tray
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open the feed | A horizontal stories tray appears above the create-post card, inside a rounded card |
+| 2 | No stories from followed users or self | Three skeleton rings (pulsing grey circles) + "Add story" ring (current user, + badge) |
+| 3 | Other users have stories | Their avatars appear after the "Add story" ring with their first names below |
+| 4 | User has unviewed stories | Story ring shows a bright green gradient border |
+| 5 | User's stories are all viewed | Ring shows a grey border |
+| 6 | Scroll the tray horizontally | More story rings reveal as you scroll; no visual clipping |
+
+#### 7.15 Story Viewer
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap a story ring with unviewed stories | Full-screen viewer opens (black background, no browser chrome) |
+| 2 | Multiple stories in a group | Segmented progress bars appear at top (one bar per story) |
+| 3 | Watch an image story | Progress bar fills over ~5 seconds, then auto-advances to next story |
+| 4 | Press and hold on an image story | Progress bar pauses; releases when finger lifts |
+| 5 | Tap the left third of the screen | Goes to previous story (or previous group if at start) |
+| 6 | Tap the right third of the screen | Goes to next story; closes viewer after the last story in the last group |
+| 7 | Watch a video story | Progress bar advances in real time with the video; auto-advances on `ended` |
+| 8 | Press Escape key (desktop) | Viewer closes |
+| 9 | Press ← / → arrow keys (desktop) | Navigates between stories |
+| 10 | View someone else's story | `POST /stories/:id/view` is called (marks as viewed) |
+| 11 | Re-open viewed stories | Ring shows grey border; progress bar jumps to correct position for each story |
+| 12 | Tap X button | Viewer closes |
+
+#### 7.16 Own Story View Count
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap your own story ring ("Your story") | Viewer opens; shows eye icon + view count in header |
+| 2 | View count > 0 | Eye icon + number visible alongside author name |
+| 3 | "Add to story" button at bottom | Tapping it closes the viewer and opens the Story Creator |
+
+#### 7.17 Story Creator
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Tap "Add story" ring | Full-screen creator modal opens |
+| 2 | Tap the media picker area | Device photo/video library opens |
+| 3 | Select a photo | Photo preview shown in 9:16 aspect ratio area |
+| 4 | Select a video | Video player shown with controls in preview area |
+| 5 | Select a file > 50 MB | Error toast: "File must be under 50 MB" |
+| 6 | Tap "Change" | Re-opens file picker to replace the selected media |
+| 7 | Type a caption | Caption input shows text; max 200 characters |
+| 8 | Tap "Post Story" with no file selected | Error toast: "Please select a photo or video first" |
+| 9 | Tap "Post Story" with a file | Upload spinner appears, then success toast "Story posted!"; modal closes |
+| 10 | Story appears in tray | New "Your story" ring appears with green border |
+| 11 | Tap Cancel | Modal closes, no story posted |
+| 12 | Tap backdrop | Modal closes |
+
+#### 7.18 Story Deletion
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Open your own story | Trash icon appears in top-right (next to X close button) |
+| 2 | Tap Trash icon | Button changes to red "Confirm delete" button + Cancel button |
+| 3 | Tap "Confirm delete" | Story is deleted; if it was the last story, viewer closes |
+| 4 | Tap Cancel | Reverts back to Trash icon |
+
+#### 7.19 Media Quality
+
+| # | What to do | What to look for |
+|---|---|---|
+| 1 | Upload a high-resolution photo as a story | Photo displayed at full quality (`quality={95}`, Cloudinary `q_auto:best,f_auto`) |
+| 2 | Upload a video | Video plays in full quality; no compression artifacts visible |
+| 3 | Open a story on desktop | Image displayed sharp and correctly sized within max-width 480px container |
