@@ -41,35 +41,43 @@ export default function ReportModal({ postId, open, onClose }: ReportModalProps)
   return (
     <AnimatePresence>
       {open && (
-        <>
+        /*
+         * Single overlay handles backdrop + centering via flexbox.
+         * Avoids the Framer Motion CSS-transform conflict that occurs when combining
+         * Tailwind's `top-1/2 -translate-y-1/2` (CSS transform) with Framer Motion
+         * animations (which overwrite the transform property entirely).
+         */
+        <motion.div
+          key="report-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={onClose}
+        >
           <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            key="report-modal"
+            initial={{ scale: 0.97, y: 10, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.97, y: 10, opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[201] max-w-sm mx-auto bg-surface rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-sm bg-surface rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <h3 className="font-semibold text-foreground">Report Post</h3>
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-full hover:bg-surface-alt transition-colors"
+                aria-label="Close"
               >
                 <X className="w-4 h-4 text-foreground-secondary" />
               </button>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto overscroll-y-none p-4 space-y-3 min-h-0">
               <p className="text-sm text-foreground-secondary">Why are you reporting this post?</p>
 
               <div className="space-y-2">
@@ -101,7 +109,9 @@ export default function ReportModal({ postId, open, onClose }: ReportModalProps)
                   className="w-full bg-surface-alt rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted outline-none focus:ring-2 focus:ring-primary/20 resize-none border border-transparent focus:border-primary/30 transition-all"
                 />
               )}
+            </div>
 
+            <div className="flex-shrink-0 p-4 border-t border-border">
               <button
                 onClick={() => mutation.mutate()}
                 disabled={!reason || mutation.isPending}
@@ -111,7 +121,7 @@ export default function ReportModal({ postId, open, onClose }: ReportModalProps)
               </button>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

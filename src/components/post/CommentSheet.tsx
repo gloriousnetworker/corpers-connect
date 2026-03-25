@@ -90,18 +90,18 @@ export default function CommentSheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm"
+            className="fixed inset-0 z-[9000] bg-black/45 backdrop-blur-sm"
             onClick={onClose}
           />
 
-          {/* Sheet */}
+          {/* Sheet — y animation only (no CSS transform conflict: sheet uses left/right/bottom positioning, not transform-based centering) */}
           <motion.div
             key="sheet"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 mx-auto z-[201] w-full max-w-[680px] bg-surface rounded-t-2xl flex flex-col"
+            className="fixed bottom-0 left-0 right-0 mx-auto z-[9001] w-full max-w-[680px] bg-surface rounded-t-2xl flex flex-col"
             style={{
               maxHeight: '85dvh',
               paddingBottom: 'env(safe-area-inset-bottom)',
@@ -113,7 +113,7 @@ export default function CommentSheet({
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <h3 className="font-semibold text-foreground">
-                {formatCount(commentsCount)} {commentsCount === 1 ? 'Comment' : 'Comments'}
+                {formatCount(commentsCount ?? 0)} {(commentsCount ?? 0) === 1 ? 'Comment' : 'Comments'}
               </h3>
               <button
                 onClick={onClose}

@@ -137,23 +137,31 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        /*
+         * Single overlay element handles BOTH the dark backdrop AND the flex centering.
+         * This avoids the Framer Motion transform conflict: Tailwind's `top-1/2 -translate-y-1/2`
+         * uses CSS `transform: translateY(-50%)` which Framer Motion overwrites with its own
+         * scale/y animation transform, destroying the centering. Using flexbox centering on the
+         * outer container + only scale/y animation on the inner content fixes this completely.
+         */
+        <motion.div
+          key="create-post-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={close}
+        >
           <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/45 backdrop-blur-sm"
-            onClick={close}
-          />
-
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12 }}
+            key="create-post-modal"
+            initial={{ scale: 0.97, y: 12, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.97, y: 12, opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[201] max-w-lg mx-auto bg-surface rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]"
+            className="w-full max-w-lg bg-surface rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
@@ -169,8 +177,8 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto overscroll-y-none p-4 space-y-4">
+            {/* Body — scrollable, grows to fill available space */}
+            <div className="flex-1 overflow-y-auto overscroll-y-none p-4 space-y-4 min-h-0">
               {/* Author row */}
               <div className="flex items-center gap-3">
                 {currentUser?.profilePicture ? (
@@ -255,7 +263,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
               )}
             </div>
 
-            {/* Footer */}
+            {/* Footer — always visible */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-border flex-shrink-0 gap-3">
               <div className="flex items-center gap-2">
                 {/* Add photo button */}
@@ -305,7 +313,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
               </div>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
