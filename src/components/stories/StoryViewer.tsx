@@ -45,7 +45,9 @@ export default function StoryViewer({
   useBodyScrollLock(true);
 
   const group = groups[groupIdx];
-  const story: Story | undefined = group?.stories[storyIdx];
+  // Backend returns stories newest-first; reverse to show chronologically (oldest first)
+  const stories: Story[] = group ? [...group.stories].reverse() : [];
+  const story: Story | undefined = stories[storyIdx];
   const isOwnStory = group?.author.id === currentUserId;
   const isVideo = story?.mediaType?.startsWith('video') || story?.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i) !== null;
 
@@ -70,10 +72,10 @@ export default function StoryViewer({
       queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
       toast.success('Story deleted');
       // If this was the last story in the group, close; otherwise advance
-      if (group.stories.length <= 1) {
+      if (stories.length <= 1) {
         onClose();
       } else {
-        const nextIdx = Math.min(storyIdx, group.stories.length - 2);
+        const nextIdx = Math.min(storyIdx, stories.length - 2);
         setStoryIdx(nextIdx);
         setProgress(0);
       }
@@ -84,7 +86,7 @@ export default function StoryViewer({
   // ── Navigation ───────────────────────────────────────────────────────────────
   const goToNextStory = useCallback(() => {
     const nextStory = storyIdx + 1;
-    if (nextStory < group.stories.length) {
+    if (nextStory < stories.length) {
       setStoryIdx(nextStory);
       setProgress(0);
     } else {
@@ -98,7 +100,8 @@ export default function StoryViewer({
         onClose();
       }
     }
-  }, [storyIdx, groupIdx, group?.stories.length, groups.length, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyIdx, groupIdx, stories.length, groups.length, onClose]);
 
   const goToPrevStory = useCallback(() => {
     if (storyIdx > 0) {
@@ -110,6 +113,7 @@ export default function StoryViewer({
       setStoryIdx(groups[prevGroup].stories.length - 1);
       setProgress(0);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyIdx, groupIdx, groups]);
 
   // ── Auto-advance timer (images only) ─────────────────────────────────────────
@@ -224,7 +228,7 @@ export default function StoryViewer({
           {/* Progress bars */}
           <div className="absolute top-3 inset-x-0 pointer-events-none">
             <StoryProgress
-              count={group.stories.length}
+              count={stories.length}
               activeIndex={storyIdx}
               progress={progress}
             />

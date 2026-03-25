@@ -15,6 +15,7 @@ import {
   MAX_POST_LENGTH,
   MAX_MEDIA_PER_POST,
   ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_VIDEO_TYPES,
 } from '@/lib/constants';
 import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
@@ -71,12 +72,13 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const valid = files.filter((f) => ACCEPTED_IMAGE_TYPES.includes(f.type));
+    const accepted = [...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES];
+    const valid = files.filter((f) => accepted.includes(f.type));
     const remaining = MAX_MEDIA_PER_POST - existingMediaUrls.length - mediaFiles.length;
     const toAdd = valid.slice(0, remaining);
 
     if (toAdd.length < valid.length) {
-      toast.warning(`Maximum ${MAX_MEDIA_PER_POST} images per post`);
+      toast.warning(`Maximum ${MAX_MEDIA_PER_POST} media files per post`);
     }
 
     setMediaFiles((prev) => [...prev, ...toAdd]);
@@ -258,12 +260,16 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                   ))}
                   {mediaPreviews.map((url, i) => (
                     <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden bg-surface-alt">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      {mediaFiles[i]?.type.startsWith('video/') ? (
+                        <video src={url} className="w-full h-full object-cover" muted playsInline />
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      )}
                       <button
                         onClick={() => removeNewMedia(i)}
                         className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
-                        aria-label="Remove image"
+                        aria-label="Remove media"
                       >
                         <X className="w-3 h-3 text-white" />
                       </button>
@@ -281,16 +287,16 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-surface-alt transition-colors text-sm font-medium text-foreground-secondary"
-                    aria-label="Add photo"
+                    aria-label="Add photo or video"
                   >
                     <ImageIcon className="w-4 h-4 text-info" />
-                    <span>Photo</span>
+                    <span>Photo/Video</span>
                   </button>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                  accept={[...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES].join(',')}
                   multiple
                   className="hidden"
                   onChange={handleFileChange}

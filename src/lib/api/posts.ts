@@ -158,7 +158,6 @@ export async function uploadToCloudinary(file: File): Promise<string> {
   const { data } = await api.post<ApiResponse<{ url: string; mediaType: string }>>(
     '/media/upload',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
 
   return data.data.url;

@@ -66,11 +66,7 @@ export async function createStory(file: File, caption?: string): Promise<Story> 
   formData.append('media', file);
   if (caption?.trim()) formData.append('caption', caption.trim());
 
-  const { data } = await api.post<ApiResponse<BackendStory>>(
-    '/stories',
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
-  );
+  const { data } = await api.post<ApiResponse<BackendStory>>('/stories', formData);
   return normalizeStory(data.data);
 }
 

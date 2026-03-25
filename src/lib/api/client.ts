@@ -34,6 +34,10 @@ api.interceptors.request.use(
     if (_accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${_accessToken}`;
     }
+    // Disable timeout for file uploads so large videos don't time out
+    if (config.data instanceof FormData) {
+      config.timeout = 0;
+    }
     return config;
   },
   (error) => Promise.reject(error)
