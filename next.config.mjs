@@ -1,5 +1,7 @@
 import withPWA from '@ducanh2912/next-pwa';
 
+const RAILWAY_URL = 'https://corpers-connect-server-production.up.railway.app';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -9,6 +11,17 @@ const nextConfig = {
     ],
   },
   reactStrictMode: true,
+  // Dev-only proxy: routes /api/proxy/* → Railway backend to avoid CORS in local dev.
+  // In production NEXT_PUBLIC_API_URL points directly to Railway so this path is never used.
+  async rewrites() {
+    if (process.env.NODE_ENV !== 'development') return [];
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: `${RAILWAY_URL}/:path*`,
+      },
+    ];
+  },
 };
 
 export default withPWA({
