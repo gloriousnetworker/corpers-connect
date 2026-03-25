@@ -11,11 +11,12 @@ import { useAuthStore } from '@/store/auth.store';
 import { getInitials } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
+import type { Conversation } from '@/types/models';
 
 interface NewConversationModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated: (conversationId: string) => void;
+  onCreated: (conversation: Conversation) => void;
 }
 
 export default function NewConversationModal({
@@ -51,7 +52,7 @@ export default function NewConversationModal({
     onSuccess: (conv) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
       toast.success('Conversation started!');
-      onCreated(conv.id);
+      onCreated(conv);
       onClose();
     },
     onError: () => toast.error('Failed to start conversation'),

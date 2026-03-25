@@ -113,15 +113,32 @@ function normalizeParticipant(p: RawParticipant): ConversationParticipant {
 }
 
 function normalizeConvFromEntry(entry: RawParticipantEntry): Conversation {
-  const c = entry.conversation;
+  const c = entry?.conversation;
+  if (!c) {
+    // Defensive: entry didn't include nested conversation — return minimal shape
+    return {
+      id: entry.conversationId,
+      type: ConversationType.DM,
+      name: null,
+      picture: null,
+      description: null,
+      participants: [],
+      lastMessage: null,
+      unreadCount: 0,
+      createdAt: entry.joinedAt,
+      updatedAt: entry.joinedAt,
+    };
+  }
+  const participants = c.participants ?? [];
+  const messages = c.messages ?? [];
   return {
     id: c.id,
     type: (c.type as ConversationType) ?? ConversationType.DM,
     name: c.name,
     picture: c.picture,
     description: c.description,
-    participants: c.participants.map(normalizeParticipant),
-    lastMessage: c.messages.length > 0 ? normalizeMessage(c.messages[0]) : null,
+    participants: participants.map(normalizeParticipant),
+    lastMessage: messages.length > 0 ? normalizeMessage(messages[0]) : null,
     unreadCount: c.unreadCount ?? 0,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
@@ -129,14 +146,16 @@ function normalizeConvFromEntry(entry: RawParticipantEntry): Conversation {
 }
 
 function normalizeConvDirect(c: RawConversation): Conversation {
+  const participants = c.participants ?? [];
+  const messages = c.messages ?? [];
   return {
     id: c.id,
     type: (c.type as ConversationType) ?? ConversationType.DM,
     name: c.name,
     picture: c.picture,
     description: c.description,
-    participants: c.participants.map(normalizeParticipant),
-    lastMessage: c.messages.length > 0 ? normalizeMessage(c.messages[0]) : null,
+    participants: participants.map(normalizeParticipant),
+    lastMessage: messages.length > 0 ? normalizeMessage(messages[0]) : null,
     unreadCount: c.unreadCount ?? 0,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,

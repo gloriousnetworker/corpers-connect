@@ -33,10 +33,10 @@ export default function MessagesSection() {
     setActiveConversation(null);
   }, [setActiveConversation]);
 
-  const handleNewConversation = useCallback((conversationId: string) => {
+  const handleNewConversation = useCallback((conv: Conversation) => {
     setNewConvOpen(false);
-    setSelectedConversation(null);
-    setActiveConversation(conversationId);
+    setSelectedConversation(conv);
+    setActiveConversation(conv.id);
   }, [setActiveConversation]);
 
   const showChat = !!activeConversationId;

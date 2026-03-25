@@ -37,6 +37,7 @@ export default function ConversationList({
       return c.participants.some(
         (p) =>
           p.userId !== user?.id &&
+          p.user &&
           (`${p.user.firstName} ${p.user.lastName}`.toLowerCase().includes(q))
       );
     });
