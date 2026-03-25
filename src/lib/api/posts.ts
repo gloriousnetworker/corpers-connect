@@ -137,35 +137,18 @@ export async function reportPost(
   await api.post(`/posts/${postId}/report`, payload);
 }
 
-// ── Cloudinary Upload ─────────────────────────────────────────────────────
-
-export interface CloudinaryUploadResult {
-  secure_url: string;
-  public_id: string;
-}
+// ── Media Upload (via backend — avoids needing a Cloudinary unsigned preset) ──
 
 export async function uploadToCloudinary(file: File): Promise<string> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error('Cloudinary not configured');
-  }
-
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', uploadPreset);
-  formData.append('folder', 'corpers-connect/posts');
+  formData.append('media', file);
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    { method: 'POST', body: formData }
+  // Use the authenticated Axios instance so the auth cookie/token is forwarded
+  const { data } = await api.post<ApiResponse<{ url: string; mediaType: string }>>(
+    '/media/upload',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
 
-  if (!response.ok) {
-    throw new Error('Image upload failed');
-  }
-
-  const result: CloudinaryUploadResult = await response.json();
-  return result.secure_url;
+  return data.data.url;
 }
