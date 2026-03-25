@@ -24,7 +24,7 @@ export interface PasswordResetState {
   maskedEmail: string;
 }
 
-export type ActiveSection = 'feed' | 'discover' | 'notifications' | 'messages' | 'profile';
+export type ActiveSection = 'feed' | 'discover' | 'notifications' | 'messages' | 'profile' | 'userProfile';
 
 interface UIState {
   // Navigation — SPA section state (no route changes)
@@ -48,6 +48,11 @@ interface UIState {
   // 2FA challenge state
   twoFAChallenge: { challengeToken: string; userId: string } | null;
   setTwoFAChallenge: (data: { challengeToken: string; userId: string } | null) => void;
+
+  // User profile navigation
+  viewingUserId: string | null;
+  previousSection: ActiveSection;
+  setViewingUser: (id: string, from?: ActiveSection) => void;
 
   // Notifications badge
   unreadNotifications: number;
@@ -77,6 +82,15 @@ const defaultPasswordReset: PasswordResetState = {
 export const useUIStore = create<UIState>((set) => ({
   activeSection: 'feed',
   setActiveSection: (section) => set({ activeSection: section }),
+
+  viewingUserId: null,
+  previousSection: 'feed',
+  setViewingUser: (id, from) =>
+    set((state) => ({
+      viewingUserId: id,
+      previousSection: from ?? state.activeSection as ActiveSection,
+      activeSection: 'userProfile',
+    })),
 
   createPostOpen: false,
   setCreatePostOpen: (open) => set({ createPostOpen: open }),

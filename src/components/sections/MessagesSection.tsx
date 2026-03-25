@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Edit3 } from 'lucide-react';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatView from '@/components/messages/ChatView';
@@ -22,8 +22,19 @@ export default function MessagesSection() {
   // to re-render on every typing/online event, which cascades unnecessarily.
   const activeConversationId = useMessagesStore((s) => s.activeConversationId);
   const setActiveConversation = useMessagesStore((s) => s.setActiveConversation);
+  const pendingConversation = useMessagesStore((s) => s.pendingConversation);
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  // Open pending conversation injected from outside (e.g. "Message" button on a profile)
+  useEffect(() => {
+    if (pendingConversation) {
+      setSelectedConversation(pendingConversation);
+      setActiveConversation(pendingConversation.id);
+      setPendingConversation(null);
+    }
+  }, [pendingConversation, setActiveConversation, setPendingConversation]);
 
   const handleSelectConversation = useCallback((conv: Conversation) => {
     setSelectedConversation(conv);

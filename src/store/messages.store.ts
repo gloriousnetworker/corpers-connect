@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Conversation } from '@/types/models';
 
 interface MessagesState {
   /** The currently open conversation ID */
@@ -7,8 +8,11 @@ interface MessagesState {
   typingUsers: Record<string, string[]>;
   /** Set of online user IDs */
   onlineUsers: Set<string>;
+  /** Conversation to open immediately when MessagesSection mounts (e.g. from "Message" button) */
+  pendingConversation: Conversation | null;
 
   setActiveConversation: (id: string | null) => void;
+  setPendingConversation: (conv: Conversation | null) => void;
   setTyping: (conversationId: string, userId: string, isTyping: boolean) => void;
   setUserOnline: (userId: string) => void;
   setUserOffline: (userId: string) => void;
@@ -19,8 +23,10 @@ export const useMessagesStore = create<MessagesState>((set) => ({
   activeConversationId: null,
   typingUsers: {},
   onlineUsers: new Set<string>(),
+  pendingConversation: null,
 
   setActiveConversation: (id) => set({ activeConversationId: id }),
+  setPendingConversation: (conv) => set({ pendingConversation: conv }),
 
   setTyping: (conversationId, userId, isTyping) =>
     set((state) => {
@@ -51,5 +57,5 @@ export const useMessagesStore = create<MessagesState>((set) => ({
     }),
 
   resetMessages: () =>
-    set({ activeConversationId: null, typingUsers: {}, onlineUsers: new Set() }),
+    set({ activeConversationId: null, typingUsers: {}, onlineUsers: new Set(), pendingConversation: null }),
 }));

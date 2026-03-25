@@ -7,6 +7,7 @@ import { getSocket, disconnectSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/api/client';
 import { useAuthStore } from '@/store/auth.store';
 import { useMessagesStore } from '@/store/messages.store';
+import { useUIStore } from '@/store/ui.store';
 import { queryKeys } from '@/lib/query-keys';
 import { normalizeMessage } from '@/lib/api/conversations';
 import type { Message } from '@/types/models';
@@ -20,6 +21,7 @@ export function useSocket() {
   const setTyping = useMessagesStore((s) => s.setTyping);
   const setUserOnline = useMessagesStore((s) => s.setUserOnline);
   const setUserOffline = useMessagesStore((s) => s.setUserOffline);
+  const incrementUnread = useUIStore((s) => s.incrementUnread);
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -50,6 +52,13 @@ export function useSocket() {
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
     });
 
+    // ── Notification events ────────────────────────────────────────────────────
+    socket.on('notification:new', () => {
+      incrementUnread();
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount() });
+    });
+
     // ── Typing indicators ─────────────────────────────────────────────────────
     socket.on('typing:start', ({ conversationId, userId }: { conversationId: string; userId: string }) => {
       if (userId !== user.id) setTyping(conversationId, userId, true);
@@ -70,13 +79,14 @@ export function useSocket() {
 
     return () => {
       socket.off('message:new');
+      socket.off('notification:new');
       socket.off('typing:start');
       socket.off('typing:stop');
       socket.off('user:online');
       socket.off('user:offline');
       if (pingRef.current) clearInterval(pingRef.current);
     };
-  }, [user, queryClient, setTyping, setUserOnline, setUserOffline]);
+  }, [user, queryClient, setTyping, setUserOnline, setUserOffline, incrementUnread]);
 
   // Disconnect on logout
   useEffect(() => {
