@@ -2,6 +2,7 @@ import api from './client';
 import type { ApiResponse, PaginatedData } from '@/types/api';
 import type { Post, Comment } from '@/types/models';
 import type { ReactionType, PostVisibility, PostType } from '@/types/enums';
+import { normalizePost } from './feed';
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 
@@ -21,17 +22,17 @@ export interface UpdatePostPayload {
 
 export async function getPost(postId: string): Promise<Post> {
   const { data } = await api.get<ApiResponse<Post>>(`/posts/${postId}`);
-  return data.data;
+  return normalizePost(data.data);
 }
 
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
   const { data } = await api.post<ApiResponse<Post>>('/posts', payload);
-  return data.data;
+  return normalizePost(data.data);
 }
 
 export async function updatePost(postId: string, payload: UpdatePostPayload): Promise<Post> {
   const { data } = await api.patch<ApiResponse<Post>>(`/posts/${postId}`, payload);
-  return data.data;
+  return normalizePost(data.data);
 }
 
 export async function deletePost(postId: string): Promise<void> {
@@ -112,7 +113,7 @@ export async function getBookmarks(
     '/users/me/bookmarks',
     { params: { cursor: params.cursor, limit: params.limit ?? 20 } }
   );
-  return data.data;
+  return { ...data.data, items: data.data.items.map(normalizePost) };
 }
 
 // ── User Posts ─────────────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ export async function getUserPosts(
     `/users/${userId}/posts`,
     { params: { cursor: params.cursor, limit: params.limit ?? 20 } }
   );
-  return data.data;
+  return { ...data.data, items: data.data.items.map(normalizePost) };
 }
 
 // ── Share ──────────────────────────────────────────────────────────────────
