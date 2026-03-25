@@ -248,13 +248,13 @@ export async function leaveConversation(conversationId: string): Promise<void> {
   await api.delete(`/conversations/${conversationId}/participants/me`);
 }
 
-/** GET /users/search — search users to start a DM */
+/** GET /discover/search — search users to start a DM */
 export async function searchUsers(
   query: string
-): Promise<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; stateCode: string; servingState: string }[]> {
-  const { data } = await api.get<ApiResponse<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; stateCode: string; servingState: string }[]>>(
-    '/users',
-    { params: { search: query, limit: 20 } }
+): Promise<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string }[]> {
+  const { data } = await api.get<ApiResponse<{ items: { id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string }[] }>>(
+    '/discover/search',
+    { params: { q: query, limit: 20 } }
   );
-  return data.data ?? [];
+  return data.data?.items ?? [];
 }

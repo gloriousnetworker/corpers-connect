@@ -136,7 +136,7 @@ export default function NewConversationModal({
                         <p className="text-sm font-semibold text-foreground">
                           {u.firstName} {u.lastName}
                         </p>
-                        <p className="text-xs text-foreground-muted">{u.servingState} · {u.stateCode}</p>
+                        <p className="text-xs text-foreground-muted">{u.servingState}</p>
                       </div>
                     </button>
                   );
