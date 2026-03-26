@@ -446,7 +446,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             <MessageBubble
               key={msg.id}
               message={msg}
-              isOwn={msg.senderId === user?.id}
+              isOwn={!!user && (msg.senderId === user.id || msg.sender?.id === user.id)}
               showAvatar={isFirstInCluster}
               isGroup={isGroup}
               participantCount={conversation.participants.length}

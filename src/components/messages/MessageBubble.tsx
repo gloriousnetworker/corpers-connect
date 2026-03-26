@@ -52,7 +52,7 @@ export default function MessageBubble({
 
   const bubbleBase = isOwn
     ? 'bg-primary text-white rounded-2xl rounded-br-sm ml-auto'
-    : 'bg-surface border border-border text-foreground rounded-2xl rounded-bl-sm';
+    : 'bg-white dark:bg-slate-700 border border-border dark:border-slate-600 text-foreground rounded-2xl rounded-bl-sm';
 
   const renderStatus = () => {
     if (!isOwn) return null;
@@ -189,7 +189,7 @@ export default function MessageBubble({
               className={`text-xs mb-0.5 px-2 py-1 rounded-lg border-l-2 max-w-full ${
                 isOwn
                   ? 'bg-white/10 border-white/40 text-white/70'
-                  : 'bg-surface-alt border-primary/40 text-foreground-muted'
+                  : 'bg-surface-alt dark:bg-slate-600 border-primary/40 text-foreground-muted'
               }`}
             >
               <p className="font-medium truncate">
