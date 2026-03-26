@@ -286,4 +286,63 @@ describe('ConversationItem', () => {
     );
     expect(screen.getByText('Message deleted')).toBeInTheDocument();
   });
+
+  it('calls onLongPress after 500ms hold', () => {
+    jest.useFakeTimers();
+    const onLongPress = jest.fn();
+    render(
+      <ConversationItem
+        conversation={mockConv}
+        currentUserId="user-123"
+        onClick={jest.fn()}
+        onLongPress={onLongPress}
+      />
+    );
+    fireEvent.pointerDown(screen.getByRole('button'), { clientX: 100, clientY: 100 });
+    expect(onLongPress).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(500);
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    fireEvent.pointerUp(screen.getByRole('button'));
+    jest.useRealTimers();
+  });
+
+  it('does not trigger onLongPress if press is cancelled (pointercancel)', () => {
+    jest.useFakeTimers();
+    const onLongPress = jest.fn();
+    render(
+      <ConversationItem
+        conversation={mockConv}
+        currentUserId="user-123"
+        onClick={jest.fn()}
+        onLongPress={onLongPress}
+      />
+    );
+    const btn = screen.getByRole('button');
+    fireEvent.pointerDown(btn, { clientX: 100, clientY: 100 });
+    fireEvent.pointerCancel(btn); // e.g. scroll begins — cancels the press
+    jest.advanceTimersByTime(600);
+    expect(onLongPress).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('does not fire onClick after long-press', () => {
+    jest.useFakeTimers();
+    const onClick = jest.fn();
+    const onLongPress = jest.fn();
+    render(
+      <ConversationItem
+        conversation={mockConv}
+        currentUserId="user-123"
+        onClick={onClick}
+        onLongPress={onLongPress}
+      />
+    );
+    const btn = screen.getByRole('button');
+    fireEvent.pointerDown(btn, { clientX: 100, clientY: 100 });
+    jest.advanceTimersByTime(500);
+    // Simulate click after long-press
+    fireEvent.click(btn);
+    expect(onClick).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
 });

@@ -183,4 +183,109 @@ describe('MessageBubble', () => {
     fireEvent.contextMenu(screen.getByText('Hello world!').closest('div')!);
     expect(screen.queryByText('Edit')).not.toBeInTheDocument();
   });
+
+  // ── Blue tick (read receipt) tests ─────────────────────────────────────────
+
+  it('shows single check (no blue ticks) when not read by anyone', () => {
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, readBy: [] }}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+        participantCount={2}
+      />
+    );
+    // No sky-300 (blue) colour — single grey check
+    expect(container.querySelector('svg.text-sky-300')).toBeNull();
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('shows grey double check when delivered but not all participants have read', () => {
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, readBy: ['other-user'] }}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+        participantCount={3} // 3 participants — only 1 has read
+      />
+    );
+    // Has a white/60 SVG but NOT sky-300
+    expect(container.querySelector('svg.text-sky-300')).toBeNull();
+    expect(container.querySelector('svg[class*="text-white"]')).toBeInTheDocument();
+  });
+
+  it('shows blue double check when all participants have read (DM)', () => {
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, readBy: ['user-2'] }}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+        participantCount={2} // 2 participants — 1 other read → allRead
+      />
+    );
+    expect(container.querySelector('svg.text-sky-300')).toBeInTheDocument();
+  });
+
+  it('shows blue ticks for group when all other participants have read', () => {
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, readBy: ['user-2', 'user-3'] }}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={true}
+        participantCount={3} // 3 participants — 2 others read → allRead
+      />
+    );
+    expect(container.querySelector('svg.text-sky-300')).toBeInTheDocument();
+  });
+
+  // ── Retry button tests ─────────────────────────────────────────────────────
+
+  it('shows retry button when message has _failed=true', () => {
+    const failedMessage = { ...baseMessage, _failed: true };
+    render(
+      <MessageBubble
+        message={failedMessage}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+        onRetry={jest.fn()}
+      />
+    );
+    expect(screen.getByLabelText('Retry sending')).toBeInTheDocument();
+  });
+
+  it('calls onRetry when retry button is clicked', () => {
+    const onRetry = jest.fn();
+    const failedMessage = { ...baseMessage, _failed: true };
+    render(
+      <MessageBubble
+        message={failedMessage}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+        onRetry={onRetry}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Retry sending'));
+    expect(onRetry).toHaveBeenCalledWith(failedMessage);
+  });
+
+  it('shows a pending indicator when _pending=true (no blue/double check)', () => {
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, _pending: true }}
+        isOwn={true}
+        showAvatar={false}
+        isGroup={false}
+      />
+    );
+    // Pending shows a clock icon — no blue ticks
+    expect(container.querySelector('svg.text-sky-300')).toBeNull();
+    // Some SVG status icon is rendered
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });

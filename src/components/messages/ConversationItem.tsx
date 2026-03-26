@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import Image from 'next/image';
 import { Users } from 'lucide-react';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
@@ -12,6 +13,7 @@ interface ConversationItemProps {
   isActive?: boolean;
   isOnline?: boolean;
   onClick: () => void;
+  onLongPress?: () => void;
 }
 
 function getConversationDisplay(conv: Conversation, currentUserId: string) {
@@ -53,15 +55,58 @@ export default function ConversationItem({
   isActive,
   isOnline,
   onClick,
+  onLongPress,
 }: ConversationItemProps) {
   const display = getConversationDisplay(conversation, currentUserId);
   const preview = getLastMessagePreview(conversation, currentUserId);
   const timestamp = conversation.lastMessage?.createdAt ?? conversation.updatedAt;
   const hasUnread = conversation.unreadCount > 0;
 
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const didLongPressRef = useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!onLongPress) return;
+    didLongPressRef.current = false;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    pressTimerRef.current = setTimeout(() => {
+      didLongPressRef.current = true;
+      onLongPress();
+    }, 500);
+  };
+
+  const cancelPress = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+    startPosRef.current = null;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!startPosRef.current) return;
+    const dx = e.clientX - startPosRef.current.x;
+    const dy = e.clientY - startPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10) cancelPress();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (didLongPressRef.current) {
+      didLongPressRef.current = false;
+      e.preventDefault();
+      return;
+    }
+    onClick();
+  };
+
   return (
     <button
-      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onPointerMove={handlePointerMove}
+      onClick={handleClick}
       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
         isActive
           ? 'bg-primary/10'

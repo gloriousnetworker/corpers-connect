@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Edit3 } from 'lucide-react';
+import { Edit3, Users } from 'lucide-react';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatView from '@/components/messages/ChatView';
 import NewConversationModal from '@/components/messages/NewConversationModal';
+import GroupCreationModal from '@/components/messages/GroupCreationModal';
 import { useMessagesStore } from '@/store/messages.store';
 import type { Conversation } from '@/types/models';
 
@@ -25,6 +26,7 @@ export default function MessagesSection() {
   const pendingConversation = useMessagesStore((s) => s.pendingConversation);
   const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
   const [newConvOpen, setNewConvOpen] = useState(false);
+  const [groupConvOpen, setGroupConvOpen] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
   // Open pending conversation injected from outside (e.g. "Message" button on a profile)
@@ -60,7 +62,7 @@ export default function MessagesSection() {
       <div className="hidden lg:flex h-full overflow-hidden">
         {/* Left: conversation list */}
         <div className="w-80 flex-shrink-0 border-r border-border flex flex-col h-full overflow-hidden">
-          <ListHeader onNew={() => setNewConvOpen(true)} />
+          <ListHeader onNew={() => setNewConvOpen(true)} onNewGroup={() => setGroupConvOpen(true)} />
           <div className="flex-1 overflow-y-auto overscroll-y-none">
             <ConversationList
               activeConversationId={activeConversationId}
@@ -95,7 +97,7 @@ export default function MessagesSection() {
         ) : (
           /* Conversation list */
           <>
-            <ListHeader onNew={() => setNewConvOpen(true)} />
+            <ListHeader onNew={() => setNewConvOpen(true)} onNewGroup={() => setGroupConvOpen(true)} />
             <div className="flex-1 overflow-y-auto overscroll-y-none">
               <ConversationList
                 activeConversationId={activeConversationId}
@@ -112,21 +114,37 @@ export default function MessagesSection() {
         onClose={() => setNewConvOpen(false)}
         onCreated={handleNewConversation}
       />
+
+      {/* Group creation modal */}
+      <GroupCreationModal
+        open={groupConvOpen}
+        onClose={() => setGroupConvOpen(false)}
+        onCreated={handleNewConversation}
+      />
     </>
   );
 }
 
-function ListHeader({ onNew }: { onNew: () => void }) {
+function ListHeader({ onNew, onNewGroup }: { onNew: () => void; onNewGroup: () => void }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
       <h2 className="text-base font-bold text-foreground">Messages</h2>
-      <button
-        onClick={onNew}
-        className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
-        aria-label="New conversation"
-      >
-        <Edit3 className="w-4 h-4 text-foreground-secondary" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onNewGroup}
+          className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+          aria-label="New group"
+        >
+          <Users className="w-4 h-4 text-foreground-secondary" />
+        </button>
+        <button
+          onClick={onNew}
+          className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+          aria-label="New conversation"
+        >
+          <Edit3 className="w-4 h-4 text-foreground-secondary" />
+        </button>
+      </div>
     </div>
   );
 }

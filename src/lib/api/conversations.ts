@@ -267,6 +267,47 @@ export async function leaveConversation(conversationId: string): Promise<void> {
   await api.delete(`/conversations/${conversationId}/participants/me`);
 }
 
+/** POST /media/upload — upload an image/audio/video file, returns Cloudinary URL */
+export async function uploadMessageMedia(
+  file: File
+): Promise<{ url: string; mediaType: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await api.post<ApiResponse<{ url: string; mediaType: string }>>(
+    '/media/upload',
+    form
+  );
+  return data.data;
+}
+
+/** POST /conversations/:id/participants — add participants (admin only) */
+export async function addParticipants(
+  conversationId: string,
+  userIds: string[]
+): Promise<void> {
+  await api.post(`/conversations/${conversationId}/participants`, { userIds });
+}
+
+/** DELETE /conversations/:id/participants/:userId — remove participant (admin only) */
+export async function removeParticipant(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  await api.delete(`/conversations/${conversationId}/participants/${userId}`);
+}
+
+/** PATCH /conversations/:id — update group name/description/picture (admin only) */
+export async function updateGroup(
+  conversationId: string,
+  payload: { name?: string; description?: string; picture?: string }
+): Promise<Conversation> {
+  const { data } = await api.patch<ApiResponse<RawConversation>>(
+    `/conversations/${conversationId}`,
+    payload
+  );
+  return normalizeConvDirect(data.data);
+}
+
 /** GET /discover/search — search users to start a DM */
 export async function searchUsers(
   query: string

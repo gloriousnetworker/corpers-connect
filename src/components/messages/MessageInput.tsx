@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, CornerUpLeft, Image as ImageIcon } from 'lucide-react';
+import { Send, X, CornerUpLeft, ImageIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { uploadMessageMedia } from '@/lib/api/conversations';
+import { MessageType } from '@/types/enums';
 import type { Message } from '@/types/models';
+import VoiceNoteRecorder, { MicButton } from './VoiceNoteRecorder';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
+  onSendMedia?: (mediaUrl: string, type: MessageType) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
   replyTo?: Message | null;
@@ -15,8 +20,18 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
 }
 
+function getReplyPreview(msg: Message): string {
+  if (msg.isDeleted) return 'Deleted message';
+  if (msg.type === MessageType.IMAGE) return '📷 Photo';
+  if (msg.type === MessageType.AUDIO) return '🎵 Voice note';
+  if (msg.type === MessageType.VIDEO) return '🎥 Video';
+  if (msg.type === MessageType.FILE) return '📄 File';
+  return msg.content ?? '';
+}
+
 export default function MessageInput({
   onSend,
+  onSendMedia,
   onTypingStart,
   onTypingStop,
   replyTo,
@@ -26,7 +41,11 @@ export default function MessageInput({
   onCancelEdit,
 }: MessageInputProps) {
   const [text, setText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -73,6 +92,7 @@ export default function MessageInput({
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
+    // When editing, onSend receives (content, messageId)
     onSend(trimmed, replyTo?.id ?? editingMessage?.id);
     setText('');
     if (isTypingRef.current) {
@@ -90,7 +110,52 @@ export default function MessageInput({
     }
   };
 
+  // ── Image / video file upload ──────────────────────────────────────────────
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onSendMedia) return;
+    e.target.value = ''; // reset so same file can be re-selected
+
+    setUploading(true);
+    try {
+      const { url, mediaType } = await uploadMessageMedia(file);
+      const msgType = mediaType.startsWith('video') ? MessageType.VIDEO : MessageType.IMAGE;
+      onSendMedia(url, msgType);
+    } catch {
+      toast.error('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── Voice note ─────────────────────────────────────────────────────────────
+  const handleVoiceSend = useCallback(async (blob: Blob, _durationMs: number) => {
+    setIsRecording(false);
+    if (!onSendMedia) return;
+    setUploading(true);
+    try {
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+      const { url } = await uploadMessageMedia(file);
+      onSendMedia(url, MessageType.AUDIO);
+    } catch {
+      toast.error('Failed to send voice note');
+    } finally {
+      setUploading(false);
+    }
+  }, [onSendMedia]);
+
+  // ── Render recording state ─────────────────────────────────────────────────
+  if (isRecording) {
+    return (
+      <VoiceNoteRecorder
+        onSend={handleVoiceSend}
+        onCancel={() => setIsRecording(false)}
+      />
+    );
+  }
+
   const canSend = text.trim().length > 0 && !disabled;
+  const showMic = !canSend && !editingMessage && !!onSendMedia;
 
   return (
     <div className="border-t border-border bg-surface">
@@ -103,7 +168,10 @@ export default function MessageInput({
               {editingMessage ? 'Editing message' : `Replying to ${replyTo?.sender.firstName}`}
             </p>
             <p className="text-xs text-foreground-muted truncate">
-              {(editingMessage ?? replyTo)?.content ?? ''}
+              {editingMessage
+                ? (editingMessage.content ?? '')
+                : getReplyPreview(replyTo!)
+              }
             </p>
           </div>
           <button
@@ -117,6 +185,30 @@ export default function MessageInput({
 
       {/* Input row */}
       <div className="flex items-end gap-2 px-3 py-2">
+        {/* Image upload button */}
+        {onSendMedia && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || disabled}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-50 self-end mb-0.5"
+              aria-label="Attach image or video"
+            >
+              {uploading
+                ? <Loader2 className="w-5 h-5 text-foreground-muted animate-spin" />
+                : <ImageIcon className="w-5 h-5 text-foreground-muted" />
+              }
+            </button>
+          </>
+        )}
+
         <div className="flex-1 flex items-end gap-2 bg-surface-alt rounded-2xl px-3 py-2 min-h-[44px]">
           <textarea
             ref={textareaRef}
@@ -132,15 +224,19 @@ export default function MessageInput({
           />
         </div>
 
-        {/* Send button */}
-        <button
-          onClick={handleSend}
-          disabled={!canSend}
-          className="w-11 h-11 rounded-full bg-primary flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-dark active:scale-95"
-          aria-label={editingMessage ? 'Save edit' : 'Send message'}
-        >
-          <Send className="w-5 h-5 text-white" strokeWidth={2} />
-        </button>
+        {/* Send or Mic button */}
+        {showMic ? (
+          <MicButton onPress={() => setIsRecording(true)} />
+        ) : (
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="w-11 h-11 rounded-full bg-primary flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-dark active:scale-95"
+            aria-label={editingMessage ? 'Save edit' : 'Send message'}
+          >
+            <Send className="w-5 h-5 text-white" strokeWidth={2} />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, MoreVertical, Phone } from 'lucide-react';
+import { ArrowLeft, Users, Info } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -25,6 +25,18 @@ import type { PaginatedData } from '@/types/api';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
+import GroupInfoSheet from './GroupInfoSheet';
+
+// WhatsApp-style chat background — subtle repeating pattern
+const CHAT_BG_LIGHT = `
+  linear-gradient(rgba(229,237,232,0.96), rgba(229,237,232,0.96)),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='25' cy='25' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='55' cy='25' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='10' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='25' cy='55' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='55' cy='55' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='10' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3C/svg%3E")
+`.trim();
+
+const CHAT_BG_DARK = `
+  linear-gradient(rgba(11,20,26,0.97), rgba(11,20,26,0.97)),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='25' cy='25' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='55' cy='25' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='10' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='25' cy='55' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='55' cy='55' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='10' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3C/svg%3E")
+`.trim();
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -38,8 +50,6 @@ function getDmPartner(conv: Conversation, currentUserId: string) {
 let _tempIdCounter = 0;
 function newTempId() { return `temp-${++_tempIdCounter}`; }
 
-// Stable empty array so the typingUsers selector doesn't return a new reference
-// on every store tick when there are no typing users (which would cause infinite re-renders).
 const EMPTY_TYPING: string[] = [];
 
 export default function ChatView({ conversation, onBack }: ChatViewProps) {
@@ -51,6 +61,9 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const prevScrollHeight = useRef(0);
@@ -65,6 +78,18 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     ? (conversation.name ?? 'G').slice(0, 2).toUpperCase()
     : getInitials(dmPartner?.firstName ?? '', dmPartner?.lastName ?? '');
   const isPartnerOnline = !isGroup && !!dmPartner && onlineUsers.has(dmPartner.id);
+  const dmPartnerLastSeen = !isGroup && dmPartner?.lastSeen
+    ? `last seen ${formatRelativeTime(dmPartner.lastSeen)}`
+    : null;
+
+  // Detect dark mode
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains('dark'));
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
 
   // ── Message history ────────────────────────────────────────────────────────
   const {
@@ -141,12 +166,33 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     };
   }, [conversation.id]);
 
-  // ── Send message ────────────────────────────────────────────────────────────
+  // ── Helper to patch message cache ──────────────────────────────────────────
+  const patchMessages = useCallback(
+    (patcher: (m: Message) => Message | null) => {
+      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
+        queryKeys.messages(conversation.id),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((p) => ({
+              ...p,
+              items: p.items
+                .map((m) => patcher(m) ?? m)
+                .filter(Boolean) as Message[],
+            })),
+          };
+        }
+      );
+    },
+    [queryClient, conversation.id]
+  );
+
+  // ── Send text message ────────────────────────────────────────────────────────
   const sendMutation = useMutation({
     mutationFn: (vars: { content: string; replyToId?: string }) =>
       sendMessage(conversation.id, { content: vars.content, replyToId: vars.replyToId }),
     onMutate: async ({ content, replyToId }) => {
-      // Optimistic update
       const tempId = newTempId();
       const optimistic: Message = {
         id: tempId,
@@ -176,38 +222,56 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       return { tempId };
     },
     onSuccess: (realMsg, _vars, context) => {
-      // Replace optimistic with real message
-      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
-        queryKeys.messages(conversation.id),
-        (old) => {
-          if (!old) return old;
-          const pages = old.pages.map((page) => ({
-            ...page,
-            items: page.items.map((m) =>
-              m.id === context?.tempId ? realMsg : m
-            ),
-          }));
-          return { ...old, pages };
-        }
-      );
+      patchMessages((m) => (m.id === context?.tempId ? realMsg : m));
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
     },
     onError: (_err, _vars, context) => {
-      // Mark as failed
+      patchMessages((m) => m.id === context?.tempId ? { ...m, _pending: false, _failed: true } : m);
+      toast.error('Failed to send message');
+    },
+  });
+
+  // ── Send media message ────────────────────────────────────────────────────────
+  const sendMediaMutation = useMutation({
+    mutationFn: (vars: { mediaUrl: string; type: MessageType }) =>
+      sendMessage(conversation.id, { mediaUrl: vars.mediaUrl, type: vars.type }),
+    onMutate: async ({ mediaUrl, type }) => {
+      const tempId = newTempId();
+      const optimistic: Message = {
+        id: tempId,
+        conversationId: conversation.id,
+        senderId: user!.id,
+        sender: user!,
+        content: null,
+        type,
+        mediaUrl,
+        isEdited: false,
+        isDeleted: false,
+        replyToId: null,
+        replyTo: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _pending: true,
+      };
       queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
         queryKeys.messages(conversation.id),
         (old) => {
           if (!old) return old;
-          const pages = old.pages.map((page) => ({
-            ...page,
-            items: page.items.map((m) =>
-              m.id === context?.tempId ? { ...m, _pending: false, _failed: true } : m
-            ),
-          }));
+          const pages = [...old.pages];
+          pages[0] = { ...pages[0], items: [optimistic, ...pages[0].items] };
           return { ...old, pages };
         }
       );
-      toast.error('Failed to send message');
+      isAtBottomRef.current = true;
+      return { tempId };
+    },
+    onSuccess: (realMsg, _vars, context) => {
+      patchMessages((m) => (m.id === context?.tempId ? realMsg : m));
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
+    },
+    onError: (_err, _vars, context) => {
+      patchMessages((m) => m.id === context?.tempId ? { ...m, _pending: false, _failed: true } : m);
+      toast.error('Failed to send media');
     },
   });
 
@@ -216,19 +280,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     mutationFn: (vars: { messageId: string; content: string }) =>
       editMessage(conversation.id, vars.messageId, vars.content),
     onSuccess: (updated) => {
-      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
-        queryKeys.messages(conversation.id),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((p) => ({
-              ...p,
-              items: p.items.map((m) => (m.id === updated.id ? updated : m)),
-            })),
-          };
-        }
-      );
+      patchMessages((m) => (m.id === updated.id ? updated : m));
       setEditingMessage(null);
     },
     onError: () => toast.error('Failed to edit message'),
@@ -239,37 +291,21 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     mutationFn: (vars: { messageId: string; forAll: boolean }) =>
       deleteMessage(conversation.id, vars.messageId, vars.forAll),
     onSuccess: (_data, { messageId, forAll }) => {
-      if (forAll) {
-        queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
-          queryKeys.messages(conversation.id),
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((p) => ({
-                ...p,
-                items: p.items.map((m) =>
-                  m.id === messageId ? { ...m, isDeleted: true, content: null } : m
-                ),
-              })),
-            };
-          }
-        );
-      } else {
-        queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
-          queryKeys.messages(conversation.id),
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((p) => ({
-                ...p,
-                items: p.items.filter((m) => m.id !== messageId),
-              })),
-            };
-          }
-        );
-      }
+      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
+        queryKeys.messages(conversation.id),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((p) => ({
+              ...p,
+              items: forAll
+                ? p.items.map((m) => m.id === messageId ? { ...m, isDeleted: true, content: null } : m)
+                : p.items.filter((m) => m.id !== messageId),
+            })),
+          };
+        }
+      );
     },
     onError: () => toast.error('Failed to delete message'),
   });
@@ -283,9 +319,24 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     setReplyTo(null);
   };
 
+  const handleSendMedia = (mediaUrl: string, type: MessageType) => {
+    sendMediaMutation.mutate({ mediaUrl, type });
+  };
+
   const handleDelete = (msg: Message) => {
     const forAll = msg.senderId === user?.id;
     deleteMutation.mutate({ messageId: msg.id, forAll });
+  };
+
+  const handleRetry = (msg: Message) => {
+    if (msg.type === MessageType.TEXT && msg.content) {
+      // Remove failed, resend
+      patchMessages((m) => m.id === msg.id ? null : m);
+      sendMutation.mutate({ content: msg.content, replyToId: msg.replyToId ?? undefined });
+    } else if (msg.mediaUrl && msg.type !== MessageType.TEXT) {
+      patchMessages((m) => m.id === msg.id ? null : m);
+      sendMediaMutation.mutate({ mediaUrl: msg.mediaUrl, type: msg.type });
+    }
   };
 
   // Typing socket events
@@ -313,7 +364,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   });
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface flex-shrink-0">
         <button
@@ -342,14 +393,26 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-foreground truncate">{headerName}</p>
-          <p className="text-xs text-foreground-muted">
-            {isPartnerOnline ? 'Online' : isGroup ? `${conversation.participants.length} members` : 'Offline'}
+          <p className="text-xs text-foreground-muted truncate">
+            {isPartnerOnline
+              ? 'Online'
+              : isGroup
+                ? `${conversation.participants.length} members`
+                : dmPartnerLastSeen ?? 'Offline'
+            }
           </p>
         </div>
 
-        <button className="p-2 rounded-xl hover:bg-surface-alt transition-colors" aria-label="More options">
-          <MoreVertical className="w-4 h-4 text-foreground-secondary" />
-        </button>
+        {/* Header actions */}
+        {isGroup ? (
+          <button
+            onClick={() => setGroupInfoOpen(true)}
+            className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+            aria-label="Group info"
+          >
+            <Info className="w-4 h-4 text-foreground-secondary" />
+          </button>
+        ) : null}
       </div>
 
       {/* ── Messages list ────────────────────────────────────────────────────── */}
@@ -357,6 +420,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         ref={listRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto overscroll-y-none py-2"
+        style={{ backgroundImage: isDark ? CHAT_BG_DARK : CHAT_BG_LIGHT, backgroundSize: '80px 80px' }}
       >
         {/* Loading older messages indicator */}
         {isFetchingNextPage && (
@@ -371,8 +435,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           </div>
         ) : allMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-              <Phone className="w-7 h-7 text-primary" />
+            <div className="w-16 h-16 rounded-full bg-white/80 shadow flex items-center justify-center mb-3">
+              <span className="text-2xl">👋</span>
             </div>
             <p className="font-semibold text-foreground text-sm">Start the conversation</p>
             <p className="text-xs text-foreground-muted mt-1">Say hi to {headerName}!</p>
@@ -385,9 +449,11 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               isOwn={msg.senderId === user?.id}
               showAvatar={isFirstInCluster}
               isGroup={isGroup}
+              participantCount={conversation.participants.length}
               onReply={(m) => { setReplyTo(m); setEditingMessage(null); }}
               onEdit={(m) => { setEditingMessage(m); setReplyTo(null); }}
               onDelete={handleDelete}
+              onRetry={handleRetry}
             />
           ))
         )}
@@ -401,6 +467,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       {/* ── Input ────────────────────────────────────────────────────────────── */}
       <MessageInput
         onSend={handleSend}
+        onSendMedia={handleSendMedia}
         onTypingStart={emitTypingStart}
         onTypingStop={emitTypingStop}
         replyTo={replyTo}
@@ -408,6 +475,17 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         editingMessage={editingMessage}
         onCancelEdit={() => setEditingMessage(null)}
       />
+
+      {/* Group info sheet */}
+      {isGroup && (
+        <GroupInfoSheet
+          open={groupInfoOpen}
+          conversation={conversation}
+          currentUserId={user?.id ?? ''}
+          onClose={() => setGroupInfoOpen(false)}
+          onLeave={onBack}
+        />
+      )}
     </div>
   );
 }
