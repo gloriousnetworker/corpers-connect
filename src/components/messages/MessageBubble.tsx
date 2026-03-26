@@ -49,6 +49,7 @@ export default function MessageBubble({
   const isDeleted = message.isDeleted;
   const isPending = message._pending;
   const isFailed = message._failed;
+  const isMedia = !isDeleted && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
 
   const bubbleBase = isOwn
     ? 'bg-primary text-white rounded-2xl rounded-br-sm ml-auto'
@@ -91,10 +92,10 @@ export default function MessageBubble({
 
     if (message.type === MessageType.IMAGE && message.mediaUrl) {
       return (
-        <div className="relative">
+        <div>
           <button
             onClick={() => setPreviewUrl(message.mediaUrl!)}
-            className="relative w-52 h-52 rounded-xl overflow-hidden block group"
+            className="relative w-52 h-52 block group"
             aria-label="View full size"
           >
             <Image
@@ -109,7 +110,7 @@ export default function MessageBubble({
             </div>
           </button>
           {message.content && (
-            <p className="mt-1 text-sm leading-relaxed">{message.content}</p>
+            <p className="px-3 py-2 text-sm leading-relaxed">{message.content}</p>
           )}
         </div>
       );
@@ -119,7 +120,7 @@ export default function MessageBubble({
       return (
         <button
           onClick={() => setPreviewUrl(message.mediaUrl!)}
-          className="relative w-52 h-52 rounded-xl overflow-hidden block bg-black"
+          className="relative w-52 h-52 block bg-black"
           aria-label="Play video"
         >
           <video src={message.mediaUrl} className="w-full h-full object-cover" />
@@ -210,7 +211,7 @@ export default function MessageBubble({
 
           {/* Bubble */}
           <div
-            className={`${bubbleBase} px-3 py-2 shadow-sm cursor-pointer select-text`}
+            className={`${bubbleBase} ${isMedia ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-text`}
             onContextMenu={(e) => {
               e.preventDefault();
               setShowMenu((v) => !v);

@@ -35,14 +35,6 @@ export function useSocket() {
       const msg = normalizeMessage(rawMessage as unknown as Parameters<typeof normalizeMessage>[0]);
       const convId = msg.conversationId;
 
-      // Skip own messages — the sender already has them via the mutation's
-      // optimistic update + onSuccess. Processing them here causes duplicates
-      // because the socket event can arrive before onSuccess replaces the tempId.
-      if (msg.senderId === user.id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
-        return;
-      }
-
       queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
         queryKeys.messages(convId),
         (old) => {

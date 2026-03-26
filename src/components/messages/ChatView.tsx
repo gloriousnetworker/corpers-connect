@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import {
 import { normalizeMessage } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
+import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
 import { getExistingSocket } from '@/lib/socket';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
@@ -26,6 +27,7 @@ import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
+import VoiceNotePlayer from './VoiceNotePlayer';
 
 // WhatsApp-style chat background — subtle repeating pattern
 const CHAT_BG_LIGHT = `
@@ -59,9 +61,12 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const onlineUsers = useMessagesStore((s) => s.onlineUsers);
   const setTyping = useMessagesStore((s) => s.setTyping);
 
+  const setViewingUser = useUIStore((s) => s.setViewingUser);
+
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -222,7 +227,24 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       return { tempId };
     },
     onSuccess: (realMsg, _vars, context) => {
-      patchMessages((m) => (m.id === context?.tempId ? realMsg : m));
+      // Replace tempId with realMsg AND deduplicate — the socket event may have
+      // already inserted realMsg before onSuccess ran (race condition).
+      const seen = new Set<string>();
+      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
+        queryKeys.messages(conversation.id),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((p) => ({
+              ...p,
+              items: p.items
+                .map((m) => m.id === context?.tempId ? realMsg : m)
+                .filter((m) => seen.has(m.id) ? false : Boolean(seen.add(m.id))),
+            })),
+          };
+        }
+      );
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
     },
     onError: (_err, _vars, context) => {
@@ -266,7 +288,22 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       return { tempId };
     },
     onSuccess: (realMsg, _vars, context) => {
-      patchMessages((m) => (m.id === context?.tempId ? realMsg : m));
+      const seen = new Set<string>();
+      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
+        queryKeys.messages(conversation.id),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((p) => ({
+              ...p,
+              items: p.items
+                .map((m) => m.id === context?.tempId ? realMsg : m)
+                .filter((m) => seen.has(m.id) ? false : Boolean(seen.add(m.id))),
+            })),
+          };
+        }
+      );
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
     },
     onError: (_err, _vars, context) => {
@@ -363,56 +400,76 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     return { msg, isFirstInCluster };
   });
 
+  // Shared media for contact info sheet
+  const sharedImages = allMessages.filter((m) => m.type === MessageType.IMAGE && m.mediaUrl && !m.isDeleted);
+  const sharedAudios = allMessages.filter((m) => m.type === MessageType.AUDIO && m.mediaUrl && !m.isDeleted);
+
   return (
     <div className="flex flex-col h-full">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface flex-shrink-0">
+      <div className="flex items-center gap-1 px-2 py-2 border-b border-border bg-surface flex-shrink-0">
+        {/* Back button — always visible on mobile */}
         <button
           onClick={onBack}
-          className="p-2 -ml-2 rounded-xl hover:bg-surface-alt transition-colors lg:hidden"
+          className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 lg:hidden"
           aria-label="Back to conversations"
         >
-          <ArrowLeft className="w-5 h-5 text-foreground-secondary" />
+          <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
 
-        {/* Avatar */}
-        <div className="relative flex-shrink-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
-            {headerAvatar ? (
-              <Image src={headerAvatar} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
-            ) : isGroup ? (
-              <Users className="w-4 h-4 text-primary" />
-            ) : (
-              <span className="font-bold text-primary text-xs uppercase">{headerInitials}</span>
-            )}
-          </div>
-          {isPartnerOnline && (
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success border-2 border-surface rounded-full" />
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-foreground truncate">{headerName}</p>
-          <p className="text-xs text-foreground-muted truncate">
-            {isPartnerOnline
-              ? 'Online'
-              : isGroup
-                ? `${conversation.participants.length} members`
-                : dmPartnerLastSeen ?? 'Offline'
-            }
-          </p>
-        </div>
-
-        {/* Header actions */}
-        {isGroup ? (
+        {/* Profile area — clickable for DMs, plain for groups */}
+        {!isGroup ? (
           <button
-            onClick={() => setGroupInfoOpen(true)}
-            className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
-            aria-label="Group info"
+            onClick={() => setContactInfoOpen(true)}
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-left px-1.5 py-1 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors"
           >
-            <Info className="w-4 h-4 text-foreground-secondary" />
+            <div className="relative flex-shrink-0">
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                {headerAvatar ? (
+                  <Image src={headerAvatar} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
+                ) : (
+                  <span className="font-bold text-primary text-xs uppercase">{headerInitials}</span>
+                )}
+              </div>
+              {isPartnerOnline && (
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success border-2 border-surface rounded-full" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-foreground truncate">{headerName}</p>
+              <p className="text-xs text-foreground-muted truncate">
+                {isPartnerOnline ? 'Online' : dmPartnerLastSeen ?? 'Offline'}
+              </p>
+            </div>
           </button>
-        ) : null}
+        ) : (
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 px-1.5 py-1">
+            <div className="relative flex-shrink-0">
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                {headerAvatar ? (
+                  <Image src={headerAvatar} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
+                ) : (
+                  <Users className="w-4 h-4 text-primary" />
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-foreground truncate">{headerName}</p>
+              <p className="text-xs text-foreground-muted truncate">
+                {`${conversation.participants.length} members`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Info button */}
+        <button
+          onClick={() => isGroup ? setGroupInfoOpen(true) : setContactInfoOpen(true)}
+          className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0"
+          aria-label={isGroup ? 'Group info' : 'Contact info'}
+        >
+          <Info className="w-4.5 h-4.5 text-foreground-secondary" />
+        </button>
       </div>
 
       {/* ── Messages list ────────────────────────────────────────────────────── */}
@@ -485,6 +542,122 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           onClose={() => setGroupInfoOpen(false)}
           onLeave={onBack}
         />
+      )}
+
+      {/* ── Contact Info Sheet (DM only) ─────────────────────────────────── */}
+      {contactInfoOpen && !isGroup && dmPartner && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setContactInfoOpen(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl shadow-sheet max-h-[85dvh] flex flex-col animate-slide-up">
+            {/* Sheet header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <span className="font-semibold text-foreground">Contact Info</span>
+              <button
+                onClick={() => setContactInfoOpen(false)}
+                className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-foreground-secondary" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1">
+              {/* Profile section */}
+              <div className="flex flex-col items-center py-6 px-4">
+                <div className="relative mb-3">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                    {dmPartner.profilePicture ? (
+                      <Image
+                        src={dmPartner.profilePicture}
+                        alt={headerName}
+                        width={96}
+                        height={96}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <span className="text-3xl font-bold text-primary uppercase">{headerInitials}</span>
+                    )}
+                  </div>
+                  {isPartnerOnline && (
+                    <span className="absolute bottom-1.5 right-1.5 w-4 h-4 bg-success border-2 border-surface rounded-full" />
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-foreground">{headerName}</h3>
+                  {dmPartner.isVerified && (
+                    <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0" />
+                  )}
+                </div>
+
+                <p className="text-sm text-foreground-muted mt-0.5">
+                  {isPartnerOnline ? '🟢 Online now' : dmPartnerLastSeen ?? 'Offline'}
+                </p>
+
+                {dmPartner.servingState && (
+                  <p className="text-xs text-foreground-secondary mt-1">📍 {dmPartner.servingState}</p>
+                )}
+
+                {dmPartner.bio && (
+                  <p className="text-sm text-foreground-secondary mt-2 text-center px-4 leading-relaxed">{dmPartner.bio}</p>
+                )}
+
+                <button
+                  onClick={() => {
+                    setContactInfoOpen(false);
+                    setViewingUser(dmPartner.id, 'messages');
+                  }}
+                  className="mt-4 px-6 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark active:bg-primary-dark transition-colors"
+                >
+                  View Full Profile
+                </button>
+              </div>
+
+              {/* Shared media */}
+              {sharedImages.length > 0 && (
+                <div className="px-4 pb-4 border-t border-border pt-4">
+                  <p className="text-sm font-semibold text-foreground mb-3">
+                    Shared Media ({sharedImages.length})
+                  </p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {sharedImages.slice(0, 9).map((msg) => (
+                      <div key={msg.id} className="aspect-square rounded-lg overflow-hidden bg-surface-alt relative">
+                        <Image
+                          src={msg.mediaUrl!}
+                          alt="Shared image"
+                          fill
+                          className="object-cover"
+                          sizes="33vw"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Shared audio */}
+              {sharedAudios.length > 0 && (
+                <div className="px-4 pb-6 border-t border-border pt-4">
+                  <p className="text-sm font-semibold text-foreground mb-3">
+                    Voice Messages ({sharedAudios.length})
+                  </p>
+                  <div className="space-y-2">
+                    {sharedAudios.slice(0, 5).map((msg) => (
+                      <VoiceNotePlayer
+                        key={msg.id}
+                        mediaUrl={msg.mediaUrl!}
+                        isOwn={msg.senderId === user?.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
