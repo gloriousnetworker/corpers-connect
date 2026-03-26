@@ -25,6 +25,7 @@ import type { Conversation, Message } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import ForwardModal from './ForwardModal';
 import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -65,6 +66,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -511,6 +513,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               onEdit={(m) => { setEditingMessage(m); setReplyTo(null); }}
               onDelete={handleDelete}
               onRetry={handleRetry}
+              onForward={(m) => setForwardingMessage(m)}
             />
           ))
         )}
@@ -541,6 +544,14 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           currentUserId={user?.id ?? ''}
           onClose={() => setGroupInfoOpen(false)}
           onLeave={onBack}
+        />
+      )}
+
+      {forwardingMessage && (
+        <ForwardModal
+          message={forwardingMessage}
+          currentUserId={user?.id ?? ''}
+          onClose={() => setForwardingMessage(null)}
         />
       )}
 

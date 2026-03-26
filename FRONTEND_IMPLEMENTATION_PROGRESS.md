@@ -1,8 +1,8 @@
 # Corpers Connect — Frontend Implementation Progress
 
 **Project:** `corpers-connect-users` (Next.js 15 PWA)
-**Last Updated:** 2026-03-25
-**Overall Status:** ✅ Phase 4 Complete — Messaging Live
+**Last Updated:** 2026-03-26
+**Overall Status:** ✅ Phase 4 Complete — Messaging Live (+ WhatsApp interactions)
 
 ---
 
@@ -13,10 +13,10 @@
 | Total Phases | 12 |
 | Completed Phases | 4 |
 | In Progress | Phase 5 (Notifications) |
-| Test Suites | 17 |
-| Unit Tests | 101 |
+| Test Suites | 24 |
+| Unit Tests | 172 |
 | Integration Tests | 54 |
-| Total Tests | 155 / 155 ✅ |
+| Total Tests | 226 / 226 ✅ |
 | E2E Tests | 0 (Phase 12) |
 | Build Status | ✅ exit 0, no warnings |
 | Vercel Deployment | ✅ Live at corpersconnectapp.vercel.app |
@@ -346,7 +346,7 @@ All routes verified wired correctly:
 
 ---
 
-## Phase 4 — Messaging ✅ COMPLETE
+## Phase 4 — Messaging ✅ COMPLETE (+ WhatsApp interactions)
 
 **Goal:** Real-time DM and group messaging with Socket.IO, full split-view layout, context menus, reply threading, and optimistic updates.
 
@@ -368,8 +368,10 @@ All routes verified wired correctly:
 - [x] `src/components/sections/MessagesSection.tsx` — full Phase-4 orchestrator; desktop two-column (w-80 list + flex-1 chat), mobile single-column toggle; calls `useSocket()` on mount
 - [x] `src/components/messages/ConversationList.tsx` — TanStack Query list, search filter, skeleton loading, empty state; props: `activeConversationId` + `onSelect(conv)`
 - [x] `src/components/messages/ConversationItem.tsx` — avatar, name, last message preview ("You:" prefix for own), unread badge (99+ cap), online dot, active highlight, group/DM modes, deleted/image/video previews
-- [x] `src/components/messages/ChatView.tsx` — infinite scroll messages (`useInfiniteQuery`), optimistic send, edit, delete; socket-driven appends; reply preview strip; typing indicator
-- [x] `src/components/messages/MessageBubble.tsx` — own (right/green) vs other (left/surface) bubbles; right-click/long-press context menu: Reply, Edit (own text), Delete (own); reply-to preview; edited badge; deleted state; group sender name + avatar
+- [x] `src/components/messages/ChatView.tsx` — infinite scroll messages (`useInfiniteQuery`), optimistic send, edit, delete; socket-driven appends; reply preview strip; typing indicator; contact info sheet; forward message handler
+- [x] `src/components/messages/MessageBubble.tsx` — own (right/green) vs other (left/surface) bubbles; **long-press (500ms) opens `MessageActionSheet`**; **swipe-right ≥ 60px triggers reply**; reply-to preview; edited badge; deleted state; group sender name + avatar; `onForward` prop
+- [x] `src/components/messages/MessageActionSheet.tsx` — WhatsApp-style fixed bottom sheet; actions: Reply, Copy (clipboard), Forward, Edit (own text only), Delete (own only); drag handle + message preview; `role="menu"` accessibility
+- [x] `src/components/messages/ForwardModal.tsx` — conversation picker modal; search filter; excludes current conversation; calls `sendMessage` on selection; success/error toasts
 - [x] `src/components/messages/NewConversationModal.tsx` — user search, start DM or create group, navigates to new conversation on success
 
 ### Layout ✅
@@ -380,7 +382,7 @@ All routes verified wired correctly:
 - [x] Added `mockOtherUser`, `mockConversation`, `mockParticipantEntry`, `mockMessage` constants to `handlers.ts` (at module level, before the `handlers` array)
 - [x] Handlers: `GET /users`, `GET /conversations`, `GET /conversations/:id`, `POST /conversations`, `GET /conversations/:id/messages`, `POST /conversations/:id/messages`, `PATCH /conversations/:id/messages/:msgId`, `DELETE /conversations/:id/messages/:msgId`, `POST /conversations/:id/read`, `PATCH /conversations/:id/settings`, `DELETE /conversations/:id/participants/me`
 
-### Tests ✅ 155 / 155 Passing
+### Tests ✅ 226 / 226 Passing
 
 | Suite | Type | Tests | Status |
 |---|---|---|---|
@@ -393,7 +395,14 @@ All routes verified wired correctly:
 | `CommentItem.test.tsx` | Unit | 8 | ✅ |
 | `StoryRing.test.tsx` | Unit | 8 | ✅ |
 | `StoryProgress.test.tsx` | Unit | 5 | ✅ |
-| `MessageBubble.test.tsx` | Unit | 9 | ✅ |
+| `LevelBadge.test.tsx` | Unit | — | ✅ |
+| `FollowButton.test.tsx` | Unit | — | ✅ |
+| `VoiceNoteRecorder.test.tsx` | Unit | — | ✅ |
+| `UserCard.test.tsx` | Unit | — | ✅ |
+| `NotificationItem.test.tsx` | Unit | — | ✅ |
+| `MessageBubble.test.tsx` | Unit | 23 | ✅ (+14 new) |
+| `MessageActionSheet.test.tsx` | Unit | 15 | ✅ (new) |
+| `ForwardModal.test.tsx` | Unit | 7 | ✅ (new) |
 | `ConversationItem.test.tsx` | Unit | 9 | ✅ |
 | `login.test.tsx` | Integration | 7 | ✅ |
 | `register.test.tsx` | Integration | 6 | ✅ |
@@ -401,7 +410,7 @@ All routes verified wired correctly:
 | `createPost.test.tsx` | Integration | 9 | ✅ |
 | `stories.test.tsx` | Integration | 11 | ✅ |
 | `messages.test.tsx` | Integration | 12 | ✅ |
-| **Total** | | **155** | **✅ All Pass** |
+| **Total** | | **226** | **✅ All Pass** |
 
 ### Technical Notes
 - `useSocket` uses `getAccessToken()` from `@/lib/api/client` (in-memory token), NOT `useAuthStore` — auth store never exposes access tokens to prevent localStorage leakage

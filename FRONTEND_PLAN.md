@@ -622,19 +622,24 @@ export const queryKeys = {
 - [ ] Reels feed (vertical full-screen scroll, TikTok-style)
 - [ ] Unit tests: ProfileHeader, LevelBadge, FollowButton
 
-### Phase 4 — Messaging (Week 3)
+### Phase 4 — Messaging (Week 3) ✅ COMPLETE
 **Goal:** Real-time DMs and group chats feel as smooth as WhatsApp.
 
-- [ ] Socket.IO provider (connect on auth, disconnect on logout)
-- [ ] Conversations list (ordered by latest, pinned at top)
-- [ ] Conversation item: avatar, last message, timestamp, unread badge
-- [ ] Long-press sheet: archive, pin, mute, delete
-- [ ] DM chat screen: message bubbles, read status, reply-to
-- [ ] Message types: text, image, voice note, video, file
-- [ ] Voice note recorder (hold to record, swipe to cancel, waveform)
-- [ ] Voice note player with progress bar
-- [ ] "Typing…" indicator
-- [ ] Optimistic messages (show immediately, confirm on delivery)
+- [x] Socket.IO provider (connect on auth, disconnect on logout)
+- [x] Conversations list (ordered by latest, pinned at top)
+- [x] Conversation item: avatar, last message, timestamp, unread badge
+- [x] DM chat screen: message bubbles, read status, reply-to
+- [x] Message types: text, image, voice note, video
+- [x] Voice note recorder (hold to record, swipe to cancel, waveform)
+- [x] Voice note player with progress bar
+- [x] "Typing…" indicator
+- [x] Optimistic messages (show immediately, confirm on delivery)
+- [x] **Long-press action sheet** (`MessageActionSheet`): Reply, Copy, Forward, Edit, Delete
+- [x] **Swipe-right to reply** (≥ 60px horizontal swipe triggers reply with animated arrow)
+- [x] **Forward message** (`ForwardModal`): conversation picker, search, sends via existing API
+- [x] Mobile chat header: back button, contact info sheet (avatar, online, bio, shared media)
+- [ ] Message reactions (emoji) — requires backend `MessageReaction` model (Phase 4b)
+- [ ] Pin message — requires backend `isPinned` field (Phase 4b)
 - [ ] Failed message retry
 - [ ] Group chat: sender name on bubbles, group info sheet
 - [ ] Add/remove participants (admin only)
@@ -890,7 +895,7 @@ src/app/layout.tsx                        — renders <InstallPrompt> globally
 | Phase 1 | Foundation + Auth | 🔴 Not Started |
 | Phase 2 | Feed, Posts, Stories | 🔴 Not Started |
 | Phase 3 | Profile + Discover | 🔴 Not Started |
-| Phase 4 | Messaging | 🔴 Not Started |
+| Phase 4 | Messaging | ✅ Complete (+ WhatsApp interactions) |
 | Phase 5 | Notifications | 🔴 Not Started |
 | Phase 6 | Calls | 🔴 Not Started |
 | Phase 7 | Marketplace | 🔴 Not Started |

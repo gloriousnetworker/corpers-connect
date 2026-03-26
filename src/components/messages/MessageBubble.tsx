@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import {
   Check,
@@ -8,16 +8,16 @@ import {
   Clock,
   AlertCircle,
   CornerUpLeft,
-  Pencil,
-  Trash2,
   RefreshCw,
   ZoomIn,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import MediaPreviewModal from './MediaPreviewModal';
+import MessageActionSheet from './MessageActionSheet';
 
 interface MessageBubbleProps {
   message: Message;
@@ -30,6 +30,7 @@ interface MessageBubbleProps {
   onEdit?: (message: Message) => void;
   onDelete?: (message: Message) => void;
   onRetry?: (message: Message) => void;
+  onForward?: (message: Message) => void;
 }
 
 export default function MessageBubble({
@@ -42,8 +43,8 @@ export default function MessageBubble({
   onEdit,
   onDelete,
   onRetry,
+  onForward,
 }: MessageBubbleProps) {
-  const [showMenu, setShowMenu] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const isDeleted = message.isDeleted;
@@ -51,9 +52,73 @@ export default function MessageBubble({
   const isFailed = message._failed;
   const isMedia = !isDeleted && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
 
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isSwipingRef = useRef(false);
+
   const bubbleBase = isOwn
     ? 'bg-primary text-white rounded-2xl rounded-br-sm ml-auto'
     : 'bg-white dark:bg-slate-700 border border-border dark:border-slate-600 text-foreground rounded-2xl rounded-bl-sm';
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (isDeleted || isPending || isFailed) return;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    longPressTriggeredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setShowActionSheet(true);
+    }, 500);
+  };
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointerStartRef.current) return;
+    const dx = Math.abs(e.clientX - pointerStartRef.current.x);
+    const dy = Math.abs(e.clientY - pointerStartRef.current.y);
+    if (dx > 8 || dy > 8) {
+      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    }
+  };
+  const handlePointerUp = () => {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    pointerStartRef.current = null;
+  };
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isDeleted) setShowActionSheet(true);
+  };
+  const handleRowClick = () => {
+    if (longPressTriggeredRef.current) longPressTriggeredRef.current = false;
+  };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isDeleted) return;
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    isSwipingRef.current = false;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.touches[0].clientX - touchStartRef.current.x;
+    const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+    if (!isSwipingRef.current) {
+      if (dx > 5 && dx > dy) isSwipingRef.current = true;
+      else if (dy > dx) return;
+    }
+    if (isSwipingRef.current && dx > 0) setSwipeX(Math.min(dx, 80));
+  };
+  const handleTouchEnd = () => {
+    if (swipeX >= 60 && onReply && !isDeleted) onReply(message);
+    setSwipeX(0);
+    touchStartRef.current = null;
+    isSwipingRef.current = false;
+  };
+  const handleCopy = () => {
+    if (message.content) {
+      navigator.clipboard.writeText(message.content).catch(() => {});
+      toast('Copied');
+    }
+  };
 
   const renderStatus = () => {
     if (!isOwn) return null;
@@ -151,7 +216,16 @@ export default function MessageBubble({
   return (
     <>
       <div
-        className={`flex items-end gap-2 px-4 py-0.5 group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+        className={`flex items-end gap-2 px-4 py-0.5 group select-none touch-pan-y ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onContextMenu={handleContextMenu}
+        onClick={handleRowClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Avatar — only for others */}
         {!isOwn && (
@@ -176,7 +250,21 @@ export default function MessageBubble({
           </div>
         )}
 
-        <div className={`relative flex flex-col max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`relative flex flex-col max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}
+          style={{ transform: 'translateX(' + swipeX + 'px)', transition: swipeX === 0 ? 'transform 0.2s ease-out' : 'none' }}
+        >
+          {swipeX > 0 && (
+            <div
+              className="absolute -left-9 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ opacity: Math.min(swipeX / 60, 1) }}
+            >
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                <CornerUpLeft className="w-4 h-4 text-primary" />
+              </div>
+            </div>
+          )}
+
           {/* Sender name — group chats, first message in cluster */}
           {isGroup && !isOwn && showAvatar && (
             <span className="text-xs font-medium text-foreground-secondary mb-0.5 ml-1">
@@ -212,11 +300,6 @@ export default function MessageBubble({
           {/* Bubble */}
           <div
             className={`${bubbleBase} ${isMedia ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-text`}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setShowMenu((v) => !v);
-            }}
-            onClick={() => showMenu && setShowMenu(false)}
           >
             {renderContent()}
 
@@ -235,47 +318,6 @@ export default function MessageBubble({
             </span>
             {renderStatus()}
           </div>
-
-          {/* Context menu */}
-          {showMenu && !isDeleted && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowMenu(false)}
-              />
-              <div
-                className={`absolute z-20 mt-1 bg-surface border border-border rounded-xl shadow-xl py-1 min-w-[150px] ${
-                  isOwn ? 'right-0' : 'left-0'
-                }`}
-                style={{ top: '100%' }}
-              >
-                {onReply && (
-                  <button
-                    onClick={() => { onReply(message); setShowMenu(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-foreground hover:bg-surface-alt transition-colors"
-                  >
-                    <CornerUpLeft className="w-3.5 h-3.5" /> Reply
-                  </button>
-                )}
-                {isOwn && message.type === MessageType.TEXT && onEdit && (
-                  <button
-                    onClick={() => { onEdit(message); setShowMenu(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-foreground hover:bg-surface-alt transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </button>
-                )}
-                {isOwn && onDelete && (
-                  <button
-                    onClick={() => { onDelete(message); setShowMenu(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-danger hover:bg-surface-alt transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
-                )}
-              </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -286,6 +328,19 @@ export default function MessageBubble({
           type={isVideoMedia ? 'video' : 'image'}
           caption={message.content}
           onClose={() => setPreviewUrl(null)}
+        />
+      )}
+
+      {showActionSheet && (
+        <MessageActionSheet
+          message={message}
+          isOwn={isOwn}
+          onClose={() => setShowActionSheet(false)}
+          onReply={onReply && !isDeleted ? () => onReply(message) : undefined}
+          onCopy={message.type === MessageType.TEXT && !!message.content && !isDeleted ? handleCopy : undefined}
+          onForward={onForward && !isDeleted ? () => onForward(message) : undefined}
+          onEdit={onEdit && !isDeleted && message.type === MessageType.TEXT ? () => onEdit(message) : undefined}
+          onDelete={onDelete && !isDeleted ? () => onDelete(message) : undefined}
         />
       )}
     </>

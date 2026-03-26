@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import MessageBubble from '@/components/messages/MessageBubble';
 import { MessageType } from '@/types/enums';
 import type { Message } from '@/types/models';
@@ -121,9 +121,10 @@ describe('MessageBubble', () => {
     expect(screen.getByText('Original message')).toBeInTheDocument();
   });
 
-  it('calls onReply when Reply is clicked in context menu', () => {
+  it('calls onReply when Reply is clicked in action sheet', () => {
+    jest.useFakeTimers();
     const onReply = jest.fn();
-    render(
+    const { container } = render(
       <MessageBubble
         message={baseMessage}
         isOwn={false}
@@ -132,15 +133,19 @@ describe('MessageBubble', () => {
         onReply={onReply}
       />
     );
-    // Right-click to open context menu
-    fireEvent.contextMenu(screen.getByText('Hello world!').closest('div')!);
-    fireEvent.click(screen.getByText('Reply'));
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reply' }));
     expect(onReply).toHaveBeenCalledWith(baseMessage);
+    jest.useRealTimers();
   });
 
-  it('calls onEdit when Edit is clicked in context menu (own text message)', () => {
+  it('calls onEdit when Edit is clicked in action sheet (own text message)', () => {
+    jest.useFakeTimers();
     const onEdit = jest.fn();
-    render(
+    const { container } = render(
       <MessageBubble
         message={baseMessage}
         isOwn={true}
@@ -149,14 +154,18 @@ describe('MessageBubble', () => {
         onEdit={onEdit}
       />
     );
-    fireEvent.contextMenu(screen.getByText('Hello world!').closest('div')!);
-    fireEvent.click(screen.getByText('Edit'));
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledWith(baseMessage);
+    jest.useRealTimers();
   });
 
-  it('calls onDelete when Delete is clicked in context menu (own message)', () => {
+  it('calls onDelete when Delete is clicked in action sheet (own message)', () => {
+    jest.useFakeTimers();
     const onDelete = jest.fn();
-    render(
+    const { container } = render(
       <MessageBubble
         message={baseMessage}
         isOwn={true}
@@ -165,13 +174,17 @@ describe('MessageBubble', () => {
         onDelete={onDelete}
       />
     );
-    fireEvent.contextMenu(screen.getByText('Hello world!').closest('div')!);
-    fireEvent.click(screen.getByText('Delete'));
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     expect(onDelete).toHaveBeenCalledWith(baseMessage);
+    jest.useRealTimers();
   });
 
   it('does not show Edit for non-own messages', () => {
-    render(
+    jest.useFakeTimers();
+    const { container } = render(
       <MessageBubble
         message={baseMessage}
         isOwn={false}
@@ -180,8 +193,11 @@ describe('MessageBubble', () => {
         onEdit={jest.fn()}
       />
     );
-    fireEvent.contextMenu(screen.getByText('Hello world!').closest('div')!);
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 
   // ── Blue tick (read receipt) tests ─────────────────────────────────────────
@@ -287,5 +303,96 @@ describe('MessageBubble', () => {
     expect(container.querySelector('svg.text-sky-300')).toBeNull();
     // Some SVG status icon is rendered
     expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('copies text to clipboard when Copy is clicked in action sheet', () => {
+    jest.useFakeTimers();
+    Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
+    const { container } = render(
+      <MessageBubble
+        message={baseMessage}
+        isOwn={false}
+        showAvatar={false}
+        isGroup={false}
+      />
+    );
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Hello world!');
+    jest.useRealTimers();
+  });
+
+  it('triggers onReply when swiped right >= 60px', () => {
+    const onReply = jest.fn();
+    const { container } = render(
+      <MessageBubble
+        message={baseMessage}
+        isOwn={false}
+        showAvatar={false}
+        isGroup={false}
+        onReply={onReply}
+      />
+    );
+    const row = container.querySelector('.group')!;
+    fireEvent.touchStart(row, { touches: [{ clientX: 0, clientY: 0 }] });
+    fireEvent.touchMove(row, { touches: [{ clientX: 70, clientY: 0 }] });
+    fireEvent.touchEnd(row);
+    expect(onReply).toHaveBeenCalledWith(baseMessage);
+  });
+
+  it('does not trigger onReply for vertical swipe', () => {
+    const onReply = jest.fn();
+    const { container } = render(
+      <MessageBubble
+        message={baseMessage}
+        isOwn={false}
+        showAvatar={false}
+        isGroup={false}
+        onReply={onReply}
+      />
+    );
+    const row = container.querySelector('.group')!;
+    fireEvent.touchStart(row, { touches: [{ clientX: 0, clientY: 0 }] });
+    fireEvent.touchMove(row, { touches: [{ clientX: 10, clientY: 80 }] });
+    fireEvent.touchEnd(row);
+    expect(onReply).not.toHaveBeenCalled();
+  });
+
+  it('shows Forward option in action sheet when onForward is provided', () => {
+    jest.useFakeTimers();
+    const onForward = jest.fn();
+    const { container } = render(
+      <MessageBubble
+        message={baseMessage}
+        isOwn={false}
+        showAvatar={false}
+        isGroup={false}
+        onForward={onForward}
+      />
+    );
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(screen.getByRole('menuitem', { name: 'Forward' })).toBeInTheDocument();
+    jest.useRealTimers();
+  });
+
+  it('does not open action sheet on long press for deleted messages', () => {
+    jest.useFakeTimers();
+    const { container } = render(
+      <MessageBubble
+        message={{ ...baseMessage, isDeleted: true, content: null }}
+        isOwn={false}
+        showAvatar={false}
+        isGroup={false}
+      />
+    );
+    const row = container.querySelector('.group')!;
+    fireEvent.pointerDown(row, { clientX: 100, clientY: 100 });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 });
