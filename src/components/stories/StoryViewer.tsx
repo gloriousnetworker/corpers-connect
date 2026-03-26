@@ -14,7 +14,6 @@ import StoryProgress from './StoryProgress';
 import type { StoryGroup, Story } from '@/types/models';
 
 const IMAGE_DURATION = 5000; // ms
-const TICK_MS = 50;          // progress bar update interval
 
 interface StoryViewerProps {
   groups: StoryGroup[];
@@ -38,9 +37,17 @@ export default function StoryViewer({
   const [paused, setPaused] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // RAF-based timer refs
+  const rafRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const pausedProgressRef = useRef<number>(0);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const nextVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewedRef = useRef<Set<string>>(new Set());
+
+  // Stable ref to goToNextStory to avoid stale closures inside RAF
+  const goToNextStoryRef = useRef<() => void>(() => {});
 
   useBodyScrollLock(true);
 
@@ -49,7 +56,29 @@ export default function StoryViewer({
   const stories: Story[] = group ? [...group.stories].reverse() : [];
   const story: Story | undefined = stories[storyIdx];
   const isOwnStory = group?.author.id === currentUserId;
-  const isVideo = story?.mediaType?.startsWith('video') || story?.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i) !== null;
+  const isVideo = !!(story?.mediaType?.startsWith('video') || story?.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i));
+
+  // Next story for preloading
+  const nextStory: Story | undefined =
+    storyIdx + 1 < stories.length
+      ? stories[storyIdx + 1]
+      : groups[groupIdx + 1]
+        ? [...groups[groupIdx + 1].stories].reverse()[0]
+        : undefined;
+  const nextIsVideo = !!(nextStory?.mediaType?.startsWith('video') || nextStory?.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i));
+
+  // ── Preload images ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!story || isVideo) return;
+    const img = new window.Image();
+    img.src = story.mediaUrl;
+  }, [story, isVideo]);
+
+  useEffect(() => {
+    if (!nextStory || nextIsVideo) return;
+    const img = new window.Image();
+    img.src = nextStory.mediaUrl;
+  }, [nextStory, nextIsVideo]);
 
   // ── Mark as viewed ──────────────────────────────────────────────────────────
   const viewMutation = useMutation({
@@ -71,75 +100,111 @@ export default function StoryViewer({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
       toast.success('Story deleted');
-      // If this was the last story in the group, close; otherwise advance
       if (stories.length <= 1) {
         onClose();
       } else {
         const nextIdx = Math.min(storyIdx, stories.length - 2);
         setStoryIdx(nextIdx);
         setProgress(0);
+        pausedProgressRef.current = 0;
       }
     },
     onError: () => toast.error('Failed to delete story'),
   });
 
+  // ── Cancel RAF timer ─────────────────────────────────────────────────────────
+  const cancelTimer = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    startTimeRef.current = null;
+  }, []);
+
+  // ── Navigate — always cancel timer first for instant transition ──────────────
+  const navigateTo = useCallback((newGroupIdx: number, newStoryIdx: number) => {
+    cancelTimer();
+    pausedProgressRef.current = 0;
+    setProgress(0);
+    setGroupIdx(newGroupIdx);
+    setStoryIdx(newStoryIdx);
+    setDeleteConfirm(false);
+  }, [cancelTimer]);
+
   // ── Navigation ───────────────────────────────────────────────────────────────
   const goToNextStory = useCallback(() => {
-    const nextStory = storyIdx + 1;
-    if (nextStory < stories.length) {
-      setStoryIdx(nextStory);
-      setProgress(0);
+    const nextSIdx = storyIdx + 1;
+    if (nextSIdx < stories.length) {
+      navigateTo(groupIdx, nextSIdx);
     } else {
-      // Advance to next group
-      const nextGroup = groupIdx + 1;
-      if (nextGroup < groups.length) {
-        setGroupIdx(nextGroup);
-        setStoryIdx(0);
-        setProgress(0);
+      const nextGIdx = groupIdx + 1;
+      if (nextGIdx < groups.length) {
+        navigateTo(nextGIdx, 0);
       } else {
+        cancelTimer();
         onClose();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storyIdx, groupIdx, stories.length, groups.length, onClose]);
+  }, [storyIdx, groupIdx, stories.length, groups.length, navigateTo, cancelTimer, onClose]);
 
   const goToPrevStory = useCallback(() => {
     if (storyIdx > 0) {
-      setStoryIdx(storyIdx - 1);
-      setProgress(0);
+      navigateTo(groupIdx, storyIdx - 1);
     } else if (groupIdx > 0) {
-      const prevGroup = groupIdx - 1;
-      setGroupIdx(prevGroup);
-      setStoryIdx(groups[prevGroup].stories.length - 1);
-      setProgress(0);
+      const prevGIdx = groupIdx - 1;
+      const prevGroupStories = [...groups[prevGIdx].stories].reverse();
+      navigateTo(prevGIdx, prevGroupStories.length - 1);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storyIdx, groupIdx, groups]);
+  }, [storyIdx, groupIdx, groups, navigateTo]);
 
-  // ── Auto-advance timer (images only) ─────────────────────────────────────────
+  // Keep stable ref in sync
   useEffect(() => {
-    if (!story || isVideo) return;
-    if (paused) {
-      if (timerRef.current) clearInterval(timerRef.current);
+    goToNextStoryRef.current = goToNextStory;
+  }, [goToNextStory]);
+
+  // ── RAF-based auto-advance timer (images only) ───────────────────────────────
+  useEffect(() => {
+    if (!story || isVideo || paused) {
+      cancelTimer();
       return;
     }
 
-    const step = TICK_MS / IMAGE_DURATION;
-    timerRef.current = setInterval(() => {
-      setProgress((p) => {
-        if (p + step >= 1) {
-          clearInterval(timerRef.current!);
-          goToNextStory();
-          return 1;
-        }
-        return p + step;
-      });
-    }, TICK_MS);
+    const resumeFrom = pausedProgressRef.current;
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+    const tick = (now: number) => {
+      if (startTimeRef.current === null) {
+        // First tick — set start time accounting for already-elapsed progress
+        startTimeRef.current = now - resumeFrom * IMAGE_DURATION;
+      }
+      const elapsed = now - startTimeRef.current;
+      const p = Math.min(elapsed / IMAGE_DURATION, 1);
+      setProgress(p);
+
+      if (p >= 1) {
+        rafRef.current = null;
+        startTimeRef.current = null;
+        pausedProgressRef.current = 0;
+        goToNextStoryRef.current();
+        return;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
     };
-  }, [story, storyIdx, groupIdx, paused, isVideo, goToNextStory]);
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => cancelTimer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id, isVideo, paused]);
+
+  // ── Save progress when pausing ───────────────────────────────────────────────
+  useEffect(() => {
+    if (paused) {
+      pausedProgressRef.current = progress;
+      cancelTimer();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
 
   // ── Mark viewed on story change ───────────────────────────────────────────────
   useEffect(() => {
@@ -190,13 +255,15 @@ export default function StoryViewer({
           onClick={handleTap}
         >
           {isVideo ? (
+            // key forces remount on story change — no stale frame flash
             <video
+              key={story.id}
               ref={videoRef}
               src={story.mediaUrl}
               className="w-full h-full object-contain"
               autoPlay
               playsInline
-              muted={false}
+              preload="auto"
               onEnded={goToNextStory}
               onTimeUpdate={(e) => {
                 const v = e.currentTarget;
@@ -204,7 +271,8 @@ export default function StoryViewer({
               }}
             />
           ) : (
-            <div className="relative w-full h-full">
+            // key forces remount on story change — no stale image flash
+            <div key={story.id} className="relative w-full h-full">
               <Image
                 src={story.mediaUrl}
                 alt={story.caption ?? `Story by ${author.firstName}`}
@@ -215,6 +283,19 @@ export default function StoryViewer({
                 priority
               />
             </div>
+          )}
+
+          {/* Hidden preloader for next video */}
+          {nextStory && nextIsVideo && (
+            <video
+              key={`preload-${nextStory.id}`}
+              ref={nextVideoRef}
+              src={nextStory.mediaUrl}
+              preload="auto"
+              className="hidden"
+              muted
+              playsInline
+            />
           )}
 
           {/* Gradient overlay — top */}
