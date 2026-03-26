@@ -22,22 +22,27 @@ export default function FollowButton({
   // Optimistic local state — avoids waiting for query refetch
   const [following, setFollowing] = useState(initialIsFollowing);
 
+  // Pass the intended action as a variable so mutationFn never closes over stale state.
+  // Without this, onMutate's setFollowing() triggers a re-render that updates the
+  // mutationFn closure before it runs, causing follow to call unfollowUser and vice-versa.
   const mutation = useMutation({
-    mutationFn: () => (following ? unfollowUser(userId) : followUser(userId)),
-    onMutate: () => {
-      const next = !following;
-      setFollowing(next);
-      onToggle?.(next);
+    mutationFn: (shouldFollow: boolean) =>
+      shouldFollow ? followUser(userId) : unfollowUser(userId),
+    onMutate: (shouldFollow) => {
+      setFollowing(shouldFollow);
+      onToggle?.(shouldFollow);
     },
     onSuccess: () => {
-      // Invalidate profile to update follower/following counts
+      // Invalidate profile counts + discover lists so isFollowing stays in sync
       queryClient.invalidateQueries({ queryKey: queryKeys.user(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.me() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.discoverCorpers() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.suggestions() });
     },
-    onError: () => {
-      // Revert optimistic update
-      setFollowing(following);
-      onToggle?.(following);
+    onError: (_err, shouldFollow) => {
+      // Revert: we tried shouldFollow, so revert to the opposite
+      setFollowing(!shouldFollow);
+      onToggle?.(!shouldFollow);
     },
   });
 
@@ -48,7 +53,7 @@ export default function FollowButton({
   if (following) {
     return (
       <button
-        onClick={() => mutation.mutate()}
+        onClick={() => mutation.mutate(false)}
         disabled={mutation.isPending}
         className={`${sizeClass} rounded-full border border-border font-semibold text-foreground-secondary hover:bg-error/10 hover:text-error hover:border-error/30 transition-colors disabled:opacity-50`}
       >
@@ -59,7 +64,7 @@ export default function FollowButton({
 
   return (
     <button
-      onClick={() => mutation.mutate()}
+      onClick={() => mutation.mutate(true)}
       disabled={mutation.isPending}
       className={`${sizeClass} rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50`}
     >

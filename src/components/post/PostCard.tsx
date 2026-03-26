@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Globe, Users, Lock, MapPin } from 'lucide-react';
+import { useUIStore } from '@/store/ui.store';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
@@ -44,6 +45,7 @@ export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
   const [commentOpen, setCommentOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const setViewingUser = useUIStore((s) => s.setViewingUser);
 
   if (deleted) return null;
 
@@ -59,7 +61,10 @@ export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
       <article className="bg-surface rounded-2xl border border-border shadow-card p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setViewingUser(author.id, 'feed')}
+            className="flex items-center gap-3 min-w-0 text-left"
+          >
             {/* Avatar */}
             <div className="flex-shrink-0">
               {author.profilePicture ? (
@@ -102,7 +107,7 @@ export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
                 <VisibilityIcon visibility={post.visibility} />
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Menu */}
           <PostMenu
