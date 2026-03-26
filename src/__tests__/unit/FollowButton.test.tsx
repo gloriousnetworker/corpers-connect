@@ -17,25 +17,25 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe('FollowButton', () => {
   it('shows "Follow" when not following', () => {
     render(<FollowButton userId="u1" isFollowing={false} />, { wrapper });
-    expect(screen.getByRole('button', { name: /follow/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^follow$/i })).toBeInTheDocument();
   });
 
-  it('shows "Following" when following', () => {
+  it('shows "Unfollow" when following', () => {
     render(<FollowButton userId="u1" isFollowing={true} />, { wrapper });
-    expect(screen.getByRole('button', { name: /following/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /unfollow/i })).toBeInTheDocument();
   });
 
   it('calls onToggle with true when clicking Follow', () => {
     const onToggle = jest.fn();
     render(<FollowButton userId="u1" isFollowing={false} onToggle={onToggle} />, { wrapper });
-    fireEvent.click(screen.getByRole('button', { name: /follow/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^follow$/i }));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
-  it('calls onToggle with false when clicking Following (unfollow)', () => {
+  it('calls onToggle with false when clicking Unfollow', () => {
     const onToggle = jest.fn();
     render(<FollowButton userId="u1" isFollowing={true} onToggle={onToggle} />, { wrapper });
-    fireEvent.click(screen.getByRole('button', { name: /following/i }));
+    fireEvent.click(screen.getByRole('button', { name: /unfollow/i }));
     expect(onToggle).toHaveBeenCalledWith(false);
   });
 

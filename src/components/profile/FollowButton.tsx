@@ -57,7 +57,7 @@ export default function FollowButton({
         disabled={mutation.isPending}
         className={`${sizeClass} rounded-full border border-border font-semibold text-foreground-secondary hover:bg-error/10 hover:text-error hover:border-error/30 transition-colors disabled:opacity-50`}
       >
-        Following
+        Unfollow
       </button>
     );
   }

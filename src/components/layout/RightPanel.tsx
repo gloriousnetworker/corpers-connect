@@ -1,55 +1,114 @@
 'use client';
 
-import { Users, TrendingUp, Zap } from 'lucide-react';
+import Image from 'next/image';
+import { Users, BadgeCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getSuggestions } from '@/lib/api/discover';
+import { queryKeys } from '@/lib/query-keys';
+import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
+import { getInitials } from '@/lib/utils';
+import FollowButton from '@/components/profile/FollowButton';
 
-/**
- * Right sidebar panel — visible on xl+ screens.
- * Phase 1: placeholder cards. Phase 2+ will populate with real data.
- */
 export default function RightPanel() {
+  const setViewingUser = useUIStore((s) => s.setViewingUser);
+  const currentUser = useAuthStore((s) => s.user);
+
+  const { data: suggestions, isLoading } = useQuery({
+    queryKey: queryKeys.suggestions(),
+    queryFn: () => getSuggestions(5),
+    staleTime: 5 * 60_000,
+  });
+
   return (
     <div className="space-y-5">
-      {/* Suggested connections */}
-      <div className="bg-surface-alt rounded-2xl p-4">
+      {/* Suggested Corpers */}
+      <div className="bg-surface rounded-2xl border border-border p-4">
         <div className="flex items-center gap-2 mb-3">
           <Users className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Suggested Corpers</h3>
         </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 py-2.5">
-            <div className="w-9 h-9 rounded-full bg-surface-alt border border-border flex-shrink-0 animate-pulse" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3 bg-border rounded w-24 animate-pulse" />
-              <div className="h-2.5 bg-border rounded w-16 animate-pulse" />
-            </div>
+
+        {isLoading ? (
+          <div className="space-y-0">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 py-2.5">
+                <div className="w-9 h-9 rounded-full bg-surface-alt animate-pulse flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 bg-surface-alt rounded animate-pulse w-24" />
+                  <div className="h-2.5 bg-surface-alt rounded animate-pulse w-16" />
+                </div>
+                <div className="h-6 w-14 bg-surface-alt rounded-full animate-pulse" />
+              </div>
+            ))}
           </div>
-        ))}
-        <button className="mt-1 text-xs text-primary font-medium hover:underline">
-          See more
+        ) : (suggestions?.length ?? 0) === 0 ? (
+          <p className="text-xs text-foreground-muted py-2">No suggestions right now</p>
+        ) : (
+          <div className="space-y-0">
+            {suggestions!.map((u) => {
+              const initials = getInitials(u.firstName, u.lastName);
+              return (
+                <div key={u.id} className="flex items-center gap-2.5 py-2.5">
+                  <button
+                    onClick={() => setViewingUser(u.id, 'feed')}
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                  >
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      {u.profilePicture ? (
+                        <Image
+                          src={u.profilePicture}
+                          alt={initials}
+                          width={36}
+                          height={36}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <span className="font-bold text-primary text-xs uppercase">{initials}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {u.firstName} {u.lastName}
+                        </p>
+                        {u.isVerified && <BadgeCheck className="w-3 h-3 text-info flex-shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-foreground-muted truncate">{u.servingState}</p>
+                    </div>
+                  </button>
+                  {u.id !== currentUser?.id && (
+                    <FollowButton
+                      userId={u.id}
+                      isFollowing={u.isFollowing ?? false}
+                      size="sm"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <button
+          onClick={() => useUIStore.getState().setActiveSection('discover')}
+          className="mt-1 text-xs text-primary font-medium hover:underline"
+        >
+          See more in Discover
         </button>
       </div>
 
-      {/* Trending topics */}
-      <div className="bg-surface-alt rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Trending in NYSC</h3>
+      {/* State info card */}
+      {currentUser?.servingState && (
+        <div className="bg-primary/8 rounded-2xl p-4">
+          <p className="text-xs font-semibold text-primary mb-0.5">
+            Serving in {currentUser.servingState}
+          </p>
+          <p className="text-xs text-foreground-secondary leading-relaxed">
+            Connect with fellow corpers in your state via the Discover tab.
+          </p>
         </div>
-        {['#NYSCBatch2025', '#CorperWoes', '#CampLife', '#PPA'].map((tag) => (
-          <div key={tag} className="py-2 border-b border-border/60 last:border-0">
-            <p className="text-sm font-medium text-foreground">{tag}</p>
-            <p className="text-xs text-foreground-muted mt-0.5">Trending</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Phase notice */}
-      <div className="bg-primary/8 rounded-2xl p-4 flex gap-2.5">
-        <Zap className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-foreground-secondary leading-relaxed">
-          More features coming in Phase 2 — stories, posts, live feed & more.
-        </p>
-      </div>
+      )}
     </div>
   );
 }

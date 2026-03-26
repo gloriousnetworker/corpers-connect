@@ -38,7 +38,10 @@ export default function NewConversationModal({
     setSearching(true);
     try {
       const data = await searchUsers(q.trim());
-      setResults(data.filter((u) => u.id !== user?.id));
+      // Only show mutual followers (both follow each other) — required for DMs
+      setResults(
+        data.filter((u) => u.id !== user?.id && (u.isFollowing ?? false) && (u.followsYou ?? false))
+      );
     } catch {
       setResults([]);
     } finally {
@@ -102,12 +105,14 @@ export default function NewConversationModal({
           {/* Results */}
           <div className="flex-1 overflow-y-auto">
             {query.trim().length < 2 ? (
-              <div className="text-center py-10 text-sm text-foreground-muted">
-                Type at least 2 characters to search
+              <div className="text-center py-10 px-4 text-sm text-foreground-muted">
+                <p>Search mutual followers to start a conversation</p>
+                <p className="text-xs mt-1 text-foreground-muted/70">You can only message corpers who follow you back</p>
               </div>
             ) : results.length === 0 && !searching ? (
-              <div className="text-center py-10 text-sm text-foreground-muted">
-                No corpers found for &ldquo;{query}&rdquo;
+              <div className="text-center py-10 px-4 text-sm text-foreground-muted">
+                <p>No mutual followers found for &ldquo;{query}&rdquo;</p>
+                <p className="text-xs mt-1 text-foreground-muted/70">Only corpers who follow you back appear here</p>
               </div>
             ) : (
               <div className="divide-y divide-border/50">

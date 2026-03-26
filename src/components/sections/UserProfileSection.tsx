@@ -106,6 +106,8 @@ export default function UserProfileSection() {
     );
   }
 
+  const isMutualFollow = (user.isFollowing ?? false) && (user.followsYou ?? false);
+
   const actionSlot = (
     <>
       <FollowButton
@@ -113,13 +115,22 @@ export default function UserProfileSection() {
         isFollowing={user.isFollowing ?? false}
         size="sm"
       />
-      <button
-        onClick={() => messageMutation.mutate()}
-        disabled={messageMutation.isPending}
-        className="px-3 py-1 rounded-full border border-border text-xs font-semibold text-foreground-secondary hover:bg-surface-alt transition-colors disabled:opacity-50"
-      >
-        {messageMutation.isPending ? '…' : 'Message'}
-      </button>
+      {isMutualFollow ? (
+        <button
+          onClick={() => messageMutation.mutate()}
+          disabled={messageMutation.isPending}
+          className="px-3 py-1 rounded-full border border-border text-xs font-semibold text-foreground-secondary hover:bg-surface-alt transition-colors disabled:opacity-50"
+        >
+          {messageMutation.isPending ? '…' : 'Message'}
+        </button>
+      ) : (
+        <span
+          title="Follow each other to message"
+          className="px-3 py-1 rounded-full border border-border/50 text-xs font-semibold text-foreground-muted cursor-not-allowed select-none"
+        >
+          Message
+        </span>
+      )}
       {/* More options */}
       <div className="relative">
         <button

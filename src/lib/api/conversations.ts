@@ -270,8 +270,8 @@ export async function leaveConversation(conversationId: string): Promise<void> {
 /** GET /discover/search — search users to start a DM */
 export async function searchUsers(
   query: string
-): Promise<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string }[]> {
-  const { data } = await api.get<ApiResponse<{ items: { id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string }[] }>>(
+): Promise<{ id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string; isFollowing?: boolean; followsYou?: boolean }[]> {
+  const { data } = await api.get<ApiResponse<{ items: { id: string; firstName: string; lastName: string; profilePicture?: string | null; isVerified: boolean; servingState: string; isFollowing?: boolean; followsYou?: boolean }[] }>>(
     '/discover/search',
     { params: { q: query, limit: 20 } }
   );

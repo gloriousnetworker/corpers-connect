@@ -47,6 +47,7 @@ export interface User {
   followingCount?: number;
   postsCount?: number;
   isFollowing?: boolean;
+  followsYou?: boolean;
   createdAt: string;
   updatedAt: string;
 }

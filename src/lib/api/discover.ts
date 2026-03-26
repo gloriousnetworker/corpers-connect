@@ -8,6 +8,7 @@ export interface DiscoverUser extends Pick<User,
   'lga' | 'ppa' | 'batch' | 'corperTag' | 'corperTagLabel' | 'createdAt'
 > {
   isFollowing?: boolean;
+  followsYou?: boolean;
 }
 
 /** GET /discover/corpers — corpers in same serving state */
