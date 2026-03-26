@@ -33,11 +33,14 @@ export default function FollowButton({
       onToggle?.(shouldFollow);
     },
     onSuccess: () => {
-      // Invalidate profile counts + discover lists so isFollowing stays in sync
+      // Invalidate profile counts + all lists that show isFollowing state
       queryClient.invalidateQueries({ queryKey: queryKeys.user(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.me() });
       queryClient.invalidateQueries({ queryKey: queryKeys.discoverCorpers() });
       queryClient.invalidateQueries({ queryKey: queryKeys.suggestions() });
+      // Invalidate followers/following lists so the modal reflects new state immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.userFollowers(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userFollowing(userId) });
     },
     onError: (_err, shouldFollow) => {
       // Revert: we tried shouldFollow, so revert to the opposite
