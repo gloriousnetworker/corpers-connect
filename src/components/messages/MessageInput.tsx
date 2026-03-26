@@ -103,7 +103,12 @@ export default function MessageInput({
     textareaRef.current?.focus();
   }, [text, disabled, onSend, replyTo, editingMessage, onTypingStop]);
 
+  // On mobile (coarse pointer) let the Return key insert a newline — send via the Send button.
+  // On desktop, Enter sends; Shift+Enter inserts a newline.
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isMobile) return; // let the soft keyboard handle Return naturally
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -219,6 +224,7 @@ export default function MessageInput({
             rows={1}
             disabled={disabled}
             maxLength={4000}
+            enterKeyHint={isMobile ? 'enter' : 'send'}
             className="flex-1 bg-transparent text-foreground text-sm outline-none resize-none placeholder:text-foreground-muted leading-relaxed"
             style={{ fontSize: '16px' }}
           />

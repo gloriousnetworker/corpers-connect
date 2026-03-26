@@ -272,7 +272,7 @@ export async function uploadMessageMedia(
   file: File
 ): Promise<{ url: string; mediaType: string }> {
   const form = new FormData();
-  form.append('file', file);
+  form.append('media', file); // must match multer .single('media') on the backend
   const { data } = await api.post<ApiResponse<{ url: string; mediaType: string }>>(
     '/media/upload',
     form

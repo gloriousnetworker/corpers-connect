@@ -59,6 +59,46 @@ export function useSocket() {
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount() });
     });
 
+    // ── Message edited ────────────────────────────────────────────────────────
+    socket.on('message:edited', (rawMessage: Record<string, unknown>) => {
+      const msg = normalizeMessage(rawMessage as unknown as Parameters<typeof normalizeMessage>[0]);
+      queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(
+        queryKeys.messages(msg.conversationId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((p) => ({
+              ...p,
+              items: p.items.map((m) => (m.id === msg.id ? msg : m)),
+            })),
+          };
+        }
+      );
+    });
+
+    // ── Message deleted ───────────────────────────────────────────────────────
+    socket.on(
+      'message:deleted',
+      ({ messageId, deleteFor, conversationId }: { messageId: string; deleteFor: 'me' | 'all'; conversationId?: string }) => {
+        // We don't always know conversationId from the event — iterate all cached queries
+        const queries = queryClient.getQueriesData<InfiniteData<PaginatedData<Message>>>({ queryKey: ['messages'] });
+        for (const [key, data] of queries) {
+          if (!data) continue;
+          queryClient.setQueryData<InfiniteData<PaginatedData<Message>>>(key, {
+            ...data,
+            pages: data.pages.map((p) => ({
+              ...p,
+              items: deleteFor === 'all'
+                ? p.items.map((m) => m.id === messageId ? { ...m, isDeleted: true, content: null } : m)
+                : p.items.filter((m) => m.id !== messageId),
+            })),
+          });
+        }
+        if (conversationId) queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
+      }
+    );
+
     // ── Typing indicators ─────────────────────────────────────────────────────
     socket.on('typing:start', ({ conversationId, userId }: { conversationId: string; userId: string }) => {
       if (userId !== user.id) setTyping(conversationId, userId, true);
@@ -79,6 +119,8 @@ export function useSocket() {
 
     return () => {
       socket.off('message:new');
+      socket.off('message:edited');
+      socket.off('message:deleted');
       socket.off('notification:new');
       socket.off('typing:start');
       socket.off('typing:stop');
