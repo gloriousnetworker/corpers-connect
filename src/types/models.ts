@@ -45,6 +45,7 @@ export interface User {
   lastSeen?: string | null;
   followersCount?: number;
   followingCount?: number;
+  postsCount?: number;
   isFollowing?: boolean;
   createdAt: string;
   updatedAt: string;

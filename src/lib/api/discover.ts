@@ -6,7 +6,9 @@ export interface DiscoverUser extends Pick<User,
   'id' | 'firstName' | 'lastName' | 'profilePicture' | 'bio' |
   'level' | 'isVerified' | 'subscriptionTier' | 'servingState' |
   'lga' | 'ppa' | 'batch' | 'corperTag' | 'corperTagLabel' | 'createdAt'
-> {}
+> {
+  isFollowing?: boolean;
+}
 
 /** GET /discover/corpers — corpers in same serving state */
 export async function getCorpersInState(

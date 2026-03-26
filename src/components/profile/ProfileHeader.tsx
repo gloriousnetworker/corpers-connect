@@ -52,7 +52,7 @@ export default function ProfileHeader({
           {isOwnProfile ? (
             <button
               onClick={onEditClick}
-              className="px-4 py-1.5 rounded-full border border-border text-sm font-semibold text-foreground hover:bg-surface-alt transition-colors"
+              className="relative z-10 px-4 py-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-alt transition-colors"
             >
               Edit Profile
             </button>
@@ -90,7 +90,7 @@ export default function ProfileHeader({
 
         {/* Stats row */}
         <div className="flex gap-5 mt-4">
-          <StatChip label="Posts" value={0} />
+          <StatChip label="Posts" value={user.postsCount ?? 0} />
           <button onClick={onFollowersClick} className="text-left">
             <StatChip label="Followers" value={user.followersCount ?? 0} clickable />
           </button>

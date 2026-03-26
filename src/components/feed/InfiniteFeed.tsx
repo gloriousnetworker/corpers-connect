@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 import { getFeed } from '@/lib/api/feed';
 import { queryKeys } from '@/lib/query-keys';
 import PostCard from '@/components/post/PostCard';
@@ -9,9 +10,17 @@ import PostCardSkeleton from '@/components/post/PostCardSkeleton';
 import CreatePostModal from '@/components/post/CreatePostModal';
 import type { Post } from '@/types/models';
 
+const PULL_THRESHOLD = 64; // px to trigger refresh
+
 export default function InfiniteFeed() {
   const [editPost, setEditPost] = useState<Post | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Pull-to-refresh state
+  const [pullY, setPullY] = useState(0);          // current drag distance
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const isPulling = useRef(false);
 
   const {
     data,
@@ -32,6 +41,36 @@ export default function InfiniteFeed() {
   });
 
   const posts = data?.pages.flatMap((p) => p.items) ?? [];
+
+  // Pull-to-refresh handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+      isPulling.current = true;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling.current || isRefreshing) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) {
+      // Apply rubber-band resistance so the pull feels natural
+      setPullY(Math.min(delta * 0.45, PULL_THRESHOLD * 1.5));
+    }
+  }, [isRefreshing]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isPulling.current) return;
+    isPulling.current = false;
+    if (pullY >= PULL_THRESHOLD && !isRefreshing) {
+      setIsRefreshing(true);
+      setPullY(0);
+      await refetch();
+      setIsRefreshing(false);
+    } else {
+      setPullY(0);
+    }
+  }, [pullY, isRefreshing, refetch]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {
@@ -93,33 +132,55 @@ export default function InfiniteFeed() {
     );
   }
 
+  const showPullIndicator = pullY > 8 || isRefreshing;
+  const pullTriggered = pullY >= PULL_THRESHOLD;
+
   return (
     <>
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onEdit={setEditPost}
-          />
-        ))}
-
-        {/* Sentinel for infinite scroll */}
-        <div ref={loadMoreRef} className="h-4" />
-
-        {isFetchingNextPage && (
-          <div className="space-y-4">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <PostCardSkeleton key={i} />
-            ))}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ transform: pullY > 0 ? `translateY(${pullY}px)` : undefined, transition: pullY === 0 ? 'transform 0.2s ease' : undefined }}
+      >
+        {/* Pull-to-refresh indicator */}
+        {showPullIndicator && (
+          <div className="flex justify-center items-center py-3 -mt-10 mb-1">
+            <Loader2
+              className={`w-5 h-5 text-primary transition-transform ${
+                isRefreshing || pullTriggered ? 'animate-spin' : ''
+              }`}
+              style={!isRefreshing ? { transform: `rotate(${(pullY / PULL_THRESHOLD) * 360}deg)` } : undefined}
+            />
           </div>
         )}
 
-        {!hasNextPage && posts.length > 0 && (
-          <p className="text-center text-sm text-foreground-muted py-6">
-            You&apos;re all caught up 🎉
-          </p>
-        )}
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onEdit={setEditPost}
+            />
+          ))}
+
+          {/* Sentinel for infinite scroll */}
+          <div ref={loadMoreRef} className="h-4" />
+
+          {isFetchingNextPage && (
+            <div className="space-y-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <PostCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
+
+          {!hasNextPage && posts.length > 0 && (
+            <p className="text-center text-sm text-foreground-muted py-6">
+              You&apos;re all caught up 🎉
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Edit post modal */}
