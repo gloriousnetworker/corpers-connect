@@ -32,7 +32,10 @@ export default function Dashboard() {
     return (
       <div
         className="flex flex-col overflow-hidden"
-        style={{ height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))' }}
+        style={{
+          height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))',
+          marginTop: 'calc(var(--top-bar-height) + env(safe-area-inset-top, 0px))',
+        }}
       >
         <MessagesSection />
       </div>
