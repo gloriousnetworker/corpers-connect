@@ -32,7 +32,20 @@ export default withPWA({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
+    // Never precache the Firebase messaging SW — it must always be fetched
+    // fresh from the network so the /api/firebase-config importScripts works
+    // with the latest config, and so workbox never serves a stale version.
+    exclude: [/firebase-messaging-sw\.js$/],
     runtimeCaching: [
+      // Always fetch the FCM service worker and its config from the network
+      {
+        urlPattern: /\/firebase-messaging-sw\.js$/,
+        handler: 'NetworkOnly',
+      },
+      {
+        urlPattern: /\/api\/firebase-config/,
+        handler: 'NetworkOnly',
+      },
       {
         urlPattern: /^https:\/\/corpers-connect-server-production\.up\.railway\.app\/api\//,
         handler: 'NetworkFirst',
