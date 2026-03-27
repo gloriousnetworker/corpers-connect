@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { LogOut, Settings } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
@@ -20,6 +21,7 @@ export default function ProfileSection() {
   const authUser = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
+  const router = useRouter();
 
   const [tab, setTab] = useState<Tab>('posts');
   const [editOpen, setEditOpen] = useState(false);
@@ -95,7 +97,10 @@ export default function ProfileSection() {
 
       {/* Settings & sign out */}
       <div className="mt-2 bg-surface border-t border-b border-border divide-y divide-border/60">
-        <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left">
+        <button
+          onClick={() => router.push('/settings')}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left"
+        >
           <Settings className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
           <span className="text-sm font-medium text-foreground">Account Settings</span>
         </button>

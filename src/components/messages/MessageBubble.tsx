@@ -31,6 +31,8 @@ interface MessageBubbleProps {
   onDelete?: (message: Message) => void;
   onRetry?: (message: Message) => void;
   onForward?: (message: Message) => void;
+  onReact?: (message: Message, emoji: string) => void;
+  onPin?: (message: Message) => void;
 }
 
 export default function MessageBubble({
@@ -44,6 +46,8 @@ export default function MessageBubble({
   onDelete,
   onRetry,
   onForward,
+  onReact,
+  onPin,
 }: MessageBubbleProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -213,6 +217,12 @@ export default function MessageBubble({
   const isVideoMedia = message.type === MessageType.VIDEO ||
     message.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i);
 
+  // Group reactions by emoji for the reaction row
+  const reactionGroups = (message.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
+    acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <>
       <div
@@ -311,6 +321,23 @@ export default function MessageBubble({
             )}
           </div>
 
+          {/* Emoji reactions */}
+          {Object.entries(reactionGroups).length > 0 && (
+            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+              {Object.entries(reactionGroups).map(([emoji, count]) => (
+                <button
+                  key={emoji}
+                  onClick={() => onReact?.(message, emoji)}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-surface border border-border text-xs shadow-sm active:scale-90 transition-transform"
+                  aria-label={`${count} ${emoji} reaction${count > 1 ? 's' : ''}`}
+                >
+                  <span>{emoji}</span>
+                  {count > 1 && <span className="text-foreground-secondary font-medium">{count}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Timestamp + status */}
           <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className="text-[10px] text-foreground-muted">
@@ -341,6 +368,8 @@ export default function MessageBubble({
           onForward={onForward && !isDeleted ? () => onForward(message) : undefined}
           onEdit={onEdit && !isDeleted && message.type === MessageType.TEXT ? () => onEdit(message) : undefined}
           onDelete={onDelete && !isDeleted ? () => onDelete(message) : undefined}
+          onReact={onReact ? (emoji) => onReact(message, emoji) : undefined}
+          onPin={onPin ? () => onPin(message) : undefined}
         />
       )}
     </>

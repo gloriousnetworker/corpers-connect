@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info, X, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck, Pin } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -12,6 +12,9 @@ import {
   editMessage,
   deleteMessage,
   markRead,
+  reactToMessage,
+  removeMessageReaction,
+  pinMessage,
 } from '@/lib/api/conversations';
 import { normalizeMessage } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
@@ -70,6 +73,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -163,14 +167,34 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMessages.length, conversation.id, user?.id]);
 
-  // ── Join socket room ────────────────────────────────────────────────────────
+  // ── Join socket room + reaction/pin socket events ──────────────────────────
   useEffect(() => {
     const socket = getExistingSocket();
     if (socket) socket.emit('conversation:join', conversation.id);
+
+    const handleReact = (payload: { messageId: string; message: unknown }) => {
+      const updated = normalizeMessage(payload.message as Parameters<typeof normalizeMessage>[0]);
+      patchMessages((m) => m.id === payload.messageId ? updated : m);
+    };
+
+    const handlePinned = (payload: { messageId: string; isPinned: boolean; message: unknown }) => {
+      const updated = normalizeMessage(payload.message as Parameters<typeof normalizeMessage>[0]);
+      patchMessages((m) => m.id === payload.messageId ? updated : m);
+      setPinnedMessage(payload.isPinned ? updated : null);
+    };
+
+    socket?.on('message:react', handleReact);
+    socket?.on('message:pinned', handlePinned);
+
     return () => {
       const s = getExistingSocket();
-      if (s) s.emit('conversation:leave', conversation.id);
+      if (s) {
+        s.emit('conversation:leave', conversation.id);
+        s.off('message:react', handleReact);
+        s.off('message:pinned', handlePinned);
+      }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation.id]);
 
   // ── Helper to patch message cache ──────────────────────────────────────────
@@ -210,6 +234,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         type: MessageType.TEXT,
         isEdited: false,
         isDeleted: false,
+        isPinned: false,
+        reactions: [],
         replyToId: replyToId ?? null,
         replyTo: replyToId ? (allMessages.find((m) => m.id === replyToId) ?? null) : null,
         createdAt: new Date().toISOString(),
@@ -271,6 +297,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         mediaUrl,
         isEdited: false,
         isDeleted: false,
+        isPinned: false,
+        reactions: [],
         replyToId: null,
         replyTo: null,
         createdAt: new Date().toISOString(),
@@ -348,6 +376,44 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     },
     onError: () => toast.error('Failed to delete message'),
   });
+
+  // ── React to message ────────────────────────────────────────────────────────
+  const reactionMutation = useMutation({
+    mutationFn: (vars: { messageId: string; emoji: string; hasReaction: boolean }) =>
+      vars.hasReaction
+        ? removeMessageReaction(conversation.id, vars.messageId, vars.emoji)
+        : reactToMessage(conversation.id, vars.messageId, vars.emoji),
+    onSuccess: (updated) => {
+      patchMessages((m) => m.id === updated.id ? updated : m);
+    },
+    onError: () => toast.error('Failed to update reaction'),
+  });
+
+  // ── Pin message ─────────────────────────────────────────────────────────────
+  const pinMutation = useMutation({
+    mutationFn: (vars: { messageId: string; isPinned: boolean }) =>
+      pinMessage(conversation.id, vars.messageId, vars.isPinned),
+    onMutate: ({ messageId, isPinned }) => {
+      patchMessages((m) => m.id === messageId ? { ...m, isPinned } : m);
+    },
+    onSuccess: (updated) => {
+      patchMessages((m) => m.id === updated.id ? updated : m);
+      setPinnedMessage(updated.isPinned ? updated : null);
+    },
+    onError: (_err, vars) => {
+      patchMessages((m) => m.id === vars.messageId ? { ...m, isPinned: !vars.isPinned } : m);
+      toast.error('Failed to pin message');
+    },
+  });
+
+  const handleReact = (msg: Message, emoji: string) => {
+    const hasReaction = (msg.reactions ?? []).some((r) => r.userId === user?.id && r.emoji === emoji);
+    reactionMutation.mutate({ messageId: msg.id, emoji, hasReaction });
+  };
+
+  const handlePin = (msg: Message) => {
+    pinMutation.mutate({ messageId: msg.id, isPinned: !msg.isPinned });
+  };
 
   const handleSend = (content: string, replyToId?: string) => {
     if (editingMessage) {
@@ -474,6 +540,24 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         </button>
       </div>
 
+      {/* ── Pinned message banner ─────────────────────────────────────────── */}
+      {pinnedMessage && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 flex-shrink-0">
+          <Pin className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+          <p className="flex-1 text-xs text-foreground-secondary truncate">
+            <span className="font-medium text-primary">Pinned: </span>
+            {pinnedMessage.isDeleted ? 'Deleted message' : pinnedMessage.content ?? '📎 Media'}
+          </p>
+          <button
+            onClick={() => setPinnedMessage(null)}
+            className="text-foreground-muted hover:text-foreground transition-colors"
+            aria-label="Dismiss pinned message"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── Messages list ────────────────────────────────────────────────────── */}
       <div
         ref={listRef}
@@ -514,6 +598,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               onDelete={handleDelete}
               onRetry={handleRetry}
               onForward={(m) => setForwardingMessage(m)}
+              onReact={handleReact}
+              onPin={handlePin}
             />
           ))
         )}

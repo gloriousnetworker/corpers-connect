@@ -131,6 +131,15 @@ export interface ConversationParticipant {
   lastReadAt?: string | null;
 }
 
+export interface MessageReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'profilePicture' | 'isVerified'>;
+  emoji: string;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -143,6 +152,8 @@ export interface Message {
   replyTo?: Message | null;
   isEdited: boolean;
   isDeleted: boolean;
+  isPinned: boolean;
+  reactions: MessageReaction[];
   deliveredAt?: string | null;
   readBy?: string[];
   createdAt: string;

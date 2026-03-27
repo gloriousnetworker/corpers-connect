@@ -18,6 +18,15 @@ interface RawMessageRead {
   readAt: string;
 }
 
+interface RawReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  user: RawUser;
+  emoji: string;
+  createdAt: string;
+}
+
 interface RawMessage {
   id: string;
   conversationId: string;
@@ -30,6 +39,8 @@ interface RawMessage {
   replyTo?: Omit<RawMessage, 'replyTo'> | null;
   isEdited: boolean;
   isDeleted: boolean;
+  isPinned?: boolean;
+  reactions?: RawReaction[];
   deliveredAt?: string | null;
   reads?: RawMessageRead[];
   createdAt: string;
@@ -91,6 +102,15 @@ export function normalizeMessage(m: RawMessage): Message {
     replyTo: m.replyTo ? normalizeMessage(m.replyTo as RawMessage) : null,
     isEdited: m.isEdited,
     isDeleted: m.isDeleted,
+    isPinned: m.isPinned ?? false,
+    reactions: (m.reactions ?? []).map((r) => ({
+      id: r.id,
+      messageId: r.messageId,
+      userId: r.userId,
+      user: r.user,
+      emoji: r.emoji,
+      createdAt: r.createdAt,
+    })),
     deliveredAt: m.deliveredAt,
     readBy: (m.reads ?? []).map((r) => r.userId),
     createdAt: m.createdAt,
@@ -306,6 +326,45 @@ export async function updateGroup(
     payload
   );
   return normalizeConvDirect(data.data);
+}
+
+/** POST /conversations/:id/messages/:msgId/reactions — add emoji reaction */
+export async function reactToMessage(
+  conversationId: string,
+  messageId: string,
+  emoji: string
+): Promise<Message> {
+  const { data } = await api.post<ApiResponse<RawMessage>>(
+    `/conversations/${conversationId}/messages/${messageId}/reactions`,
+    { emoji }
+  );
+  return normalizeMessage(data.data);
+}
+
+/** DELETE /conversations/:id/messages/:msgId/reactions — remove emoji reaction */
+export async function removeMessageReaction(
+  conversationId: string,
+  messageId: string,
+  emoji: string
+): Promise<Message> {
+  const { data } = await api.delete<ApiResponse<RawMessage>>(
+    `/conversations/${conversationId}/messages/${messageId}/reactions`,
+    { data: { emoji } }
+  );
+  return normalizeMessage(data.data);
+}
+
+/** PATCH /conversations/:id/messages/:msgId/pin — pin or unpin a message */
+export async function pinMessage(
+  conversationId: string,
+  messageId: string,
+  isPinned: boolean
+): Promise<Message> {
+  const { data } = await api.patch<ApiResponse<RawMessage>>(
+    `/conversations/${conversationId}/messages/${messageId}/pin`,
+    { isPinned }
+  );
+  return normalizeMessage(data.data);
 }
 
 /** GET /discover/search — search users to start a DM */

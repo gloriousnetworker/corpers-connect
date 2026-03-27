@@ -100,3 +100,7 @@ export async function registerFcmToken(fcmToken: string, platform: string): Prom
 export async function removeFcmToken(fcmToken: string): Promise<void> {
   await api.delete('/users/me/fcm-token', { data: { fcmToken } });
 }
+
+export async function deleteAccount(): Promise<void> {
+  await api.delete('/users/me');
+}

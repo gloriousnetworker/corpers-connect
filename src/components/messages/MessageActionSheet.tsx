@@ -1,8 +1,10 @@
 'use client';
 
-import { CornerUpLeft, Copy, Share2, Pencil, Trash2 } from 'lucide-react';
+import { CornerUpLeft, Copy, Share2, Pencil, Trash2, Pin, PinOff } from 'lucide-react';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
+
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 
 interface MessageActionSheetProps {
   message: Message;
@@ -13,6 +15,8 @@ interface MessageActionSheetProps {
   onForward?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onReact?: (emoji: string) => void;
+  onPin?: () => void;
 }
 
 function getMessagePreview(message: Message): string {
@@ -39,6 +43,8 @@ export default function MessageActionSheet({
   onForward,
   onEdit,
   onDelete,
+  onReact,
+  onPin,
 }: MessageActionSheetProps) {
   const preview = getMessagePreview(message);
 
@@ -46,6 +52,9 @@ export default function MessageActionSheet({
     ...(onReply ? [{ label: 'Reply', icon: CornerUpLeft, onClick: onReply }] : []),
     ...(onCopy ? [{ label: 'Copy', icon: Copy, onClick: onCopy }] : []),
     ...(onForward ? [{ label: 'Forward', icon: Share2, onClick: onForward }] : []),
+    ...(!message.isDeleted && onPin
+      ? [{ label: message.isPinned ? 'Unpin message' : 'Pin message', icon: message.isPinned ? PinOff : Pin, onClick: onPin }]
+      : []),
     ...(isOwn && message.type === MessageType.TEXT && !message.isDeleted && onEdit
       ? [{ label: 'Edit', icon: Pencil, onClick: onEdit }]
       : []),
@@ -74,8 +83,27 @@ export default function MessageActionSheet({
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
+        {/* Quick emoji reactions */}
+        {onReact && !message.isDeleted && (
+          <div className="flex justify-around px-4 py-3 border-b border-border">
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  onReact(emoji);
+                  onClose();
+                }}
+                className="text-2xl p-1.5 rounded-xl transition-transform active:scale-90 hover:bg-surface-alt"
+                aria-label={`React with ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Message preview */}
-        <div className="mx-4 mb-3 px-3 py-2 bg-surface-alt rounded-xl">
+        <div className="mx-4 mb-3 mt-3 px-3 py-2 bg-surface-alt rounded-xl">
           <p className="text-xs text-foreground-muted truncate">{preview || '\u00a0'}</p>
         </div>
 
