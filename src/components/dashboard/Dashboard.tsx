@@ -1,6 +1,10 @@
 'use client';
 
+import { Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/store/ui.store';
+import { useMessagesStore } from '@/store/messages.store';
+import { getConversation } from '@/lib/api/conversations';
 import FeedSection from '@/components/sections/FeedSection';
 import DiscoverSection from '@/components/sections/DiscoverSection';
 import ReelsSection from '@/components/sections/ReelsSection';
@@ -22,6 +26,35 @@ const SECTIONS: Record<ActiveSection, ComponentType> = {
 };
 
 /**
+ * Handles push-notification deep links via URL params on app open.
+ * Must be wrapped in Suspense because it uses useSearchParams.
+ *   ?conv=<conversationId>  → open that conversation in MessagesSection
+ */
+function DeepLinkHandler() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
+
+  useEffect(() => {
+    const conv = searchParams.get('conv');
+    if (conv) {
+      getConversation(conv)
+        .then((conversation) => {
+          setPendingConversation(conversation);
+          setActiveSection('messages');
+        })
+        .catch(() => {/* conversation not found — ignore */})
+        .finally(() => router.replace('/'));
+    }
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
+/**
  * Client-side SPA dashboard — swaps sections without any route changes.
  * URL stays at "/" forever. Section is driven by Zustand activeSection state.
  */
@@ -32,20 +65,24 @@ export default function Dashboard() {
   // Messages and Reels need full-height layout — no scroll padding wrappers
   if (activeSection === 'messages' || activeSection === 'reels') {
     return (
-      <div
-        className="flex flex-col overflow-hidden"
-        style={{
-          height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))',
-          marginTop: 'calc(var(--top-bar-height) + env(safe-area-inset-top, 0px))',
-        }}
-      >
-        {activeSection === 'reels' ? <ReelsSection /> : <MessagesSection />}
-      </div>
+      <>
+        <Suspense><DeepLinkHandler /></Suspense>
+        <div
+          className="flex flex-col overflow-hidden"
+          style={{
+            height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))',
+            marginTop: 'calc(var(--top-bar-height) + env(safe-area-inset-top, 0px))',
+          }}
+        >
+          {activeSection === 'reels' ? <ReelsSection /> : <MessagesSection />}
+        </div>
+      </>
     );
   }
 
   return (
     <div className="pt-bar pb-nav">
+      <Suspense><DeepLinkHandler /></Suspense>
       {/* 12 px breathing room so content never sits flush against the mobile TopBar */}
       <div className="py-3">
         <Section />

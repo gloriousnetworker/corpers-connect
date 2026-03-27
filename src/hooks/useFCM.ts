@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { getToken, onMessage } from 'firebase/messaging';
 import { toast } from 'sonner';
 import { getFirebaseMessaging } from '@/lib/firebase';
 import { registerFcmToken, removeFcmToken } from '@/lib/api/users';
+import { getConversation } from '@/lib/api/conversations';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
+import { useMessagesStore } from '@/store/messages.store';
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const FCM_TOKEN_KEY = 'cc_fcm_token';
@@ -22,7 +25,11 @@ const FCM_TOKEN_KEY = 'cc_fcm_token';
  */
 export function useFCM() {
   const user = useAuthStore((s) => s.user);
+  const router = useRouter();
   const incrementUnread = useUIStore((s) => s.incrementUnread);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const setViewingUser = useUIStore((s) => s.setViewingUser);
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
   const registeredRef = useRef(false);
 
   // Cleanup on logout
@@ -71,8 +78,32 @@ export function useFCM() {
         unsubscribeForeground = onMessage(messaging, (payload) => {
           const title = payload.notification?.title ?? 'New notification';
           const body  = payload.notification?.body  ?? '';
-          toast(title, { description: body || undefined });
+          const data  = payload.data ?? {};
+
+          const handleView = () => {
+            const { type, entityType, entityId, actorId } = data;
+            if (type === 'DM_RECEIVED' && entityId) {
+              getConversation(entityId)
+                .then((conv) => {
+                  setPendingConversation(conv);
+                  setActiveSection('messages');
+                })
+                .catch(() => setActiveSection('messages'));
+            } else if (entityType === 'Post' && entityId) {
+              router.push(`/post/${entityId}`);
+            } else if (actorId) {
+              setViewingUser(actorId);
+            } else {
+              setActiveSection('notifications');
+            }
+          };
+
           incrementUnread();
+          toast(title, {
+            description: body || undefined,
+            action: { label: 'View', onClick: handleView },
+            duration: 5000,
+          });
         });
       } catch {
         // Permission denied or messaging not supported — fail silently
@@ -82,5 +113,5 @@ export function useFCM() {
     return () => {
       unsubscribeForeground?.();
     };
-  }, [user, incrementUnread]);
+  }, [user, router, incrementUnread, setActiveSection, setViewingUser, setPendingConversation]);
 }

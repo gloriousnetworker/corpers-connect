@@ -113,9 +113,24 @@ export const useUIStore = create<UIState>((set) => ({
   setTwoFAChallenge: (data) => set({ twoFAChallenge: data }),
 
   unreadNotifications: 0,
-  setUnreadNotifications: (count) => set({ unreadNotifications: count }),
+  setUnreadNotifications: (count) => {
+    set({ unreadNotifications: count });
+    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+      if (count > 0) {
+        (navigator as Navigator & { setAppBadge: (n: number) => void }).setAppBadge(count);
+      } else {
+        (navigator as Navigator & { clearAppBadge: () => void }).clearAppBadge?.();
+      }
+    }
+  },
   incrementUnread: () =>
-    set((state) => ({ unreadNotifications: state.unreadNotifications + 1 })),
+    set((state) => {
+      const next = state.unreadNotifications + 1;
+      if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+        (navigator as Navigator & { setAppBadge: (n: number) => void }).setAppBadge(next);
+      }
+      return { unreadNotifications: next };
+    }),
 
   unreadMessages: 0,
   setUnreadMessages: (count) => set({ unreadMessages: count }),

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,19 +11,23 @@ import { useAuthStore } from '@/store/auth.store';
 import { useMessagesStore } from '@/store/messages.store';
 import { useUIStore } from '@/store/ui.store';
 import { queryKeys } from '@/lib/query-keys';
-import { normalizeMessage } from '@/lib/api/conversations';
-import type { Message } from '@/types/models';
+import { normalizeMessage, getConversation } from '@/lib/api/conversations';
+import type { Message, Notification } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
 
 export function useSocket() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const router = useRouter();
   // Use targeted selectors so this hook only triggers when the specific actions change
   // (Zustand actions are stable, so this effectively never re-runs the effect from here)
   const setTyping = useMessagesStore((s) => s.setTyping);
   const setUserOnline = useMessagesStore((s) => s.setUserOnline);
   const setUserOffline = useMessagesStore((s) => s.setUserOffline);
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
   const incrementUnread = useUIStore((s) => s.incrementUnread);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const setViewingUser = useUIStore((s) => s.setViewingUser);
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -54,17 +59,39 @@ export function useSocket() {
     });
 
     // ── Notification events ────────────────────────────────────────────────────
-    socket.on('notification:new', (payload?: { actorName?: string; content?: string }) => {
+    socket.on('notification:new', (payload?: Partial<Notification> & { actorName?: string }) => {
       incrementUnread();
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount() });
 
-      // In-app toast shown while the app is open (FCM handles background push)
-      const title = payload?.actorName
-        ? `${payload.actorName}`
-        : 'Corpers Connect';
+      const actorName = payload?.actor
+        ? `${payload.actor.firstName} ${payload.actor.lastName}`
+        : (payload?.actorName ?? 'Corpers Connect');
       const description = payload?.content ?? 'You have a new notification';
-      toast(title, { description });
+
+      const handleView = () => {
+        const { type, entityType, entityId, actorId } = payload ?? {};
+        if (type === 'DM_RECEIVED' && entityId) {
+          getConversation(entityId)
+            .then((conv) => {
+              setPendingConversation(conv);
+              setActiveSection('messages');
+            })
+            .catch(() => setActiveSection('messages'));
+        } else if (entityType === 'Post' && entityId) {
+          router.push(`/post/${entityId}`);
+        } else if (actorId) {
+          setViewingUser(actorId);
+        } else {
+          setActiveSection('notifications');
+        }
+      };
+
+      toast(actorName, {
+        description,
+        action: { label: 'View', onClick: handleView },
+        duration: 5000,
+      });
     });
 
     // ── Message edited ────────────────────────────────────────────────────────
@@ -136,7 +163,7 @@ export function useSocket() {
       socket.off('user:offline');
       if (pingRef.current) clearInterval(pingRef.current);
     };
-  }, [user, queryClient, setTyping, setUserOnline, setUserOffline, incrementUnread]);
+  }, [user, queryClient, router, setTyping, setUserOnline, setUserOffline, setPendingConversation, incrementUnread, setActiveSection, setViewingUser]);
 
   // Disconnect on logout
   useEffect(() => {

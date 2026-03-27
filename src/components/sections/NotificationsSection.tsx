@@ -6,8 +6,10 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getNotifications, markAllRead, markAsRead } from '@/lib/api/notifications';
+import { getConversation } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
+import { useMessagesStore } from '@/store/messages.store';
 import { useNotifications } from '@/hooks/useNotifications';
 import NotificationItem from '@/components/profile/NotificationItem';
 import type { Notification } from '@/types/models';
@@ -15,6 +17,8 @@ import type { Notification } from '@/types/models';
 export default function NotificationsSection() {
   const setUnreadNotifications = useUIStore((s) => s.setUnreadNotifications);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -74,17 +78,33 @@ export default function NotificationsSection() {
       markOneMutation.mutate(notification.id);
     }
 
-    // Deep-link to the relevant entity based on entityType
-    if (notification.entityType === 'POST' || notification.entityType === 'COMMENT') {
-      if (notification.entityId) {
-        router.push(`/post/${notification.entityId}`);
-        return;
-      }
+    const { type, entityType, entityId, actorId } = notification;
+
+    if (type === 'DM_RECEIVED' && entityId) {
+      getConversation(entityId)
+        .then((conv) => {
+          setPendingConversation(conv);
+          setActiveSection('messages');
+        })
+        .catch(() => {
+          toast.error('Could not open conversation');
+        });
+      return;
+    }
+
+    if (entityType === 'Post' && entityId) {
+      router.push(`/post/${entityId}`);
+      return;
+    }
+
+    if (type === 'FOLLOW' && actorId) {
+      setViewingUser(actorId, 'notifications');
+      return;
     }
 
     // Fall back to actor's profile
-    if (notification.actorId) {
-      setViewingUser(notification.actorId, 'notifications');
+    if (actorId) {
+      setViewingUser(actorId, 'notifications');
     }
   };
 

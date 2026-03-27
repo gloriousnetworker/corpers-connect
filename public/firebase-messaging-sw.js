@@ -44,19 +44,33 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // ---------------------------------------------------------------------------
-// Tap handler — bring the app to focus when user taps a notification
+// Tap handler — open the deep link URL when user taps a notification
 // ---------------------------------------------------------------------------
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  const data = event.notification.data ?? {};
+  const deepPath = data.url || '/';
+  const targetUrl = deepPath.startsWith('http')
+    ? deepPath
+    : self.location.origin + deepPath;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      const appUrl = self.location.origin;
+      // If there is already an open tab at exactly the target URL, focus it
       for (const client of clientList) {
-        if (client.url.startsWith(appUrl) && 'focus' in client) {
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      return clients.openWindow(appUrl);
+      // If there is any open app tab, navigate it to the target URL
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'navigate' in client) {
+          return client.navigate(targetUrl).then((c) => c && c.focus());
+        }
+      }
+      // Otherwise open a new tab
+      return clients.openWindow(targetUrl);
     })
   );
 });
