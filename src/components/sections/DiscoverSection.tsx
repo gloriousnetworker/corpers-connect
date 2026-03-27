@@ -2,23 +2,27 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { Search, X, BadgeCheck, Loader2 } from 'lucide-react';
+import { Search, X, BadgeCheck, Loader2, ShoppingBag, FileText, Users } from 'lucide-react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { getCorpersInState, getSuggestions, searchDiscover } from '@/lib/api/discover';
+import { getCorpersInState, getSuggestions, searchDiscover, searchPosts, searchListings } from '@/lib/api/discover';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
-import UserCard from '@/components/profile/UserCard';
 import LevelBadge from '@/components/profile/LevelBadge';
 import FollowButton from '@/components/profile/FollowButton';
 import { getInitials, debounce } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils';
 import type { DiscoverUser } from '@/lib/api/discover';
+import type { Post, MarketplaceListing } from '@/types/models';
+
+type SearchTab = 'people' | 'posts' | 'listings';
 
 export default function DiscoverSection() {
   const setViewingUser = useUIStore((s) => s.setViewingUser);
   const currentUser = useAuthStore((s) => s.user);
   const [inputValue, setInputValue] = useState('');
   const [query, setQuery] = useState('');
+  const [searchTab, setSearchTab] = useState<SearchTab>('people');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search input
@@ -40,7 +44,25 @@ export default function DiscoverSection() {
     queryFn: ({ pageParam }) => searchDiscover(query, pageParam as string | undefined),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
-    enabled: isSearching,
+    enabled: isSearching && searchTab === 'people',
+    staleTime: 30_000,
+  });
+
+  const postsResults = useInfiniteQuery({
+    queryKey: queryKeys.searchPosts(query),
+    queryFn: ({ pageParam }) => searchPosts(query, pageParam as string | undefined),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    enabled: isSearching && searchTab === 'posts',
+    staleTime: 30_000,
+  });
+
+  const listingsResults = useInfiniteQuery({
+    queryKey: queryKeys.searchListings(query),
+    queryFn: ({ pageParam }) => searchListings(query, pageParam as string | undefined),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    enabled: isSearching && searchTab === 'listings',
     staleTime: 30_000,
   });
 
@@ -63,6 +85,8 @@ export default function DiscoverSection() {
   });
 
   const searchItems = searchResults.data?.pages.flatMap((p) => p.items) ?? [];
+  const postItems = postsResults.data?.pages.flatMap((p) => p.items) ?? [];
+  const listingItems = listingsResults.data?.pages.flatMap((p) => p.items) ?? [];
   const corpers = corpersQuery.data?.pages.flatMap((p) => p.items) ?? [];
   const stateLabel = corpersQuery.data?.pages[0]?.state ?? currentUser?.servingState ?? 'your state';
 
@@ -106,35 +130,92 @@ export default function DiscoverSection() {
       {/* ── Search results ─────────────────────────────────────────────────── */}
       {isSearching ? (
         <div className="bg-surface">
-          {searchResults.isLoading ? (
-            <SearchSkeleton />
-          ) : searchItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <p className="font-semibold text-foreground text-sm">No corpers found</p>
-              <p className="text-xs text-foreground-muted mt-1">Try a different name or state code</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/50">
-              {searchItems.map((u) => (
-                <DiscoverUserRow
-                  key={u.id}
-                  user={u}
-                  currentUserId={currentUser?.id}
-                  onClick={() => handleUserClick(u.id)}
-                />
-              ))}
-              {searchResults.hasNextPage && (
-                <div className="p-4 text-center">
-                  <button
-                    onClick={() => searchResults.fetchNextPage()}
-                    disabled={searchResults.isFetchingNextPage}
-                    className="text-sm text-primary font-semibold disabled:opacity-50"
-                  >
-                    {searchResults.isFetchingNextPage ? 'Loading…' : 'Load more'}
-                  </button>
+          {/* Search tabs */}
+          <div className="flex border-b border-border">
+            {(['people', 'posts', 'listings'] as SearchTab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSearchTab(tab)}
+                className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors border-b-2 ${
+                  searchTab === tab
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-foreground-muted hover:text-foreground'
+                }`}
+              >
+                {tab === 'people' ? 'People' : tab === 'posts' ? 'Posts' : 'Listings'}
+              </button>
+            ))}
+          </div>
+
+          {searchTab === 'people' && (
+            <>
+              {searchResults.isLoading ? (
+                <SearchSkeleton />
+              ) : searchItems.length === 0 ? (
+                <SearchEmpty label="No corpers found" hint="Try a different name or state code" />
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {searchItems.map((u) => (
+                    <DiscoverUserRow
+                      key={u.id}
+                      user={u}
+                      currentUserId={currentUser?.id}
+                      onClick={() => handleUserClick(u.id)}
+                    />
+                  ))}
+                  {searchResults.hasNextPage && (
+                    <LoadMoreButton
+                      onClick={() => searchResults.fetchNextPage()}
+                      isLoading={searchResults.isFetchingNextPage}
+                    />
+                  )}
                 </div>
               )}
-            </div>
+            </>
+          )}
+
+          {searchTab === 'posts' && (
+            <>
+              {postsResults.isLoading ? (
+                <SearchSkeleton />
+              ) : postItems.length === 0 ? (
+                <SearchEmpty label="No posts found" hint="Try different keywords" />
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {postItems.map((post) => (
+                    <SearchPostRow key={post.id} post={post} />
+                  ))}
+                  {postsResults.hasNextPage && (
+                    <LoadMoreButton
+                      onClick={() => postsResults.fetchNextPage()}
+                      isLoading={postsResults.isFetchingNextPage}
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {searchTab === 'listings' && (
+            <>
+              {listingsResults.isLoading ? (
+                <SearchSkeleton />
+              ) : listingItems.length === 0 ? (
+                <SearchEmpty label="No listings found" hint="Try different keywords" />
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {listingItems.map((listing) => (
+                    <SearchListingRow key={listing.id} listing={listing} />
+                  ))}
+                  {listingsResults.hasNextPage && (
+                    <LoadMoreButton
+                      onClick={() => listingsResults.fetchNextPage()}
+                      isLoading={listingsResults.isFetchingNextPage}
+                    />
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
@@ -339,6 +420,108 @@ function SearchSkeleton() {
           <div className="h-7 w-16 bg-surface-alt rounded-full animate-pulse" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function SearchEmpty({ label, hint }: { label: string; hint: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <p className="font-semibold text-foreground text-sm">{label}</p>
+      <p className="text-xs text-foreground-muted mt-1">{hint}</p>
+    </div>
+  );
+}
+
+function LoadMoreButton({ onClick, isLoading }: { onClick: () => void; isLoading: boolean }) {
+  return (
+    <div className="p-4 text-center">
+      <button
+        onClick={onClick}
+        disabled={isLoading}
+        className="text-sm text-primary font-semibold disabled:opacity-50"
+      >
+        {isLoading ? 'Loading…' : 'Load more'}
+      </button>
+    </div>
+  );
+}
+
+function SearchPostRow({ post }: { post: Post }) {
+  const initials = getInitials(post.author.firstName, post.author.lastName);
+  return (
+    <div className="flex gap-3 px-4 py-3">
+      <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+        {post.author.profilePicture ? (
+          <Image
+            src={post.author.profilePicture}
+            alt={initials}
+            width={36}
+            height={36}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <span className="text-xs font-bold text-primary uppercase">{initials}</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <p className="text-xs font-semibold text-foreground truncate">
+            {post.author.firstName} {post.author.lastName}
+          </p>
+          {post.author.isVerified && <BadgeCheck className="w-3 h-3 text-info flex-shrink-0" />}
+          <span className="text-[10px] text-foreground-muted ml-auto flex-shrink-0">
+            {formatRelativeTime(post.createdAt)}
+          </span>
+        </div>
+        {post.content && (
+          <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">{post.content}</p>
+        )}
+        {post.mediaUrls?.[0] && (
+          <div className="mt-1.5 w-16 h-12 rounded overflow-hidden bg-surface-alt flex-shrink-0">
+            <Image
+              src={post.mediaUrls[0]}
+              alt="Post media"
+              width={64}
+              height={48}
+              className="object-cover w-full h-full"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SearchListingRow({ listing }: { listing: MarketplaceListing }) {
+  const initials = getInitials(listing.seller.firstName, listing.seller.lastName);
+  return (
+    <div className="flex gap-3 px-4 py-3">
+      <div className="w-14 h-14 rounded-lg overflow-hidden bg-surface-alt flex items-center justify-center flex-shrink-0">
+        {listing.images?.[0] ? (
+          <Image
+            src={listing.images[0]}
+            alt={listing.title}
+            width={56}
+            height={56}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <ShoppingBag className="w-6 h-6 text-foreground-muted" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-foreground truncate">{listing.title}</p>
+        <p className="text-xs text-foreground-muted mt-0.5 line-clamp-1">{listing.description}</p>
+        <div className="flex items-center gap-2 mt-1">
+          {listing.price != null && (
+            <span className="text-xs font-bold text-primary">
+              ₦{listing.price.toLocaleString()}
+            </span>
+          )}
+          <span className="text-[10px] text-foreground-muted">{listing.servingState}</span>
+        </div>
+      </div>
     </div>
   );
 }

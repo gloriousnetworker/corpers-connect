@@ -58,18 +58,18 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
   });
 
   const bookmarkMutation = useMutation({
-    mutationFn: async () => {
-      if (post.isBookmarked) {
-        await unbookmarkPost(post.id);
-      } else {
+    mutationFn: async (shouldBookmark: boolean) => {
+      if (shouldBookmark) {
         await bookmarkPost(post.id);
+      } else {
+        await unbookmarkPost(post.id);
       }
     },
-    onMutate: () => {
-      onOptimisticUpdate({ isBookmarked: !post.isBookmarked });
+    onMutate: (shouldBookmark: boolean) => {
+      onOptimisticUpdate({ isBookmarked: shouldBookmark });
     },
-    onError: () => {
-      onOptimisticUpdate({ isBookmarked: post.isBookmarked });
+    onError: (_err, shouldBookmark) => {
+      onOptimisticUpdate({ isBookmarked: !shouldBookmark });
       toast.error('Failed to update bookmark');
     },
     onSettled: () => {
@@ -194,7 +194,7 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
 
       {/* Bookmark button */}
       <button
-        onClick={() => bookmarkMutation.mutate()}
+        onClick={() => bookmarkMutation.mutate(!post.isBookmarked)}
         className={`flex items-center justify-center p-2 rounded-xl transition-colors ${
           post.isBookmarked
             ? 'text-gold bg-gold/10 hover:bg-gold/20'

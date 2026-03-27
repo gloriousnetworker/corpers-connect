@@ -120,11 +120,11 @@ export async function getBookmarks(
 
 export async function getUserPosts(
   userId: string,
-  params: { cursor?: string; limit?: number } = {}
+  params: { cursor?: string; limit?: number; postType?: string } = {}
 ): Promise<PaginatedData<Post>> {
   const { data } = await api.get<ApiResponse<PaginatedData<Post>>>(
     `/users/${userId}/posts`,
-    { params: { cursor: params.cursor, limit: params.limit ?? 20 } }
+    { params: { cursor: params.cursor, limit: params.limit ?? 20, postType: params.postType } }
   );
   return { ...data.data, items: data.data.items.map(normalizePost) };
 }

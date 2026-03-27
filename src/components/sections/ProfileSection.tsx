@@ -8,12 +8,13 @@ import { queryKeys } from '@/lib/query-keys';
 import { getMe } from '@/lib/api/users';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePostGrid from '@/components/profile/ProfilePostGrid';
+import ProfileHighlights from '@/components/profile/ProfileHighlights';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import FollowersModal from '@/components/profile/FollowersModal';
 import { useUIStore } from '@/store/ui.store';
 import type { Post } from '@/types/models';
 
-type Tab = 'posts' | 'bookmarks';
+type Tab = 'posts' | 'reels' | 'highlights' | 'bookmarks';
 
 export default function ProfileSection() {
   const authUser = useAuthStore((s) => s.user);
@@ -64,28 +65,32 @@ export default function ProfileSection() {
 
       {/* Tab bar */}
       <div className="sticky top-[var(--top-bar-height,56px)] z-20 bg-surface border-b border-border flex">
-        {(['posts', 'bookmarks'] as Tab[]).map((t) => (
+        {(['posts', 'reels', 'highlights', 'bookmarks'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors border-b-2 ${
+            className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors border-b-2 ${
               tab === t
                 ? 'border-primary text-primary'
                 : 'border-transparent text-foreground-muted hover:text-foreground'
             }`}
           >
-            {t === 'posts' ? 'Posts' : 'Saved'}
+            {t === 'bookmarks' ? 'Saved' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
-      {/* Post grid */}
+      {/* Tab content */}
       <div className="bg-surface">
-        <ProfilePostGrid
-          userId={user.id}
-          mode={tab === 'bookmarks' ? 'bookmarks' : 'posts'}
-          onPostClick={handlePostClick}
-        />
+        {tab === 'highlights' ? (
+          <ProfileHighlights user={user} />
+        ) : (
+          <ProfilePostGrid
+            userId={user.id}
+            mode={tab === 'bookmarks' ? 'bookmarks' : tab === 'reels' ? 'reels' : 'posts'}
+            onPostClick={handlePostClick}
+          />
+        )}
       </div>
 
       {/* Settings & sign out */}

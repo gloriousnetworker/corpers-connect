@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, CheckCheck } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getNotifications, markAllRead } from '@/lib/api/notifications';
+import { getNotifications, markAllRead, markAsRead } from '@/lib/api/notifications';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -15,6 +16,7 @@ export default function NotificationsSection() {
   const setUnreadNotifications = useUIStore((s) => s.setUnreadNotifications);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   // Sync unread count to UIStore
   useNotifications();
@@ -37,6 +39,29 @@ export default function NotificationsSection() {
     onError: () => toast.error('Failed to mark as read'),
   });
 
+  const markOneMutation = useMutation({
+    mutationFn: (id: string) => markAsRead([id]),
+    onSuccess: (_data, id) => {
+      // Optimistically flip isRead in the cached list
+      queryClient.setQueryData(
+        queryKeys.notifications(),
+        (old: { pages: { items: Notification[] }[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((n) =>
+                n.id === id ? { ...n, isRead: true } : n
+              ),
+            })),
+          };
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount() });
+    },
+  });
+
   // Clear badge when user opens this section
   useEffect(() => {
     setUnreadNotifications(0);
@@ -45,6 +70,19 @@ export default function NotificationsSection() {
   const notifications: Notification[] = notificationsQuery.data?.pages.flatMap((p) => p.items) ?? [];
 
   const handleNotificationPress = (notification: Notification) => {
+    if (!notification.isRead) {
+      markOneMutation.mutate(notification.id);
+    }
+
+    // Deep-link to the relevant entity based on entityType
+    if (notification.entityType === 'POST' || notification.entityType === 'COMMENT') {
+      if (notification.entityId) {
+        router.push(`/post/${notification.entityId}`);
+        return;
+      }
+    }
+
+    // Fall back to actor's profile
     if (notification.actorId) {
       setViewingUser(notification.actorId, 'notifications');
     }

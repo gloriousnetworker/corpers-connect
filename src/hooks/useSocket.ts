@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getSocket, disconnectSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/api/client';
 import { useAuthStore } from '@/store/auth.store';
@@ -53,10 +54,17 @@ export function useSocket() {
     });
 
     // ── Notification events ────────────────────────────────────────────────────
-    socket.on('notification:new', () => {
+    socket.on('notification:new', (payload?: { actorName?: string; content?: string }) => {
       incrementUnread();
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount() });
+
+      // In-app toast shown while the app is open (FCM handles background push)
+      const title = payload?.actorName
+        ? `${payload.actorName}`
+        : 'Corpers Connect';
+      const description = payload?.content ?? 'You have a new notification';
+      toast(title, { description });
     });
 
     // ── Message edited ────────────────────────────────────────────────────────

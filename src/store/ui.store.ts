@@ -24,7 +24,7 @@ export interface PasswordResetState {
   maskedEmail: string;
 }
 
-export type ActiveSection = 'feed' | 'discover' | 'notifications' | 'messages' | 'profile' | 'userProfile';
+export type ActiveSection = 'feed' | 'discover' | 'reels' | 'notifications' | 'messages' | 'profile' | 'userProfile';
 
 interface UIState {
   // Navigation — SPA section state (no route changes)

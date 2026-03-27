@@ -4,22 +4,30 @@ import Image from 'next/image';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getUserPosts, getBookmarks } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
-import { ImageIcon, BookmarkIcon, MessageCircle } from 'lucide-react';
+import { ImageIcon, BookmarkIcon, MessageCircle, Film } from 'lucide-react';
 import type { Post } from '@/types/models';
 
 interface ProfilePostGridProps {
   userId: string;
-  mode?: 'posts' | 'bookmarks';
+  mode?: 'posts' | 'reels' | 'bookmarks';
   onPostClick?: (post: Post) => void;
 }
 
 export default function ProfilePostGrid({ userId, mode = 'posts', onPostClick }: ProfilePostGridProps) {
   const postsQuery = useInfiniteQuery({
-    queryKey: mode === 'posts' ? queryKeys.userPosts(userId) : queryKeys.bookmarks(),
+    queryKey:
+      mode === 'bookmarks'
+        ? queryKeys.bookmarks()
+        : mode === 'reels'
+        ? [...queryKeys.userPosts(userId), 'reels']
+        : queryKeys.userPosts(userId),
     queryFn: ({ pageParam }) =>
-      mode === 'posts'
-        ? getUserPosts(userId, { cursor: pageParam as string | undefined })
-        : getBookmarks({ cursor: pageParam as string | undefined }),
+      mode === 'bookmarks'
+        ? getBookmarks({ cursor: pageParam as string | undefined })
+        : getUserPosts(userId, {
+            cursor: pageParam as string | undefined,
+            postType: mode === 'reels' ? 'REEL' : undefined,
+          }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     staleTime: 60_000,
@@ -43,15 +51,21 @@ export default function ProfilePostGrid({ userId, mode = 'posts', onPostClick }:
         <div className="w-14 h-14 rounded-full bg-surface-alt flex items-center justify-center mb-3">
           {mode === 'bookmarks' ? (
             <BookmarkIcon className="w-6 h-6 text-foreground-muted" />
+          ) : mode === 'reels' ? (
+            <Film className="w-6 h-6 text-foreground-muted" />
           ) : (
             <ImageIcon className="w-6 h-6 text-foreground-muted" />
           )}
         </div>
         <p className="font-semibold text-foreground text-sm">
-          {mode === 'bookmarks' ? 'No saved posts' : 'No posts yet'}
+          {mode === 'bookmarks' ? 'No saved posts' : mode === 'reels' ? 'No reels yet' : 'No posts yet'}
         </p>
         <p className="text-xs text-foreground-muted mt-1">
-          {mode === 'bookmarks' ? 'Bookmarked posts appear here' : 'Posts will appear here'}
+          {mode === 'bookmarks'
+            ? 'Bookmarked posts appear here'
+            : mode === 'reels'
+            ? 'Reels will appear here'
+            : 'Posts will appear here'}
         </p>
       </div>
     );

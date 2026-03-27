@@ -23,7 +23,9 @@ export const queryKeys = {
   // Discover
   discoverCorpers: () => ['discover', 'corpers'] as const,
   suggestions: () => ['discover', 'suggestions'] as const,
-  search: (q: string) => ['search', q] as const,
+  search: (q: string) => ['search', 'users', q] as const,
+  searchPosts: (q: string) => ['search', 'posts', q] as const,
+  searchListings: (q: string) => ['search', 'listings', q] as const,
 
   // Stories
   stories: () => ['stories'] as const,

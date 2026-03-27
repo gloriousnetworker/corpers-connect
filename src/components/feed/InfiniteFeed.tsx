@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowUp } from 'lucide-react';
 import { getFeed } from '@/lib/api/feed';
 import { queryKeys } from '@/lib/query-keys';
 import PostCard from '@/components/post/PostCard';
@@ -17,10 +17,14 @@ export default function InfiniteFeed() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Pull-to-refresh state
-  const [pullY, setPullY] = useState(0);          // current drag distance
+  const [pullY, setPullY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const touchStartY = useRef(0);
   const isPulling = useRef(false);
+
+  // "New posts available" banner
+  const [showNewBanner, setShowNewBanner] = useState(false);
+  const firstPostIdRef = useRef<string | null>(null);
 
   const {
     data,
@@ -38,9 +42,24 @@ export default function InfiniteFeed() {
     getNextPageParam: (last) =>
       last.hasMore ? (last.nextCursor ?? undefined) : undefined,
     staleTime: 1000 * 60 * 2, // 2 min
+    refetchInterval: 1000 * 60 * 2, // background re-poll every 2 min
   });
 
   const posts = data?.pages.flatMap((p) => p.items) ?? [];
+
+  // Detect new posts via background refetch
+  useEffect(() => {
+    const firstPost = data?.pages[0]?.items[0];
+    if (!firstPost) return;
+    if (firstPostIdRef.current === null) {
+      firstPostIdRef.current = firstPost.id;
+      return;
+    }
+    if (firstPost.id !== firstPostIdRef.current) {
+      setShowNewBanner(true);
+      firstPostIdRef.current = firstPost.id;
+    }
+  }, [data]);
 
   // Pull-to-refresh handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -71,6 +90,11 @@ export default function InfiniteFeed() {
       setPullY(0);
     }
   }, [pullY, isRefreshing, refetch]);
+
+  const handleBannerClick = useCallback(() => {
+    setShowNewBanner(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // Intersection observer for infinite scroll
   useEffect(() => {
@@ -137,6 +161,18 @@ export default function InfiniteFeed() {
 
   return (
     <>
+      {/* New posts available banner */}
+      {showNewBanner && (
+        <button
+          onClick={handleBannerClick}
+          className="fixed top-[calc(var(--top-bar-height,56px)+8px)] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold shadow-lg active:scale-95 transition-transform"
+          aria-label="New posts available"
+        >
+          <ArrowUp className="w-3.5 h-3.5" />
+          New posts available
+        </button>
+      )}
+
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

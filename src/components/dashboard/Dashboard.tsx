@@ -3,6 +3,7 @@
 import { useUIStore } from '@/store/ui.store';
 import FeedSection from '@/components/sections/FeedSection';
 import DiscoverSection from '@/components/sections/DiscoverSection';
+import ReelsSection from '@/components/sections/ReelsSection';
 import NotificationsSection from '@/components/sections/NotificationsSection';
 import MessagesSection from '@/components/sections/MessagesSection';
 import ProfileSection from '@/components/sections/ProfileSection';
@@ -13,6 +14,7 @@ import type { ComponentType } from 'react';
 const SECTIONS: Record<ActiveSection, ComponentType> = {
   feed:          FeedSection,
   discover:      DiscoverSection,
+  reels:         ReelsSection,
   notifications: NotificationsSection,
   messages:      MessagesSection,
   profile:       ProfileSection,
@@ -27,8 +29,8 @@ export default function Dashboard() {
   const activeSection = useUIStore((s) => s.activeSection);
   const Section = SECTIONS[activeSection] ?? FeedSection;
 
-  // Messages section needs full-height layout — no scroll padding wrappers
-  if (activeSection === 'messages') {
+  // Messages and Reels need full-height layout — no scroll padding wrappers
+  if (activeSection === 'messages' || activeSection === 'reels') {
     return (
       <div
         className="flex flex-col overflow-hidden"
@@ -37,7 +39,7 @@ export default function Dashboard() {
           marginTop: 'calc(var(--top-bar-height) + env(safe-area-inset-top, 0px))',
         }}
       >
-        <MessagesSection />
+        {activeSection === 'reels' ? <ReelsSection /> : <MessagesSection />}
       </div>
     );
   }
