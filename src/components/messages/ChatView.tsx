@@ -32,17 +32,7 @@ import ForwardModal from './ForwardModal';
 import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
 import VoiceNotePlayer from './VoiceNotePlayer';
-
-// Chat background — warm neutral with subtle leaf/dot pattern
-const CHAT_BG_LIGHT = `
-  linear-gradient(rgba(240,244,248,0.97), rgba(240,244,248,0.97)),
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='60' cy='15' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='90' cy='30' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='10' cy='55' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='45' cy='50' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='80' cy='60' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='30' cy='80' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='70' cy='85' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='95' cy='75' r='1.2' fill='%23008751' opacity='0.18'/%3E%3C/svg%3E")
-`.trim();
-
-const CHAT_BG_DARK = `
-  linear-gradient(rgba(15,23,42,0.98), rgba(15,23,42,0.98)),
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='60' cy='15' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='90' cy='30' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='10' cy='55' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='45' cy='50' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='80' cy='60' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='30' cy='80' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='70' cy='85' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='95' cy='75' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3C/svg%3E")
-`.trim();
+import ChatBackground from './ChatBackground';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -571,12 +561,14 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       )}
 
       {/* ── Messages list ────────────────────────────────────────────────────── */}
-      <div
-        ref={listRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overscroll-y-none py-2"
-        style={{ backgroundImage: isDark ? CHAT_BG_DARK : CHAT_BG_LIGHT, backgroundSize: '80px 80px' }}
-      >
+      <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: isDark ? '#0f172a' : '#f0f4f8' }}>
+        {/* Animated doodle wallpaper — fixed behind messages */}
+        <ChatBackground isDark={isDark} />
+        <div
+          ref={listRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-y-auto overscroll-y-none py-2"
+        >
         {/* Loading older messages indicator */}
         {isFetchingNextPage && (
           <div className="flex justify-center py-3">
@@ -605,7 +597,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               lastDayLabel = dayLabel;
               items.push(
                 <div key={`day-${msg.id}`} className="flex items-center justify-center py-3">
-                  <span className="text-[11px] font-medium text-foreground-secondary bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+                  <span className="text-[11px] font-semibold text-white bg-black/35 dark:bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full shadow">
                     {dayLabel}
                   </span>
                 </div>
@@ -636,6 +628,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         {typingUsers.length > 0 && <TypingIndicator />}
 
         <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* ── Input ────────────────────────────────────────────────────────────── */}

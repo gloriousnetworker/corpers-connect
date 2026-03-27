@@ -328,11 +328,11 @@ export default function MessageBubble({
                 <button
                   key={emoji}
                   onClick={() => onReact?.(message, emoji)}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-surface border border-border text-xs shadow-sm active:scale-90 transition-transform"
+                  className="flex items-center gap-0.5 text-base active:scale-90 transition-transform"
                   aria-label={`${count} ${emoji} reaction${count > 1 ? 's' : ''}`}
                 >
                   <span>{emoji}</span>
-                  {count > 1 && <span className="text-foreground-secondary font-medium">{count}</span>}
+                  {count > 1 && <span className="text-[11px] text-foreground-secondary font-semibold ml-0.5">{count}</span>}
                 </button>
               ))}
             </div>
