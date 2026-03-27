@@ -7,6 +7,7 @@
  * via this API route at runtime.
  *
  * These are the *public* NEXT_PUBLIC_* keys — safe to serve over HTTP.
+ * Config is injected at runtime so the SW always gets the latest values.
  */
 export function GET() {
   const config = {
