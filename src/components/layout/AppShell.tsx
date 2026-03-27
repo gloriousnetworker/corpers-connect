@@ -5,6 +5,7 @@ import BottomNav from './BottomNav';
 import DesktopSideNav from './DesktopSideNav';
 import RightPanel from './RightPanel';
 import SocketInitializer from './SocketInitializer';
+import NotificationPermissionBanner from './NotificationPermissionBanner';
 
 /**
  * AppShell — single-render layout shell for the authenticated SPA dashboard.
@@ -49,6 +50,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile-only bottom nav — hidden on desktop via lg:hidden inside BottomNav */}
       <BottomNav />
+
+      {/* Push-notification permission nudge — shows once for users who haven't decided */}
+      <NotificationPermissionBanner />
     </>
   );
 }
