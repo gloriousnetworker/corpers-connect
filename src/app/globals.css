@@ -102,6 +102,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Prevent text selection / callout on long-press for interactive elements */
+  button,
+  [role='button'],
+  a,
+  label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   /* Minimum touch target (WCAG 2.5.5) */
   button,
   [role='button'],
