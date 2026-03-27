@@ -97,19 +97,42 @@
     touch-action: manipulation;
   }
 
-  /* Remove tap highlight flash on mobile */
+  /* Remove tap highlight flash + long-press callout on ALL elements */
   * {
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
   }
 
-  /* Prevent text selection / callout on long-press for interactive elements */
+  /* Prevent text selection on the entire app shell (PWA / native-app feel).
+     Inputs, textareas, and readable content opt back in below. */
+  html,
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Re-enable selection for actual content and form fields */
+  input,
+  textarea,
+  select,
+  [contenteditable],
+  p,
+  span,
+  h1, h2, h3, h4, h5, h6,
+  li,
+  blockquote,
+  .select-text {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Keep explicit no-select on interactive controls (belt-and-suspenders) */
   button,
   [role='button'],
   a,
   label {
     -webkit-user-select: none;
     user-select: none;
-    -webkit-touch-callout: none;
   }
 
   /* Minimum touch target (WCAG 2.5.5) */

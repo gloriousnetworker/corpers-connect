@@ -54,14 +54,15 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Only attempt refresh on 401 when we had an active session.
-    // If _accessToken is null we are on a public endpoint (e.g. login) — just
-    // surface the server error rather than trying a pointless token refresh.
+    // Attempt refresh on 401 when we have either an active access token OR a
+    // stored refresh token (covers PWA cold-start where _accessToken is null
+    // but the user was previously logged in).
+    const hasRefreshToken = !!safeLocalStorage().get(STORAGE_KEYS.REFRESH_TOKEN);
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       originalRequest.url !== '/auth/refresh' &&
-      _accessToken !== null
+      (_accessToken !== null || hasRefreshToken)
     ) {
       originalRequest._retry = true;
 

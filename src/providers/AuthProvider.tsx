@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { setAccessToken } from '@/lib/api/client';
+import { setAccessToken, getAccessToken } from '@/lib/api/client';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { safeLocalStorage } from '@/lib/utils';
 import { refreshTokens } from '@/lib/api/auth';
@@ -45,8 +45,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
     }
 
-    // Only restore if not already authenticated in Zustand
-    if (!isAuthenticated) {
+    // Always restore if _accessToken is null (in-memory, reset on every cold start).
+    // Zustand persist may rehydrate isAuthenticated=true, but _accessToken is still
+    // null — so we must re-run the refresh flow regardless of persisted auth state.
+    if (!isAuthenticated || !getAccessToken()) {
       restoreSession();
     } else {
       setLoading(false);
