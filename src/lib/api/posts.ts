@@ -96,6 +96,22 @@ export async function deleteComment(postId: string, commentId: string): Promise<
   await api.delete(`/posts/${postId}/comments/${commentId}`);
 }
 
+export async function reactToComment(postId: string, commentId: string, emoji: string): Promise<Comment> {
+  const { data } = await api.post<ApiResponse<Comment>>(
+    `/posts/${postId}/comments/${commentId}/reactions`,
+    { emoji }
+  );
+  return data.data;
+}
+
+export async function removeCommentReaction(postId: string, commentId: string, emoji: string): Promise<Comment> {
+  const { data } = await api.delete<ApiResponse<Comment>>(
+    `/posts/${postId}/comments/${commentId}/reactions`,
+    { data: { emoji } }
+  );
+  return data.data;
+}
+
 // ── Bookmarks ─────────────────────────────────────────────────────────────
 
 export async function bookmarkPost(postId: string): Promise<void> {

@@ -73,6 +73,12 @@ export interface Post {
   updatedAt: string;
 }
 
+export interface CommentReaction {
+  id: string;
+  userId: string;
+  emoji: string;
+}
+
 export interface Comment {
   id: string;
   postId: string;
@@ -83,6 +89,7 @@ export interface Comment {
   isEdited: boolean;
   replies?: Comment[];
   repliesCount?: number;
+  reactions?: CommentReaction[];
   createdAt: string;
   updatedAt: string;
 }

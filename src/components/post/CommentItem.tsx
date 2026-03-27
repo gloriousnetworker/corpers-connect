@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Trash2, CornerDownRight } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { deleteComment } from '@/lib/api/posts';
+import { deleteComment, reactToComment, removeCommentReaction } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import type { Comment } from '@/types/models';
+import type { PaginatedData } from '@/types/api';
+
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 interface CommentItemProps {
   postId: string;
@@ -21,10 +25,31 @@ interface CommentItemProps {
 
 export default function CommentItem({ postId, comment, onReply, onDeleted, isReply = false }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const isOwn = currentUser?.id === comment.authorId;
 
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+
+  // ── Long-press handlers on the comment bubble ────────────────────────────
+  const handlePointerDown = () => {
+    longPressFiredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      setShowEmojiPicker(true);
+    }, 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowEmojiPicker(true);
+  };
+
+  // ── Delete mutation ───────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => deleteComment(postId, comment.id),
     onSuccess: () => {
@@ -35,6 +60,55 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
     },
     onError: () => toast.error('Failed to delete comment'),
   });
+
+  // ── Reaction mutation ─────────────────────────────────────────────────────
+  const reactionMutation = useMutation({
+    mutationFn: (vars: { emoji: string; hasReaction: boolean }) =>
+      vars.hasReaction
+        ? removeCommentReaction(postId, comment.id, vars.emoji)
+        : reactToComment(postId, comment.id, vars.emoji),
+    onSuccess: (updated) => {
+      // Patch the comment in the infinite query cache
+      queryClient.setQueryData<InfiniteData<PaginatedData<Comment>>>(
+        queryKeys.postComments(postId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((c) => {
+                if (c.id === updated.id) return updated;
+                // Also patch inside replies
+                if (c.replies) {
+                  return {
+                    ...c,
+                    replies: c.replies.map((r) => (r.id === updated.id ? updated : r)),
+                  };
+                }
+                return c;
+              }),
+            })),
+          };
+        }
+      );
+    },
+    onError: () => toast.error('Failed to update reaction'),
+  });
+
+  const handleReact = (emoji: string) => {
+    setShowEmojiPicker(false);
+    const hasReaction = (comment.reactions ?? []).some(
+      (r) => r.userId === currentUser?.id && r.emoji === emoji
+    );
+    reactionMutation.mutate({ emoji, hasReaction });
+  };
+
+  // ── Reaction groups ───────────────────────────────────────────────────────
+  const reactionGroups = (comment.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
+    acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const author = comment.author;
   const initials = getInitials(author.firstName, author.lastName);
@@ -56,7 +130,45 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="bg-surface-alt rounded-2xl px-3 py-2">
+        {/* Emoji picker popover */}
+        {showEmojiPicker && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowEmojiPicker(false)}
+            />
+            {/* Emoji row */}
+            <div className="relative z-50 mb-1 inline-flex items-center gap-1 bg-surface border border-border rounded-full shadow-lg px-2 py-1.5">
+              {QUICK_EMOJIS.map((emoji) => {
+                const isActive = (comment.reactions ?? []).some(
+                  (r) => r.userId === currentUser?.id && r.emoji === emoji
+                );
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReact(emoji)}
+                    className={`text-xl leading-none transition-transform active:scale-110 hover:scale-125 rounded-full p-0.5 ${
+                      isActive ? 'bg-primary/10 ring-1 ring-primary/30' : ''
+                    }`}
+                    aria-label={`React with ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Bubble */}
+        <div
+          className="bg-surface-alt rounded-2xl px-3 py-2 cursor-pointer select-none"
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onContextMenu={handleContextMenu}
+        >
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-sm font-semibold text-foreground">
               {author.firstName} {author.lastName}
@@ -67,6 +179,32 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
           </div>
           <p className="text-sm text-foreground leading-relaxed break-words">{comment.content}</p>
         </div>
+
+        {/* Reaction badges */}
+        {Object.entries(reactionGroups).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1 px-1">
+            {Object.entries(reactionGroups).map(([emoji, count]) => {
+              const isActive = (comment.reactions ?? []).some(
+                (r) => r.userId === currentUser?.id && r.emoji === emoji
+              );
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => handleReact(emoji)}
+                  className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-colors ${
+                    isActive
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'bg-surface border-border text-foreground-secondary'
+                  }`}
+                  aria-label={`${count} ${emoji} reaction${count > 1 ? 's' : ''}`}
+                >
+                  <span>{emoji}</span>
+                  {count > 1 && <span className="font-semibold ml-0.5">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Meta row */}
         <div className="flex items-center gap-3 mt-1 px-1">
