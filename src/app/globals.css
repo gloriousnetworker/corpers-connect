@@ -111,16 +111,13 @@
     user-select: none;
   }
 
-  /* Re-enable selection for actual content and form fields */
+  /* Re-enable selection ONLY for form fields and explicitly opted-in elements.
+     Do NOT include p/span/h1-h6/li — those are UI chrome and should not be
+     selectable on mobile (prevents the Copy/Look Up native menu on long-press). */
   input,
   textarea,
   select,
   [contenteditable],
-  p,
-  span,
-  h1, h2, h3, h4, h5, h6,
-  li,
-  blockquote,
   .select-text {
     -webkit-user-select: text;
     user-select: text;

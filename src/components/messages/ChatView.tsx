@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, Users, Info, X, ShieldCheck, Pin } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,15 +33,15 @@ import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
 import VoiceNotePlayer from './VoiceNotePlayer';
 
-// WhatsApp-style chat background — subtle repeating pattern
+// Chat background — warm neutral with subtle leaf/dot pattern
 const CHAT_BG_LIGHT = `
-  linear-gradient(rgba(229,237,232,0.96), rgba(229,237,232,0.96)),
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='10' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='25' cy='25' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='55' cy='25' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='10' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='40' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='25' cy='55' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='55' cy='55' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='10' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='40' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%2325D366' opacity='0.25'/%3E%3C/svg%3E")
+  linear-gradient(rgba(240,244,248,0.97), rgba(240,244,248,0.97)),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='60' cy='15' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='90' cy='30' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='10' cy='55' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='45' cy='50' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='80' cy='60' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='30' cy='80' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='70' cy='85' r='1.2' fill='%23008751' opacity='0.18'/%3E%3Ccircle cx='95' cy='75' r='1.2' fill='%23008751' opacity='0.18'/%3E%3C/svg%3E")
 `.trim();
 
 const CHAT_BG_DARK = `
-  linear-gradient(rgba(11,20,26,0.97), rgba(11,20,26,0.97)),
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='10' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='25' cy='25' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='55' cy='25' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='10' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='40' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='25' cy='55' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='55' cy='55' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='10' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='40' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%2325D366' opacity='0.12'/%3E%3C/svg%3E")
+  linear-gradient(rgba(15,23,42,0.98), rgba(15,23,42,0.98)),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='60' cy='15' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='90' cy='30' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='10' cy='55' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='45' cy='50' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='80' cy='60' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='30' cy='80' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='70' cy='85' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3Ccircle cx='95' cy='75' r='1.2' fill='%2300b368' opacity='0.12'/%3E%3C/svg%3E")
 `.trim();
 
 interface ChatViewProps {
@@ -55,6 +55,18 @@ function getDmPartner(conv: Conversation, currentUserId: string) {
 
 let _tempIdCounter = 0;
 function newTempId() { return `temp-${++_tempIdCounter}`; }
+
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (msgDay.getTime() === today.getTime()) return 'Today';
+  if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
 
 const EMPTY_TYPING: string[] = [];
 
@@ -584,25 +596,41 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             <p className="font-semibold text-foreground text-sm">Start the conversation</p>
             <p className="text-xs text-foreground-muted mt-1">Say hi to {headerName}!</p>
           </div>
-        ) : (
-          messageClusters.map(({ msg, isFirstInCluster }) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              isOwn={!!user && (msg.senderId === user.id || msg.sender?.id === user.id)}
-              showAvatar={isFirstInCluster}
-              isGroup={isGroup}
-              participantCount={conversation.participants.length}
-              onReply={(m) => { setReplyTo(m); setEditingMessage(null); }}
-              onEdit={(m) => { setEditingMessage(m); setReplyTo(null); }}
-              onDelete={handleDelete}
-              onRetry={handleRetry}
-              onForward={(m) => setForwardingMessage(m)}
-              onReact={handleReact}
-              onPin={handlePin}
-            />
-          ))
-        )}
+        ) : (() => {
+          const items: React.ReactNode[] = [];
+          let lastDayLabel = '';
+          messageClusters.forEach(({ msg, isFirstInCluster }) => {
+            const dayLabel = formatDayLabel(msg.createdAt);
+            if (dayLabel !== lastDayLabel) {
+              lastDayLabel = dayLabel;
+              items.push(
+                <div key={`day-${msg.id}`} className="flex items-center justify-center py-3">
+                  <span className="text-[11px] font-medium text-foreground-secondary bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+                    {dayLabel}
+                  </span>
+                </div>
+              );
+            }
+            items.push(
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                isOwn={!!user && (msg.senderId === user.id || msg.sender?.id === user.id)}
+                showAvatar={isFirstInCluster}
+                isGroup={isGroup}
+                participantCount={conversation.participants.length}
+                onReply={(m) => { setReplyTo(m); setEditingMessage(null); }}
+                onEdit={(m) => { setEditingMessage(m); setReplyTo(null); }}
+                onDelete={handleDelete}
+                onRetry={handleRetry}
+                onForward={(m) => setForwardingMessage(m)}
+                onReact={handleReact}
+                onPin={handlePin}
+              />
+            );
+          });
+          return items;
+        })()}
 
         {/* Typing indicator */}
         {typingUsers.length > 0 && <TypingIndicator />}

@@ -285,10 +285,10 @@ export default function MessageBubble({
           {/* Reply preview */}
           {message.replyTo && !isDeleted && (
             <div
-              className={`text-xs mb-0.5 px-2 py-1 rounded-lg border-l-2 max-w-full ${
+              className={`text-xs mb-0.5 px-2 py-1 rounded-lg border-l-[3px] max-w-full ${
                 isOwn
-                  ? 'bg-white/10 border-white/40 text-white/70'
-                  : 'bg-surface-alt dark:bg-slate-600 border-primary/40 text-foreground-muted'
+                  ? 'bg-white/20 border-white text-white/90'
+                  : 'bg-primary/10 border-primary text-foreground-secondary'
               }`}
             >
               <p className="font-medium truncate">
@@ -309,7 +309,7 @@ export default function MessageBubble({
 
           {/* Bubble */}
           <div
-            className={`${bubbleBase} ${isMedia ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-text`}
+            className={`${bubbleBase} ${isMedia ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-none`}
           >
             {renderContent()}
 
