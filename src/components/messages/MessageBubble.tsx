@@ -287,8 +287,8 @@ export default function MessageBubble({
             <div
               className={`text-xs mb-0.5 px-2 py-1 rounded-lg border-l-[3px] max-w-full ${
                 isOwn
-                  ? 'bg-white/20 border-white text-white/90'
-                  : 'bg-primary/10 border-primary text-foreground-secondary'
+                  ? 'bg-black/25 border-white/70 text-white/85'
+                  : 'bg-black/6 border-primary text-foreground-secondary'
               }`}
             >
               <p className="font-medium truncate">
