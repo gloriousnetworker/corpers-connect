@@ -148,8 +148,8 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
                   <button
                     key={emoji}
                     onClick={() => handleReact(emoji)}
-                    className={`text-xl leading-none transition-transform active:scale-110 hover:scale-125 rounded-full p-0.5 ${
-                      isActive ? 'bg-primary/10 ring-1 ring-primary/30' : ''
+                    className={`text-xl leading-none transition-transform active:scale-110 hover:scale-125 ${
+                      isActive ? 'opacity-60' : ''
                     }`}
                     aria-label={`React with ${emoji}`}
                   >
@@ -191,15 +191,11 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
                 <button
                   key={emoji}
                   onClick={() => handleReact(emoji)}
-                  className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                    isActive
-                      ? 'bg-primary/10 border-primary/30 text-primary'
-                      : 'bg-surface border-border text-foreground-secondary'
-                  }`}
+                  className="flex items-center gap-0.5 text-base active:scale-90 transition-transform"
                   aria-label={`${count} ${emoji} reaction${count > 1 ? 's' : ''}`}
                 >
                   <span>{emoji}</span>
-                  {count > 1 && <span className="font-semibold ml-0.5">{count}</span>}
+                  {count > 1 && <span className="text-[11px] text-foreground-secondary font-semibold ml-0.5">{count}</span>}
                 </button>
               );
             })}
