@@ -8,6 +8,7 @@ import {
   MessageCircle,
   User,
   PlusSquare,
+  ShoppingBag,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { section: 'feed',          icon: Home,          label: 'Home'          },
   { section: 'discover',      icon: Compass,       label: 'Discover'      },
+  { section: 'marketplace',   icon: ShoppingBag,   label: 'Mami Market'   },
   { section: 'notifications', icon: Bell,          label: 'Notifications' },
   { section: 'messages',      icon: MessageCircle, label: 'Messages'      },
   { section: 'profile',       icon: User,          label: 'Profile'       },

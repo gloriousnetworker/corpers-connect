@@ -12,6 +12,7 @@ const SECTION_TITLES: Record<string, string> = {
   messages:      'Messages',
   profile:       'Profile',
   userProfile:   'Profile',
+  marketplace:   'Mami Market',
 };
 
 export default function TopBar({ className }: { className?: string }) {

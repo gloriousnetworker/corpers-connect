@@ -1,26 +1,25 @@
 'use client';
 
-import { Home, Compass, PlusSquare, MessageCircle, User, type LucideIcon } from 'lucide-react';
+import { Home, Compass, ShoppingBag, MessageCircle, User, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
 
 interface NavItem {
-  section: ActiveSection | 'create';
+  section: ActiveSection;
   icon: LucideIcon;
   label: string;
-  isCreate?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { section: 'feed',     icon: Home,          label: 'Home'     },
-  { section: 'discover', icon: Compass,       label: 'Discover' },
-  { section: 'create',   icon: PlusSquare,    label: 'Create',  isCreate: true },
-  { section: 'messages', icon: MessageCircle, label: 'Messages' },
-  { section: 'profile',  icon: User,          label: 'Profile'  },
+  { section: 'feed',        icon: Home,          label: 'Home'    },
+  { section: 'discover',    icon: Compass,       label: 'Discover'},
+  { section: 'marketplace', icon: ShoppingBag,   label: 'Market'  },
+  { section: 'messages',    icon: MessageCircle, label: 'Messages'},
+  { section: 'profile',     icon: User,          label: 'Profile' },
 ];
 
 export default function BottomNav() {
-  const { activeSection, setActiveSection, unreadMessages, setCreatePostOpen } = useUIStore();
+  const { activeSection, setActiveSection, unreadMessages } = useUIStore();
 
   return (
     <nav
@@ -28,29 +27,14 @@ export default function BottomNav() {
       aria-label="Main navigation"
     >
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-2">
-        {NAV_ITEMS.map(({ section, icon: Icon, label, isCreate }) => {
-          const active = !isCreate && activeSection === section;
+        {NAV_ITEMS.map(({ section, icon: Icon, label }) => {
+          const active = activeSection === section;
           const showBadge = section === 'messages' && unreadMessages > 0;
-
-          if (isCreate) {
-            return (
-              <button
-                key="create"
-                onClick={() => setCreatePostOpen(true)}
-                className="flex flex-col items-center justify-center gap-0.5 p-2 -mt-1 touch-manipulation"
-                aria-label="Create post"
-              >
-                <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center shadow-md active:scale-95 transition-transform">
-                  <Icon className="h-5 w-5 text-white" />
-                </div>
-              </button>
-            );
-          }
 
           return (
             <button
               key={section}
-              onClick={() => setActiveSection(section as ActiveSection)}
+              onClick={() => setActiveSection(section)}
               className="flex flex-col items-center justify-center gap-0.5 p-2 min-w-[48px] touch-manipulation"
               aria-label={label}
               aria-current={active ? 'page' : undefined}

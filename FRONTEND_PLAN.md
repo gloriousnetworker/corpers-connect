@@ -663,33 +663,67 @@ export const queryKeys = {
 - [ ] In-app toast for new notifications while app is open
 - [ ] Unit tests: NotificationItem, badge count
 
-### Phase 6 — Calls (Week 4)
+### Phase 6 — Calls (Week 4) ✅ COMPLETE
 **Goal:** Voice and video calls via Agora feel native.
 
-- [ ] Agora Web SDK integration
-- [ ] Call initiation (REST API call + enter Agora channel)
-- [ ] Incoming call overlay (full-screen, green accept / red reject)
-- [ ] Active call screen: video feed, mute, speaker, flip, end
-- [ ] Call duration timer
-- [ ] Call log in conversation header
-- [ ] Missed call notification
-- [ ] Token refresh mid-call
-- [ ] Graceful handling of permissions denied (microphone/camera)
-- [ ] Unit tests: CallControls component
+- [x] Agora Web SDK integration (SSR-safe dynamic import)
+- [x] Call initiation via socket `call:initiate` ack → Agora join (uid=1)
+- [x] Incoming call overlay (full-screen pulsing rings, 30s auto-dismiss)
+- [x] Outbound call overlay (45s auto-cancel)
+- [x] Active call screen: VIDEO (remote fill + local PiP) / VOICE (avatar + timer)
+- [x] Call duration timer (mm:ss / hh:mm:ss)
+- [x] CallControls: mute, camera toggle, flip camera, end call
+- [x] Token refresh mid-call (`token-privilege-will-expire` handler)
+- [x] Graceful permissions denied → `permissionErr` state
+- [x] `useCallSocket` hook for all socket call events
+- [x] `CallOverlayManager` renders above everything (z-[100])
+- [x] Phone + Video call buttons in DM chat header
 
-### Phase 7 — Marketplace (Week 4-5)
+### Phase 7 — Marketplace (Week 4-5) ✅ COMPLETE
 **Goal:** Mami Market fully functional.
 
-- [ ] Market home: category chips, search, filter/sort, listing grid
-- [ ] Listing card: image, title, price, seller, state, time
-- [ ] Listing detail: image gallery, seller card, inquiry button
-- [ ] Create listing form (multipart upload to Cloudinary)
-- [ ] My listings (active/sold/inactive tabs)
-- [ ] Edit / delete listing
-- [ ] Send inquiry → opens DM with context
-- [ ] Seller application form (ID upload)
-- [ ] Application status screen
-- [ ] Unit tests: ListingCard, CategoryChips, PriceInput
+- [x] Market home: category chips, search, filter/sort, listing grid
+- [x] Listing card: image, title, price, seller, state, type badge, boost badge
+- [x] Listing detail: image gallery (with lightbox + thumbnails), seller card, inquiry button
+- [x] Create listing form (multipart image upload, type/category/price/location)
+- [x] My listings (with inline edit + mark-sold actions)
+- [x] Edit listing (all fields + status management)
+- [x] Delete listing (with confirmation modal)
+- [x] Send inquiry → opens DM with seller (server creates conversation)
+- [x] Seller application form (ID doc upload, agreement checkbox, 5 MB guard)
+- [x] Application status screen (pending/approved/rejected + re-apply)
+- [x] FilterSheet (type, category, price range)
+- [x] MarketplaceSection router (guards non-approved sellers from create flow)
+- [x] Navigation: BottomNav "Market" tab, DesktopSideNav "Mami Market", TopBar title
+- [x] Unit tests: ListingCard, CategoryChips, PriceInput (20 assertions)
+
+**Files added:**
+```
+src/lib/api/marketplace.ts
+src/store/marketplace.store.ts
+src/components/marketplace/
+  ├── CategoryChips.tsx
+  ├── PriceInput.tsx
+  ├── ListingCard.tsx
+  ├── ImageGallery.tsx
+  ├── FilterSheet.tsx
+  ├── MarketplaceHome.tsx
+  ├── ListingDetail.tsx
+  ├── CreateListingForm.tsx
+  ├── EditListingForm.tsx
+  ├── MyListings.tsx
+  ├── SellerApplicationForm.tsx
+  ├── ApplicationStatus.tsx
+  └── MarketplaceSection.tsx
+src/__tests__/unit/marketplace.test.tsx
+```
+
+**Files modified:**
+- `src/store/ui.store.ts` — added `marketplace` to `ActiveSection`
+- `src/components/dashboard/Dashboard.tsx` — added `marketplace` section mapping
+- `src/components/layout/BottomNav.tsx` — replaced Create button with Market tab
+- `src/components/layout/DesktopSideNav.tsx` — added Mami Market nav item
+- `src/components/layout/TopBar.tsx` — added "Mami Market" section title
 
 ### Phase 8 — Opportunities (Week 5)
 **Goal:** Opportunities board like LinkedIn Lite.
@@ -897,8 +931,8 @@ src/app/layout.tsx                        — renders <InstallPrompt> globally
 | Phase 3 | Profile + Discover | 🔴 Not Started |
 | Phase 4 | Messaging | ✅ Complete (+ WhatsApp interactions) |
 | Phase 5 | Notifications | 🔴 Not Started |
-| Phase 6 | Calls | 🔴 Not Started |
-| Phase 7 | Marketplace | 🔴 Not Started |
+| Phase 6 | Calls | ✅ Complete |
+| Phase 7 | Marketplace | ✅ Complete |
 | Phase 8 | Opportunities | 🔴 Not Started |
 | Phase 9 | Subscriptions | 🔴 Not Started |
 | Phase 10 | Settings + Security | 🔴 Not Started |

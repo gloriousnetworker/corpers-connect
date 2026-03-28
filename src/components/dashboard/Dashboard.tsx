@@ -13,6 +13,7 @@ import NotificationsSection from '@/components/sections/NotificationsSection';
 import MessagesSection from '@/components/sections/MessagesSection';
 import ProfileSection from '@/components/sections/ProfileSection';
 import UserProfileSection from '@/components/sections/UserProfileSection';
+import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import type { ActiveSection } from '@/store/ui.store';
 import type { ComponentType } from 'react';
 
@@ -24,6 +25,7 @@ const SECTIONS: Record<ActiveSection, ComponentType> = {
   messages:      MessagesSection,
   profile:       ProfileSection,
   userProfile:   UserProfileSection,
+  marketplace:   MarketplaceSection,
 };
 
 /**
