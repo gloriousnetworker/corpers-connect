@@ -34,6 +34,22 @@ export function useFCM() {
   const registeredRef = useRef(false);
   const unsubscribeRef = useRef<(() => void) | undefined>(undefined);
 
+  // Shared routing helper — used by both foreground toasts and SW postMessage clicks
+  const routeFromData = useCallback((data: Record<string, string>) => {
+    const { type, entityType, entityId, actorId } = data;
+    if (type === 'DM_RECEIVED' && entityId) {
+      getConversation(entityId)
+        .then((conv) => { setPendingConversation(conv); setActiveSection('messages'); })
+        .catch(() => setActiveSection('messages'));
+    } else if (entityType === 'Post' && entityId) {
+      router.push(`/post/${entityId}`);
+    } else if (actorId) {
+      setViewingUser(actorId);
+    } else {
+      setActiveSection('notifications');
+    }
+  }, [router, setActiveSection, setViewingUser, setPendingConversation]);
+
   const [permissionState, setPermissionState] = useState<NotificationPermission>(() => {
     if (typeof Notification === 'undefined') return 'default';
     return Notification.permission as NotificationPermission;
@@ -79,35 +95,18 @@ export function useFCM() {
 
       registeredRef.current = true;
 
-      // Show in-app toast for foreground push messages
+      // Show in-app toast for foreground push messages.
+      // Backend sends data-only so all fields are in payload.data, not payload.notification.
       unsubscribeRef.current?.();
       unsubscribeRef.current = onMessage(messaging, (payload) => {
-        const title = payload.notification?.title ?? 'New notification';
-        const body  = payload.notification?.body  ?? '';
         const data  = payload.data ?? {};
-
-        const handleView = () => {
-          const { type, entityType, entityId, actorId } = data;
-          if (type === 'DM_RECEIVED' && entityId) {
-            getConversation(entityId)
-              .then((conv) => {
-                setPendingConversation(conv);
-                setActiveSection('messages');
-              })
-              .catch(() => setActiveSection('messages'));
-          } else if (entityType === 'Post' && entityId) {
-            router.push(`/post/${entityId}`);
-          } else if (actorId) {
-            setViewingUser(actorId);
-          } else {
-            setActiveSection('notifications');
-          }
-        };
+        const title = data.title ?? 'New notification';
+        const body  = data.body  ?? '';
 
         incrementUnread();
         toast(title, {
           description: body || undefined,
-          action: { label: 'View', onClick: handleView },
+          action: { label: 'View', onClick: () => routeFromData(data) },
           duration: 5000,
         });
       });
@@ -125,6 +124,22 @@ export function useFCM() {
       await registerAndListen();
     }
   }, [registerAndListen]);
+
+  // Handle notification clicks posted from the service worker when the app is open.
+  // The SW sends { type: 'NOTIFICATION_CLICK', ...notificationData } via postMessage
+  // instead of client.navigate() — this is the only reliable cross-platform approach
+  // because useSearchParams's useEffect([]) doesn't re-fire on URL changes.
+  useEffect(() => {
+    if (!user || !('serviceWorker' in navigator)) return;
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'NOTIFICATION_CLICK') return;
+      routeFromData(event.data as Record<string, string>);
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+  }, [user, routeFromData]);
 
   // Auto-register silently when permission is already granted on login
   useEffect(() => {

@@ -86,27 +86,29 @@ if (firebaseConfig.projectId) {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const data      = event.notification.data ?? {};
-  const deepPath  = data.url || '/';
+  const data     = event.notification.data ?? {};
+  const deepPath = data.url || '/';
   const targetUrl = deepPath.startsWith('http')
     ? deepPath
     : self.location.origin + deepPath;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 1. If there is already a tab open at the exact target URL, focus it
-      for (const client of clientList) {
-        if (client.url === targetUrl && 'focus' in client) {
-          return client.focus();
-        }
+      // Find any open app window/tab
+      const appClient = clientList.find((c) =>
+        c.url.startsWith(self.location.origin)
+      );
+
+      if (appClient) {
+        // App is already open — post the routing data so the in-app handler
+        // can navigate without relying on URL params (which useEffect([]) won't
+        // re-read after the initial mount).
+        appClient.postMessage({ type: 'NOTIFICATION_CLICK', ...data });
+        return 'focus' in appClient ? appClient.focus() : Promise.resolve();
       }
-      // 2. If any app tab is open, navigate it to the target URL
-      for (const client of clientList) {
-        if (client.url.startsWith(self.location.origin) && 'navigate' in client) {
-          return client.navigate(targetUrl).then((c) => c && c.focus());
-        }
-      }
-      // 3. App is fully closed — open a new window at the target URL
+
+      // App is fully closed — open at the deep-link URL.
+      // DeepLinkHandler reads ?conv= on cold start and routes correctly.
       return clients.openWindow(targetUrl);
     })
   );
