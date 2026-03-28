@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
 import { getConversation } from '@/lib/api/conversations';
@@ -26,30 +27,46 @@ const SECTIONS: Record<ActiveSection, ComponentType> = {
 };
 
 /**
- * Handles push-notification deep links via URL params on app open.
+ * Handles push-notification deep links via URL params on cold start.
  * Must be wrapped in Suspense because it uses useSearchParams.
+ *
  *   ?conv=<conversationId>  → open that conversation in MessagesSection
+ *
+ * IMPORTANT: AuthProvider restores the session via two async network calls
+ * (refreshTokens + getMe) before the access token exists. We must NOT call
+ * getConversation() until user is non-null — otherwise the request fires
+ * with no token, gets a 401, and the user lands on the home page.
+ *
+ * Strategy:
+ *   1. On mount: read ?conv= and store it in a ref (URL still has the param).
+ *   2. Watch user: once auth finishes and user is set, make the API call.
  */
 function DeepLinkHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
 
+  // Capture the conv param once on mount before it's cleaned from the URL
+  const pendingConvRef = useRef<string | null>(null);
   useEffect(() => {
-    const conv = searchParams.get('conv');
-    if (conv) {
-      // Switch to messages immediately so there's no visible delay after tap,
-      // then load the conversation data in the background.
-      setActiveSection('messages');
-      router.replace('/');
-      getConversation(conv)
-        .then((conversation) => setPendingConversation(conversation))
-        .catch(() => {/* conversation not found — messages section still shows */});
-    }
-  // Only run once on mount
+    pendingConvRef.current = searchParams.get('conv');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Once auth is ready, open the pending conversation
+  useEffect(() => {
+    if (!user || !pendingConvRef.current) return;
+    const convId = pendingConvRef.current;
+    pendingConvRef.current = null; // prevent double-trigger
+
+    setActiveSection('messages');
+    router.replace('/');
+    getConversation(convId)
+      .then((conversation) => setPendingConversation(conversation))
+      .catch(() => {/* conversation not found */});
+  }, [user, router, setActiveSection, setPendingConversation]);
 
   return null;
 }
