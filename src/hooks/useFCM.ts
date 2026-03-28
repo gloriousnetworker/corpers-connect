@@ -113,7 +113,7 @@ export function useFCM() {
     } catch {
       // Permission denied or messaging not supported — fail silently
     }
-  }, [user, router, incrementUnread, setActiveSection, setViewingUser, setPendingConversation]);
+  }, [user, routeFromData, incrementUnread]);
 
   // Request notification permission then register (call from a user-gesture handler)
   const requestPermission = useCallback(async () => {
@@ -133,7 +133,9 @@ export function useFCM() {
     if (!user || !('serviceWorker' in navigator)) return;
 
     const handleSWMessage = (event: MessageEvent) => {
-      if (event.data?.type !== 'NOTIFICATION_CLICK') return;
+      // SW sends { action: 'NOTIFICATION_CLICK', type, entityId, ... }
+      // We check 'action' because 'type' is the notification type (DM_RECEIVED etc.)
+      if (event.data?.action !== 'NOTIFICATION_CLICK') return;
       routeFromData(event.data as Record<string, string>);
     };
 

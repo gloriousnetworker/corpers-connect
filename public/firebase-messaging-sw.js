@@ -103,7 +103,17 @@ self.addEventListener('notificationclick', (event) => {
         // App is already open — post the routing data so the in-app handler
         // can navigate without relying on URL params (which useEffect([]) won't
         // re-read after the initial mount).
-        appClient.postMessage({ type: 'NOTIFICATION_CLICK', ...data });
+        // NOTE: use 'action' not 'type' — data already has a 'type' field
+        // (e.g. 'DM_RECEIVED') that would overwrite 'NOTIFICATION_CLICK'
+        // if we spread { type: 'NOTIFICATION_CLICK', ...data }.
+        appClient.postMessage({
+          action:     'NOTIFICATION_CLICK',
+          url:        data.url        ?? '/',
+          type:       data.type       ?? '',
+          entityType: data.entityType ?? '',
+          entityId:   data.entityId   ?? '',
+          actorId:    data.actorId    ?? '',
+        });
         return 'focus' in appClient ? appClient.focus() : Promise.resolve();
       }
 
