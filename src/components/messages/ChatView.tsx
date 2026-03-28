@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info, X, ShieldCheck, Pin } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -21,9 +21,12 @@ import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
+import { useCallsStore } from '@/store/calls.store';
+import { useAgora } from '@/hooks/useAgora';
+import { refreshCallToken } from '@/lib/api/calls';
 import { getExistingSocket } from '@/lib/socket';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
-import { ConversationType, MessageType } from '@/types/enums';
+import { CallType, ConversationType, MessageType } from '@/types/enums';
 import type { Conversation, Message } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
 import MessageBubble from './MessageBubble';
@@ -69,6 +72,54 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
   const setViewingUser = useUIStore((s) => s.setViewingUser);
 
+  // Derive early — needed by both call logic and header render
+  const isGroup   = conversation.type === ConversationType.GROUP;
+  const dmPartner = getDmPartner(conversation, user?.id ?? '');
+
+  // ── Calls ──────────────────────────────────────────────────────────────────
+  const setOutboundCall = useCallsStore((s) => s.setOutboundCall);
+  const setActiveCall   = useCallsStore((s) => s.setActiveCall);
+  const activeCall      = useCallsStore((s) => s.activeCall);
+  const outboundCall    = useCallsStore((s) => s.outboundCall);
+
+  const { join: joinAgora } = useAgora({
+    onTokenWillExpire: async () => {
+      if (!activeCall) return '';
+      const res = await refreshCallToken(activeCall.callId);
+      return res.token;
+    },
+  });
+
+  const initiateCall = useCallback(async (type: CallType) => {
+    if (!user || !dmPartner) return;
+    if (activeCall || outboundCall) return; // already in a call
+
+    const socket = getExistingSocket();
+    if (!socket) return;
+
+    socket.emit(
+      'call:initiate',
+      { receiverId: dmPartner.id, type },
+      async (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
+        if (!res.success || !res.data) return;
+        const { callId, channelName, token, appId } = res.data;
+
+        // Join Agora as caller (uid = 1) immediately
+        await joinAgora(appId, channelName, token, 1, type);
+
+        setActiveCall(null); // ensure clean
+        setOutboundCall({
+          callId,
+          type,
+          partner:     dmPartner,
+          channelName,
+          token,
+          appId,
+        });
+      },
+    );
+  }, [user, dmPartner, activeCall, outboundCall, joinAgora, setOutboundCall, setActiveCall]);
+
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
@@ -83,8 +134,6 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const isAtBottomRef = useRef(true);
   const typingSocketRef = useRef(false);
 
-  const isGroup = conversation.type === ConversationType.GROUP;
-  const dmPartner = getDmPartner(conversation, user?.id ?? '');
   const headerName = isGroup ? (conversation.name ?? 'Group') : (dmPartner ? `${dmPartner.firstName} ${dmPartner.lastName}` : 'Unknown');
   const headerAvatar = isGroup ? conversation.picture : dmPartner?.profilePicture;
   const headerInitials = isGroup
@@ -530,6 +579,28 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Call buttons — DM only */}
+        {!isGroup && (
+          <>
+            <button
+              onClick={() => initiateCall(CallType.VOICE)}
+              disabled={!!(activeCall || outboundCall)}
+              className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-40"
+              aria-label="Voice call"
+            >
+              <Phone className="w-4.5 h-4.5 text-foreground-secondary" />
+            </button>
+            <button
+              onClick={() => initiateCall(CallType.VIDEO)}
+              disabled={!!(activeCall || outboundCall)}
+              className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-40"
+              aria-label="Video call"
+            >
+              <Video className="w-4.5 h-4.5 text-foreground-secondary" />
+            </button>
+          </>
         )}
 
         {/* Info button */}

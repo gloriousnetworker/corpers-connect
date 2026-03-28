@@ -1,0 +1,247 @@
+'use client';
+
+/**
+ * useAgora — manages a single Agora RTC session.
+ *
+ * All Agora SDK imports happen inside callbacks / useEffect so the module is
+ * never evaluated on the server (Next.js App Router still SSR-renders
+ * 'use client' components during hydration).
+ *
+ * Call flow:
+ *   1. join(appId, channelName, token, uid, callType) — creates tracks + publishes
+ *   2. Remote participant auto-subscribed via 'user-published' event
+ *   3. leave() — stops/closes all tracks and disconnects from channel
+ */
+
+import { useRef, useState, useCallback, useEffect } from 'react';
+
+// --- Agora type aliases (avoid top-level SDK import) -------------------------
+type IAgoraRTCClient      = import('agora-rtc-sdk-ng').IAgoraRTCClient;
+type IMicrophoneAudioTrack = import('agora-rtc-sdk-ng').IMicrophoneAudioTrack;
+type ICameraVideoTrack    = import('agora-rtc-sdk-ng').ICameraVideoTrack;
+type IRemoteVideoTrack    = import('agora-rtc-sdk-ng').IRemoteVideoTrack;
+
+// Loader — call once; result is cached by the module system
+async function loadAgora() {
+  const mod = await import('agora-rtc-sdk-ng');
+  return mod.default;
+}
+
+export interface UseAgoraOptions {
+  /**
+   * Called when the Agora token is about to expire (~30 s before expiry).
+   * Should return a fresh token from the backend.
+   */
+  onTokenWillExpire?: () => Promise<string>;
+}
+
+export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
+  const clientRef         = useRef<IAgoraRTCClient | null>(null);
+  const localAudioRef     = useRef<IMicrophoneAudioTrack | null>(null);
+  const localVideoRef     = useRef<ICameraVideoTrack | null>(null);
+  const remoteVideoRef    = useRef<IRemoteVideoTrack | null>(null);
+
+  // DOM container refs for video playback
+  const localVideoElRef  = useRef<HTMLDivElement | null>(null);
+  const remoteVideoElRef = useRef<HTMLDivElement | null>(null);
+
+  const [isJoined,      setIsJoined]      = useState(false);
+  const [isMuted,       setIsMuted]       = useState(false);
+  const [isCameraOff,   setIsCameraOff]   = useState(false);
+  const [permissionErr, setPermissionErr] = useState<string | null>(null);
+  const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+
+  // ── join ──────────────────────────────────────────────────────────────────
+
+  const join = useCallback(async (
+    appId:       string,
+    channelName: string,
+    token:       string,
+    uid:         number,
+    callType:    'VOICE' | 'VIDEO',
+  ) => {
+    try {
+      setPermissionErr(null);
+      const AgoraRTC = await loadAgora();
+      AgoraRTC.setLogLevel(4); // Error only — reduces console noise
+
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      clientRef.current = client;
+
+      // ── Remote track subscription ────────────────────────────────────────
+      client.on('user-published', async (remoteUser, mediaType) => {
+        await client.subscribe(remoteUser, mediaType);
+        if (mediaType === 'audio') {
+          remoteUser.audioTrack?.play();
+        }
+        if (mediaType === 'video' && remoteUser.videoTrack) {
+          remoteVideoRef.current = remoteUser.videoTrack;
+          setRemoteHasVideo(true);
+          if (remoteVideoElRef.current) {
+            remoteUser.videoTrack.play(remoteVideoElRef.current);
+          }
+        }
+      });
+
+      client.on('user-unpublished', (_remoteUser, mediaType) => {
+        if (mediaType === 'video') {
+          remoteVideoRef.current = null;
+          setRemoteHasVideo(false);
+        }
+      });
+
+      // ── Token renewal ────────────────────────────────────────────────────
+      client.on('token-privilege-will-expire', async () => {
+        if (onTokenWillExpire) {
+          try {
+            const newToken = await onTokenWillExpire();
+            await client.renewToken(newToken);
+          } catch { /* best-effort */ }
+        }
+      });
+
+      // ── Join channel ─────────────────────────────────────────────────────
+      await client.join(appId, channelName, token, uid);
+
+      // ── Create and publish local tracks ──────────────────────────────────
+      if (callType === 'VIDEO') {
+        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+          {},
+          { facingMode: 'user' },
+        );
+        localAudioRef.current = audioTrack;
+        localVideoRef.current = videoTrack;
+        await client.publish([audioTrack, videoTrack]);
+        if (localVideoElRef.current) {
+          videoTrack.play(localVideoElRef.current);
+        }
+      } else {
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localAudioRef.current = audioTrack;
+        await client.publish([audioTrack]);
+      }
+
+      setIsJoined(true);
+    } catch (err: unknown) {
+      const e = err as Error;
+      if (
+        e.name === 'NotAllowedError' ||
+        e.message?.includes('Permission denied') ||
+        e.message?.includes('NotAllowedError')
+      ) {
+        const isVideo = callType === 'VIDEO';
+        setPermissionErr(isVideo
+          ? 'Camera and microphone access was denied. Please allow access in your browser settings.'
+          : 'Microphone access was denied. Please allow access in your browser settings.'
+        );
+      } else {
+        setPermissionErr('Unable to connect to the call. Please try again.');
+      }
+      // Clean up partial state
+      localAudioRef.current?.stop();
+      localAudioRef.current?.close();
+      localAudioRef.current = null;
+      localVideoRef.current?.stop();
+      localVideoRef.current?.close();
+      localVideoRef.current = null;
+      if (clientRef.current) {
+        try { await clientRef.current.leave(); } catch { /* ignore */ }
+        clientRef.current = null;
+      }
+    }
+  }, [onTokenWillExpire]);
+
+  // ── leave ─────────────────────────────────────────────────────────────────
+
+  const leave = useCallback(async () => {
+    localAudioRef.current?.stop();
+    localAudioRef.current?.close();
+    localAudioRef.current = null;
+
+    localVideoRef.current?.stop();
+    localVideoRef.current?.close();
+    localVideoRef.current = null;
+
+    remoteVideoRef.current = null;
+
+    if (clientRef.current) {
+      try { await clientRef.current.leave(); } catch { /* ignore */ }
+      clientRef.current = null;
+    }
+
+    setIsJoined(false);
+    setIsMuted(false);
+    setIsCameraOff(false);
+    setRemoteHasVideo(false);
+    setPermissionErr(null);
+  }, []);
+
+  // ── controls ──────────────────────────────────────────────────────────────
+
+  const toggleMute = useCallback(async () => {
+    if (!localAudioRef.current) return;
+    const next = !isMuted;
+    await localAudioRef.current.setMuted(next);
+    setIsMuted(next);
+  }, [isMuted]);
+
+  const toggleCamera = useCallback(async () => {
+    if (!localVideoRef.current) return;
+    const next = !isCameraOff;
+    await localVideoRef.current.setMuted(next);
+    setIsCameraOff(next);
+  }, [isCameraOff]);
+
+  const switchCamera = useCallback(async () => {
+    if (!localVideoRef.current) return;
+    try {
+      const AgoraRTC = await loadAgora();
+      const devices = await AgoraRTC.getCameras();
+      if (devices.length < 2) return;
+      const currentLabel = localVideoRef.current.getTrackLabel();
+      const next = devices.find((d) => d.label !== currentLabel) ?? devices[0];
+      await localVideoRef.current.setDevice(next.deviceId);
+    } catch { /* device switching not supported */ }
+  }, []);
+
+  const renewToken = useCallback(async (token: string) => {
+    if (clientRef.current) {
+      await clientRef.current.renewToken(token);
+    }
+  }, []);
+
+  // ── video container setters (called from ref callbacks in JSX) ────────────
+
+  const setLocalVideoEl = useCallback((el: HTMLDivElement | null) => {
+    localVideoElRef.current = el;
+    if (el && localVideoRef.current) {
+      localVideoRef.current.play(el);
+    }
+  }, []);
+
+  const setRemoteVideoEl = useCallback((el: HTMLDivElement | null) => {
+    remoteVideoElRef.current = el;
+    if (el && remoteVideoRef.current) {
+      remoteVideoRef.current.play(el);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => { leave(); }, [leave]);
+
+  return {
+    join,
+    leave,
+    toggleMute,
+    toggleCamera,
+    switchCamera,
+    renewToken,
+    setLocalVideoEl,
+    setRemoteVideoEl,
+    isJoined,
+    isMuted,
+    isCameraOff,
+    remoteHasVideo,
+    permissionErr,
+  };
+}
