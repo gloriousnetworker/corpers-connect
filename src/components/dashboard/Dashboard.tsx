@@ -39,13 +39,13 @@ function DeepLinkHandler() {
   useEffect(() => {
     const conv = searchParams.get('conv');
     if (conv) {
+      // Switch to messages immediately so there's no visible delay after tap,
+      // then load the conversation data in the background.
+      setActiveSection('messages');
+      router.replace('/');
       getConversation(conv)
-        .then((conversation) => {
-          setPendingConversation(conversation);
-          setActiveSection('messages');
-        })
-        .catch(() => {/* conversation not found — ignore */})
-        .finally(() => router.replace('/'));
+        .then((conversation) => setPendingConversation(conversation))
+        .catch(() => {/* conversation not found — messages section still shows */});
     }
   // Only run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps

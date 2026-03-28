@@ -8,10 +8,14 @@
  * service workers cannot access process.env / NEXT_PUBLIC_* variables.
  *
  * How push delivery works:
- *   1. Backend calls FCM with notification + webpush fields
+ *   1. Backend calls FCM with data-only payload (no notification field)
  *   2. When app is OPEN    → onMessage()           fires in the page (toast shown)
  *   3. When app is CLOSED  → onBackgroundMessage() fires here → showNotification()
  *   4. User taps the notification → notificationclick fires → opens deep-link URL
+ *
+ * Data-only is critical: sending a notification payload causes the browser to
+ * auto-show AND onBackgroundMessage to fire — resulting in duplicate notifications.
+ * With data-only, onBackgroundMessage is the single renderer on all platforms.
  */
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
@@ -46,31 +50,28 @@ if (firebaseConfig.projectId) {
    *   title, body, icon, badge, requireInteraction, tag, renotify, vibrate, data
    */
   messaging.onBackgroundMessage((payload) => {
-    const n    = payload.notification ?? {};
+    // Backend sends data-only — all fields arrive in payload.data
     const data = payload.data ?? {};
 
-    // Prefer the rich webpush notification fields; fall back to root notification
-    const title = n.title ?? 'Corpers Connect';
-    const body  = n.body  ?? '';
+    const title = data.title ?? 'Corpers Connect';
+    const body  = data.body  ?? '';
 
     self.registration.showNotification(title, {
       body,
-      icon:               '/icons/icon-192x192.png',
-      badge:              '/icons/icon-72x72.png',
+      icon:               data.icon  ?? '/icons/icon-192x192.png',
+      badge:              data.badge ?? '/icons/icon-72x72.png',
       // Persist in the notification center until explicitly dismissed
       requireInteraction: true,
       // Collapse duplicate notifications from the same source
-      tag:                data.type && data.entityId
-                            ? `cc-${data.type}-${data.entityId}`
-                            : 'corpers-connect',
+      tag:                data.tag ?? 'corpers-connect',
       // Show notification even if one with same tag already exists (e.g. new DM)
       renotify:           true,
       // Vibration pattern (ms): buzz — pause — buzz
       vibrate:            [200, 100, 200],
       // Pass the full data payload so notificationclick can route correctly
-      data:               {
-        url:        data.url  ?? '/',
-        type:       data.type ?? '',
+      data: {
+        url:        data.url        ?? '/',
+        type:       data.type       ?? '',
         entityType: data.entityType ?? '',
         entityId:   data.entityId   ?? '',
         actorId:    data.actorId    ?? '',
