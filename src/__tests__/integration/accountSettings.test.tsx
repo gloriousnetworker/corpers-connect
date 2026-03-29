@@ -71,7 +71,7 @@ describe('AccountSettingsPage', () => {
   it('renders heading and security sections', async () => {
     render(<AccountSettingsPage />, { wrapper: makeWrapper() });
     await waitFor(() => {
-      expect(screen.getByText('Account Settings')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Change Password')).toBeInTheDocument();
       expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
       expect(screen.getByText('Delete Account')).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe('AccountSettingsPage', () => {
     await waitFor(() => screen.getByPlaceholderText('Current password'));
 
     fireEvent.change(screen.getByPlaceholderText('Current password'), { target: { value: 'OldPass@123' } });
-    fireEvent.change(screen.getByPlaceholderText('New password (min 8 chars)'), { target: { value: 'NewPass@456' } });
+    fireEvent.change(screen.getByPlaceholderText('New password (min 8 chars, 1 upper, 1 digit)'), { target: { value: 'NewPass@456' } });
     fireEvent.change(screen.getByPlaceholderText('Confirm new password'), { target: { value: 'NewPass@456' } });
 
     fireEvent.click(screen.getByText('Update Password'));
@@ -107,7 +107,7 @@ describe('AccountSettingsPage', () => {
     await waitFor(() => screen.getByPlaceholderText('Current password'));
 
     fireEvent.change(screen.getByPlaceholderText('Current password'), { target: { value: 'OldPass@123' } });
-    fireEvent.change(screen.getByPlaceholderText('New password (min 8 chars)'), { target: { value: 'NewPass@456' } });
+    fireEvent.change(screen.getByPlaceholderText('New password (min 8 chars, 1 upper, 1 digit)'), { target: { value: 'NewPass@456' } });
     fireEvent.change(screen.getByPlaceholderText('Confirm new password'), { target: { value: 'Different@789' } });
 
     fireEvent.click(screen.getByText('Update Password'));
