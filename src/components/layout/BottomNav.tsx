@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Compass, ShoppingBag, MessageCircle, User, type LucideIcon } from 'lucide-react';
+import { Home, Compass, ShoppingBag, Briefcase, MessageCircle, User, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
 
@@ -13,8 +13,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { section: 'feed',        icon: Home,          label: 'Home'    },
   { section: 'discover',    icon: Compass,       label: 'Discover'},
-  { section: 'marketplace', icon: ShoppingBag,   label: 'Market'  },
-  { section: 'messages',    icon: MessageCircle, label: 'Messages'},
+  { section: 'marketplace',   icon: ShoppingBag,   label: 'Market'  },
+  { section: 'opportunities', icon: Briefcase,     label: 'Jobs'    },
+  { section: 'messages',      icon: MessageCircle, label: 'Messages'},
   { section: 'profile',     icon: User,          label: 'Profile' },
 ];
 

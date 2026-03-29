@@ -1,0 +1,90 @@
+'use client';
+
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { ArrowLeft, Plus, Briefcase } from 'lucide-react';
+import { getMyOpportunities } from '@/lib/api/opportunities';
+import { useOpportunitiesStore } from '@/store/opportunities.store';
+import type { Opportunity } from '@/types/models';
+import OpportunityCard from './OpportunityCard';
+
+export default function MyOpportunities() {
+  const { goBack, setView, selectOpportunity, viewApplicationsFor } = useOpportunitiesStore();
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ['my-opportunities'],
+      queryFn: ({ pageParam }) =>
+        getMyOpportunities({ cursor: pageParam, limit: 20 }),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (last) => last.hasMore ? last.nextCursor ?? undefined : undefined,
+    });
+
+  const opportunities = data?.pages.flatMap((p) => p.items) ?? [];
+
+  return (
+    <div className="flex flex-col min-h-full">
+      <div className="sticky top-0 z-10 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+        <button onClick={goBack} className="text-foreground hover:text-primary">
+          <ArrowLeft size={22} />
+        </button>
+        <h1 className="font-bold text-foreground text-lg flex-1">My Postings</h1>
+        <button
+          onClick={() => setView('create')}
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90"
+        >
+          <Plus size={14} /> New
+        </button>
+      </div>
+
+      <div className="flex-1 px-4 py-4 space-y-3">
+        {isLoading && (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-2xl border border-border animate-pulse space-y-3">
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && opportunities.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+            <Briefcase size={48} className="text-muted-foreground/40" />
+            <p className="font-semibold text-foreground">No postings yet</p>
+            <p className="text-sm text-muted-foreground">Post an opportunity for fellow corps members</p>
+            <button
+              onClick={() => setView('create')}
+              className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+            >
+              Post opportunity
+            </button>
+          </div>
+        )}
+
+        {opportunities.map((opp: Opportunity) => (
+          <div key={opp.id} className="relative">
+            <OpportunityCard opportunity={opp} onClick={selectOpportunity} />
+            {/* View applications shortcut */}
+            <button
+              onClick={() => viewApplicationsFor(opp.id)}
+              className="absolute bottom-3 right-3 text-[11px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+            >
+              View applications →
+            </button>
+          </div>
+        ))}
+
+        {hasNextPage && (
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="w-full py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+          >
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

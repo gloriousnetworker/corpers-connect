@@ -13,6 +13,7 @@ const SECTION_TITLES: Record<string, string> = {
   profile:       'Profile',
   userProfile:   'Profile',
   marketplace:   'Mami Market',
+  opportunities: 'Opportunities',
 };
 
 export default function TopBar({ className }: { className?: string }) {

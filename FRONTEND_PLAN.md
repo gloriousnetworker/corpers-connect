@@ -725,17 +725,46 @@ src/__tests__/unit/marketplace.test.tsx
 - `src/components/layout/DesktopSideNav.tsx` — added Mami Market nav item
 - `src/components/layout/TopBar.tsx` — added "Mami Market" section title
 
-### Phase 8 — Opportunities (Week 5)
+### Phase 8 — Opportunities ✅ Complete
 **Goal:** Opportunities board like LinkedIn Lite.
 
-- [ ] Opportunities feed (filter by type)
-- [ ] Create opportunity form
-- [ ] Opportunity detail page
-- [ ] Save/unsave opportunity
-- [ ] Apply (cover letter input)
-- [ ] My saved + my applications tabs
-- [ ] Application status updates
-- [ ] Unit tests: OpportunityCard, ApplicationStatus
+- [x] Opportunities feed (filter by type, search, remote toggle)
+- [x] Create opportunity form (type, company, location, salary, deadline, description, requirements)
+- [x] Edit opportunity form (pre-filled, author-only)
+- [x] Opportunity detail page (badges, quick-info grid, author card, CTAs)
+- [x] Save/unsave opportunity (optimistic, invalidates feed + saved list)
+- [x] Apply modal (cover letter textarea, CV PDF/DOC upload, 409 duplicate guard)
+- [x] My saved opportunities list
+- [x] My applications list (status badges, tap to view opportunity)
+- [x] My posted opportunities list (with "View applications →" shortcut)
+- [x] Application status updates (Reviewed/Shortlisted/Accepted/Rejected)
+- [x] ApplicationsViewer — paginated applicants, cover letter preview, CV link, status chips
+- [x] Navigation: BottomNav "Jobs" (Briefcase), DesktopSideNav "Opportunities", TopBar title
+- [x] Unit tests: TypeChips (6 tests), OpportunityCard (15 tests)
+
+**Files added:**
+- `src/lib/api/opportunities.ts` — full API module (13 endpoints)
+- `src/store/opportunities.store.ts` — SPA view router (8 views)
+- `src/components/opportunities/TypeChips.tsx`
+- `src/components/opportunities/OpportunityCard.tsx`
+- `src/components/opportunities/ApplyModal.tsx`
+- `src/components/opportunities/OpportunitiesHome.tsx`
+- `src/components/opportunities/OpportunityDetail.tsx`
+- `src/components/opportunities/CreateOpportunityForm.tsx`
+- `src/components/opportunities/EditOpportunityForm.tsx`
+- `src/components/opportunities/MyOpportunities.tsx`
+- `src/components/opportunities/SavedOpportunities.tsx`
+- `src/components/opportunities/MyApplications.tsx`
+- `src/components/opportunities/ApplicationsViewer.tsx`
+- `src/components/opportunities/OpportunitiesSection.tsx`
+- `src/__tests__/unit/opportunities.test.tsx` — 21 tests
+
+**Files modified:**
+- `src/store/ui.store.ts` — added `opportunities` to `ActiveSection`
+- `src/components/dashboard/Dashboard.tsx` — registered OpportunitiesSection
+- `src/components/layout/BottomNav.tsx` — added Briefcase "Jobs" tab
+- `src/components/layout/DesktopSideNav.tsx` — added "Opportunities" nav item
+- `src/components/layout/TopBar.tsx` — added "Opportunities" section title
 
 ### Phase 9 — Subscriptions & Premium Features (Week 5)
 **Goal:** Users can subscribe via Paystack; premium features gate correctly.
@@ -933,7 +962,7 @@ src/app/layout.tsx                        — renders <InstallPrompt> globally
 | Phase 5 | Notifications | 🔴 Not Started |
 | Phase 6 | Calls | ✅ Complete |
 | Phase 7 | Marketplace | ✅ Complete |
-| Phase 8 | Opportunities | 🔴 Not Started |
+| Phase 8 | Opportunities | ✅ Complete |
 | Phase 9 | Subscriptions | 🔴 Not Started |
 | Phase 10 | Settings + Security | 🔴 Not Started |
 | Phase 11 | PWA + Performance | 🔴 Not Started |
