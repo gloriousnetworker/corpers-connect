@@ -1,18 +1,87 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Lock, Shield, Trash2, ChevronRight, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import {
+  Lock, Shield, Trash2, ChevronRight, Eye, EyeOff, ArrowLeft,
+  MonitorSmartphone, LogOut, Bell, Palette, UserX, Smartphone, Globe,
+} from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { changePassword, initiate2FA, confirm2FA, disable2FA } from '@/lib/api/auth';
-import { deleteAccount } from '@/lib/api/users';
+import {
+  changePassword, initiate2FA, confirm2FA, disable2FA,
+  getSessions, revokeSession, revokeAllSessions, logout,
+} from '@/lib/api/auth';
+import { deleteAccount, getBlockedUsers, unblockUser } from '@/lib/api/users';
 import { getMe } from '@/lib/api/users';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/query-keys';
+import { getInitials } from '@/lib/utils';
+import type { Session } from '@/types/models';
 
-// ── Change Password Section ────────────────────────────────────────────────────
+// ── Notification preference keys & labels ─────────────────────────────────────
+
+const NOTIF_PREFS_KEY = 'cc_notif_prefs';
+
+const NOTIF_TYPES = [
+  { key: 'FOLLOW', label: 'New follower', description: 'When someone follows you' },
+  { key: 'POST_LIKE', label: 'Post likes', description: 'When someone likes your post' },
+  { key: 'POST_COMMENT', label: 'Post comments', description: 'When someone comments on your post' },
+  { key: 'MENTION', label: 'Mentions', description: 'When someone mentions you' },
+  { key: 'DM_RECEIVED', label: 'Direct messages', description: 'When you receive a DM' },
+  { key: 'MARKET_INQUIRY', label: 'Market inquiries', description: 'When someone messages about your listing' },
+] as const;
+
+type NotifKey = (typeof NOTIF_TYPES)[number]['key'];
+type NotifPrefs = Record<NotifKey, boolean>;
+
+function loadNotifPrefs(): NotifPrefs {
+  try {
+    const raw = localStorage.getItem(NOTIF_PREFS_KEY);
+    if (raw) return { ...defaultNotifPrefs(), ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return defaultNotifPrefs();
+}
+
+function defaultNotifPrefs(): NotifPrefs {
+  return Object.fromEntries(NOTIF_TYPES.map((t) => [t.key, true])) as NotifPrefs;
+}
+
+function saveNotifPrefs(prefs: NotifPrefs) {
+  try {
+    localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+  } catch { /* ignore */ }
+}
+
+// ── Shared sub-components ─────────────────────────────────────────────────────
+
+function SectionLabel({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
+  return (
+    <p className={`text-xs font-semibold uppercase tracking-wide px-1 mb-3 ${danger ? 'text-danger/70' : 'text-foreground-muted'}`}>
+      {children}
+    </p>
+  );
+}
+
+function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary' : 'bg-border'}`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+      />
+    </button>
+  );
+}
+
+// ── Change Password ────────────────────────────────────────────────────────────
 
 function ChangePasswordSection() {
   const [open, setOpen] = useState(false);
@@ -36,19 +105,21 @@ function ChangePasswordSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPw.length < 8) return toast.error('New password must be at least 8 characters');
+    if (newPw.length < 8) return toast.error('Password must be at least 8 characters');
+    if (!/[A-Z]/.test(newPw)) return toast.error('Password must contain an uppercase letter');
+    if (!/\d/.test(newPw)) return toast.error('Password must contain a number');
     if (newPw !== confirmPw) return toast.error('Passwords do not match');
     mutation.mutate();
   };
 
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div data-testid="change-password-section" className="bg-surface border border-border rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt active:bg-surface-alt transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Lock className="w-4.5 h-4.5 text-primary" />
+          <Lock className="w-4 h-4 text-primary" />
         </div>
         <div className="flex-1 text-left">
           <p className="text-sm font-medium text-foreground">Change Password</p>
@@ -58,7 +129,8 @@ function ChangePasswordSection() {
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3 border-t border-border pt-4">
+        <form onSubmit={handleSubmit} className="px-4 pb-4 pt-4 space-y-3 border-t border-border">
+          {/* Current password */}
           <div className="relative">
             <input
               type={showCurrent ? 'text' : 'password'}
@@ -77,10 +149,12 @@ function ChangePasswordSection() {
               {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+
+          {/* New password */}
           <div className="relative">
             <input
               type={showNew ? 'text' : 'password'}
-              placeholder="New password (min 8 chars)"
+              placeholder="New password (min 8 chars, 1 upper, 1 digit)"
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
               required
@@ -95,6 +169,7 @@ function ChangePasswordSection() {
               {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+
           <input
             type="password"
             placeholder="Confirm new password"
@@ -103,10 +178,11 @@ function ChangePasswordSection() {
             required
             className="form-input"
           />
+
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark active:bg-primary-dark disabled:opacity-50 transition-colors"
+            className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {mutation.isPending ? 'Updating…' : 'Update Password'}
           </button>
@@ -116,7 +192,7 @@ function ChangePasswordSection() {
   );
 }
 
-// ── 2FA Section ────────────────────────────────────────────────────────────────
+// ── Two-Factor Authentication ──────────────────────────────────────────────────
 
 function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   const queryClient = useQueryClient();
@@ -141,10 +217,11 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
       toast.success('2FA enabled successfully');
       queryClient.invalidateQueries({ queryKey: queryKeys.me() });
       setPhase('idle');
+      setTotpCode('');
       setOpen(false);
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? 'Invalid code');
+      toast.error(err?.response?.data?.message ?? 'Invalid code. Try again.');
     },
   });
 
@@ -154,10 +231,11 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
       toast.success('2FA disabled');
       queryClient.invalidateQueries({ queryKey: queryKeys.me() });
       setPhase('idle');
+      setDisableCode('');
       setOpen(false);
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? 'Invalid code');
+      toast.error(err?.response?.data?.message ?? 'Invalid code. Try again.');
     },
   });
 
@@ -177,19 +255,19 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   };
 
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div data-testid="twofa-section" className="bg-surface border border-border rounded-2xl overflow-hidden">
       <button
         onClick={handleToggle}
-        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt active:bg-surface-alt transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Shield className="w-4.5 h-4.5 text-primary" />
+          <Shield className="w-4 h-4 text-primary" />
         </div>
         <div className="flex-1 text-left">
           <p className="text-sm font-medium text-foreground">Two-Factor Authentication</p>
           <p className="text-xs mt-0.5">
             <span className={twoFactorEnabled ? 'text-success font-medium' : 'text-foreground-muted'}>
-              {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+              {twoFactorEnabled ? 'Enabled' : 'Not enabled'}
             </span>
           </p>
         </div>
@@ -197,21 +275,27 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-border pt-4 space-y-3">
+        <div className="px-4 pb-4 pt-4 border-t border-border space-y-3">
           {/* Setup flow */}
           {phase === 'setup' && !twoFactorEnabled && (
             <>
-              <p className="text-xs text-foreground-secondary">
-                Scan this QR code with your authenticator app (e.g. Google Authenticator).
+              <p className="text-xs text-foreground-secondary leading-relaxed">
+                Scan this QR code with Google Authenticator, Authy, or any TOTP app, then enter the 6-digit code to activate.
               </p>
               {initMutation.isPending && (
-                <div className="flex justify-center py-4">
+                <div className="flex justify-center py-6">
                   <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                 </div>
               )}
               {qrUrl && (
                 <div className="flex justify-center py-2">
-                  <Image src={qrUrl} alt="2FA QR code" width={180} height={180} className="rounded-xl border border-border" />
+                  <Image
+                    src={qrUrl}
+                    alt="2FA QR code"
+                    width={180}
+                    height={180}
+                    className="rounded-xl border border-border"
+                  />
                 </div>
               )}
               <input
@@ -221,12 +305,12 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 maxLength={6}
-                className="form-input text-center tracking-widest"
+                className="form-input text-center tracking-widest font-mono"
               />
               <button
                 onClick={() => confirmMutation.mutate()}
-                disabled={totpCode.length !== 6 || confirmMutation.isPending}
-                className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark disabled:opacity-50 transition-colors"
+                disabled={totpCode.length !== 6 || confirmMutation.isPending || initMutation.isPending}
+                className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {confirmMutation.isPending ? 'Verifying…' : 'Enable 2FA'}
               </button>
@@ -236,9 +320,11 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
           {/* Disable flow */}
           {phase === 'disable' && twoFactorEnabled && (
             <>
-              <p className="text-xs text-foreground-secondary">
-                Enter your authenticator code to disable 2FA.
-              </p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-xl p-3">
+                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                  Disabling 2FA reduces your account security. Enter your authenticator code to confirm.
+                </p>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -246,7 +332,7 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
                 value={disableCode}
                 onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 maxLength={6}
-                className="form-input text-center tracking-widest"
+                className="form-input text-center tracking-widest font-mono"
               />
               <button
                 onClick={() => disableMutation.mutate()}
@@ -263,11 +349,318 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   );
 }
 
-// ── Delete Account Section ─────────────────────────────────────────────────────
+// ── Active Sessions ────────────────────────────────────────────────────────────
+
+function SessionsSection() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { data: sessions, isLoading } = useQuery({
+    queryKey: queryKeys.sessions(),
+    queryFn: getSessions,
+    enabled: open,
+    staleTime: 30_000,
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (sessionId: string) => revokeSession(sessionId),
+    onSuccess: () => {
+      toast.success('Session revoked');
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions() });
+    },
+    onError: () => toast.error('Failed to revoke session'),
+  });
+
+  const revokeAllMutation = useMutation({
+    mutationFn: revokeAllSessions,
+    onSuccess: () => {
+      toast.success('All other sessions revoked');
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions() });
+    },
+    onError: () => toast.error('Failed to revoke sessions'),
+  });
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const otherSessions = sessions?.filter((s) => !s.isCurrent) ?? [];
+
+  return (
+    <div data-testid="sessions-section" className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
+      >
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <MonitorSmartphone className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-foreground">Active Sessions</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Manage devices where you're logged in</p>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-foreground-muted transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-4 border-t border-border space-y-3">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-14 bg-surface-alt rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : !sessions?.length ? (
+            <p className="text-xs text-foreground-muted text-center py-4">No sessions found</p>
+          ) : (
+            <div className="space-y-2">
+              {sessions.map((session: Session) => (
+                <div
+                  key={session.id}
+                  className={`flex items-start gap-3 p-3 rounded-xl border ${session.isCurrent ? 'border-primary/30 bg-primary/5' : 'border-border bg-surface-alt'}`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {session.deviceInfo?.toLowerCase().includes('mobile') ? (
+                      <Smartphone className="w-4 h-4 text-foreground-muted" />
+                    ) : (
+                      <Globe className="w-4 h-4 text-foreground-muted" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {session.deviceInfo ?? 'Unknown device'}
+                      </p>
+                      {session.isCurrent && (
+                        <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          This device
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-foreground-muted mt-0.5">
+                      {session.ipAddress ? `${session.ipAddress} · ` : ''}
+                      Active since {formatDate(session.createdAt)}
+                    </p>
+                  </div>
+                  {!session.isCurrent && (
+                    <button
+                      onClick={() => revokeMutation.mutate(session.id)}
+                      disabled={revokeMutation.isPending}
+                      className="text-[11px] font-semibold text-danger hover:underline flex-shrink-0 disabled:opacity-50"
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {otherSessions.length > 1 && (
+            <button
+              onClick={() => revokeAllMutation.mutate()}
+              disabled={revokeAllMutation.isPending}
+              className="w-full h-10 border border-danger/40 text-danger text-sm font-semibold rounded-xl hover:bg-danger/5 disabled:opacity-50 transition-colors"
+            >
+              {revokeAllMutation.isPending ? 'Revoking…' : 'Revoke All Other Sessions'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Block List ─────────────────────────────────────────────────────────────────
+
+function BlockListSection() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { data: blocked, isLoading } = useQuery({
+    queryKey: queryKeys.blockedUsers(),
+    queryFn: getBlockedUsers,
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: (userId: string) => unblockUser(userId),
+    onSuccess: () => {
+      toast.success('User unblocked');
+      queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
+    },
+    onError: () => toast.error('Failed to unblock user'),
+  });
+
+  return (
+    <div data-testid="block-list-section" className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
+      >
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <UserX className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-foreground">Blocked Users</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Manage users you've blocked</p>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-foreground-muted transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-4 border-t border-border">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-12 bg-surface-alt rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : !blocked?.length ? (
+            <p className="text-xs text-foreground-muted text-center py-4">You haven't blocked anyone</p>
+          ) : (
+            <div className="space-y-2">
+              {blocked.map((user) => {
+                const initials = getInitials(user.firstName, user.lastName);
+                return (
+                  <div key={user.id} className="flex items-center gap-3 py-2">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      {user.profilePicture ? (
+                        <Image
+                          src={user.profilePicture}
+                          alt={initials}
+                          width={36}
+                          height={36}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <span className="text-xs font-bold text-primary uppercase">{initials}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {user.firstName} {user.lastName}
+                      </p>
+                      <p className="text-xs text-foreground-muted truncate">{user.servingState}</p>
+                    </div>
+                    <button
+                      onClick={() => unblockMutation.mutate(user.id)}
+                      disabled={unblockMutation.isPending}
+                      className="text-xs font-semibold text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 disabled:opacity-50 transition-colors"
+                    >
+                      Unblock
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Notification Preferences ──────────────────────────────────────────────────
+
+function NotificationPrefsSection() {
+  const [open, setOpen] = useState(false);
+  const [prefs, setPrefs] = useState<NotifPrefs>(defaultNotifPrefs);
+
+  useEffect(() => {
+    if (open) setPrefs(loadNotifPrefs());
+  }, [open]);
+
+  const handleChange = (key: NotifKey, value: boolean) => {
+    const updated = { ...prefs, [key]: value };
+    setPrefs(updated);
+    saveNotifPrefs(updated);
+  };
+
+  return (
+    <div data-testid="notif-prefs-section" className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
+      >
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Bell className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-foreground">Notification Preferences</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Choose what alerts you receive</p>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-foreground-muted transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-4 border-t border-border space-y-0 divide-y divide-border/50">
+          {NOTIF_TYPES.map((type) => (
+            <div key={type.key} className="flex items-center gap-3 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{type.label}</p>
+                <p className="text-xs text-foreground-muted mt-0.5">{type.description}</p>
+              </div>
+              <ToggleSwitch
+                checked={prefs[type.key]}
+                onChange={(v) => handleChange(type.key, v)}
+                label={`Toggle ${type.label}`}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Appearance ────────────────────────────────────────────────────────────────
+
+function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+
+  const options: { value: string; label: string }[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ];
+
+  return (
+    <div data-testid="appearance-section" className="bg-surface border border-border rounded-2xl p-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Palette className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">Appearance</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Choose your preferred theme</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setTheme(opt.value)}
+            className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+              theme === opt.value
+                ? 'bg-primary text-white border-primary'
+                : 'bg-surface-alt text-foreground border-border hover:border-primary/40'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Delete Account ─────────────────────────────────────────────────────────────
 
 function DeleteAccountSection() {
   const [open, setOpen] = useState(false);
-  const [confirm, setConfirm] = useState('');
+  const [confirmText, setConfirmText] = useState('');
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const router = useRouter();
 
@@ -278,17 +671,17 @@ function DeleteAccountSection() {
       clearAuth();
       router.replace('/auth/login');
     },
-    onError: () => toast.error('Failed to delete account'),
+    onError: () => toast.error('Failed to delete account. Please try again.'),
   });
 
   return (
-    <div className="bg-surface border border-danger/30 rounded-2xl overflow-hidden">
+    <div data-testid="delete-account-section" className="bg-surface border border-danger/30 rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-danger/5 active:bg-danger/5 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-danger/5 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-danger/10 flex items-center justify-center flex-shrink-0">
-          <Trash2 className="w-4.5 h-4.5 text-danger" />
+          <Trash2 className="w-4 h-4 text-danger" />
         </div>
         <div className="flex-1 text-left">
           <p className="text-sm font-medium text-danger">Delete Account</p>
@@ -298,12 +691,11 @@ function DeleteAccountSection() {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-danger/20 pt-4 space-y-3">
+        <div className="px-4 pb-4 pt-4 border-t border-danger/20 space-y-3">
           <div className="bg-danger/5 border border-danger/20 rounded-xl p-3">
-            <p className="text-xs text-danger font-medium mb-1">This action is irreversible</p>
+            <p className="text-xs text-danger font-semibold mb-1">This action is irreversible</p>
             <p className="text-xs text-foreground-secondary leading-relaxed">
-              Your account will be deactivated and your profile will no longer be visible to other users.
-              All your posts, messages, and data will be removed.
+              Your profile, posts, messages, and all data will be permanently removed. This cannot be undone.
             </p>
           </div>
           <p className="text-xs text-foreground-secondary">
@@ -312,21 +704,57 @@ function DeleteAccountSection() {
           <input
             type="text"
             placeholder="DELETE"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
             className="form-input"
             autoComplete="off"
           />
           <button
             onClick={() => mutation.mutate()}
-            disabled={confirm !== 'DELETE' || mutation.isPending}
-            className="w-full h-11 bg-danger text-white text-sm font-semibold rounded-xl hover:opacity-90 active:opacity-90 disabled:opacity-40 transition-opacity"
+            disabled={confirmText !== 'DELETE' || mutation.isPending}
+            className="w-full h-11 bg-danger text-white text-sm font-semibold rounded-xl hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {mutation.isPending ? 'Deleting…' : 'Delete My Account'}
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+// ── Logout Button ─────────────────────────────────────────────────────────────
+
+function LogoutButton() {
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const router = useRouter();
+
+  const mutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      clearAuth();
+      router.replace('/auth/login');
+    },
+    onError: () => {
+      // Even if server logout fails, clear local auth state
+      clearAuth();
+      router.replace('/auth/login');
+    },
+  });
+
+  return (
+    <button
+      data-testid="logout-button"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      className="w-full flex items-center gap-3 px-4 py-4 bg-surface border border-border rounded-2xl hover:bg-danger/5 transition-colors disabled:opacity-50"
+    >
+      <div className="w-9 h-9 rounded-xl bg-danger/10 flex items-center justify-center flex-shrink-0">
+        <LogOut className="w-4 h-4 text-danger" />
+      </div>
+      <span className="text-sm font-medium text-danger">
+        {mutation.isPending ? 'Signing out…' : 'Sign Out'}
+      </span>
+    </button>
   );
 }
 
@@ -337,12 +765,13 @@ export default function AccountSettingsPage() {
   const { data: me, isLoading } = useQuery({
     queryKey: queryKeys.me(),
     queryFn: getMe,
+    staleTime: 30_000,
   });
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0 bg-surface">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0 bg-surface sticky top-0 z-10">
         <button
           onClick={() => router.back()}
           className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
@@ -350,7 +779,7 @@ export default function AccountSettingsPage() {
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="text-base font-bold text-foreground">Account Settings</h1>
+        <h1 className="text-base font-bold text-foreground">Settings</h1>
       </div>
 
       {isLoading ? (
@@ -358,25 +787,50 @@ export default function AccountSettingsPage() {
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 px-4 py-6 space-y-4 max-w-lg mx-auto w-full">
-          {/* Security section */}
+        <div className="flex-1 px-4 py-6 space-y-6 max-w-lg mx-auto w-full">
+
+          {/* ── Security ── */}
           <div>
-            <p className="text-xs font-semibold text-foreground-muted uppercase tracking-wide px-1 mb-3">
-              Security
-            </p>
+            <SectionLabel>Security</SectionLabel>
             <div className="space-y-3">
               <ChangePasswordSection />
               <TwoFASection twoFactorEnabled={me?.twoFactorEnabled ?? false} />
+              <SessionsSection />
             </div>
           </div>
 
-          {/* Danger zone */}
+          {/* ── Privacy ── */}
           <div>
-            <p className="text-xs font-semibold text-danger/70 uppercase tracking-wide px-1 mb-3">
-              Danger Zone
-            </p>
+            <SectionLabel>Privacy</SectionLabel>
+            <BlockListSection />
+          </div>
+
+          {/* ── Notifications ── */}
+          <div>
+            <SectionLabel>Notifications</SectionLabel>
+            <NotificationPrefsSection />
+          </div>
+
+          {/* ── Appearance ── */}
+          <div>
+            <SectionLabel>Appearance</SectionLabel>
+            <AppearanceSection />
+          </div>
+
+          {/* ── Account ── */}
+          <div>
+            <SectionLabel>Account</SectionLabel>
+            <div className="space-y-3">
+              <LogoutButton />
+            </div>
+          </div>
+
+          {/* ── Danger Zone ── */}
+          <div>
+            <SectionLabel danger>Danger Zone</SectionLabel>
             <DeleteAccountSection />
           </div>
+
         </div>
       )}
     </div>

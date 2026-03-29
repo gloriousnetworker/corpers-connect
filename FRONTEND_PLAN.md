@@ -811,16 +811,19 @@ src/__tests__/unit/marketplace.test.tsx
 
 ### Phase 10 — Settings & Security (Week 5-6)
 **Goal:** Complete settings screens.
+**Status: ✅ Complete**
 
-- [ ] Settings main menu (grouped sections)
-- [ ] Change password form
-- [ ] 2FA enable/disable flow (QR code display, TOTP input)
-- [ ] Active sessions list + revoke
-- [ ] Block list management
-- [ ] Notifications settings (toggles per event type)
-- [ ] Dark mode toggle (persisted to localStorage)
-- [ ] Delete account confirmation flow
-- [ ] Logout
+- [x] Settings main menu (grouped sections: Security / Privacy / Notifications / Appearance / Account / Danger Zone)
+- [x] Change password form (min 8 chars, uppercase + digit validation)
+- [x] 2FA enable/disable flow (QR code display, TOTP input, disable with code)
+- [x] Active sessions list + revoke (individual + revoke all others)
+- [x] Block list management (view blocked users, Unblock button)
+- [x] Notifications settings (6 toggles per event type, localStorage-persisted)
+- [x] Dark mode toggle (Light / Dark / System via next-themes, persisted)
+- [x] Delete account confirmation flow (type DELETE to confirm)
+- [x] Logout (calls API, clears local auth, redirects to login)
+
+**Tests:** 49 unit tests — all passing
 
 ### Phase 11 — PWA, Performance & Polish (Week 6)
 **Goal:** App is installable, fast, and polished.
@@ -994,7 +997,7 @@ src/app/layout.tsx                        — renders <InstallPrompt> globally
 | Phase 7 | Marketplace | ✅ Complete |
 | Phase 8 | Opportunities | ✅ Complete |
 | Phase 9 | Subscriptions & Premium Features | ✅ Complete |
-| Phase 10 | Settings + Security | 🔴 Not Started |
+| Phase 10 | Settings + Security | ✅ Complete |
 | Phase 11 | PWA + Performance | 🔴 Not Started |
 | Phase 12 | Testing + Deploy | 🔴 Not Started |
 
