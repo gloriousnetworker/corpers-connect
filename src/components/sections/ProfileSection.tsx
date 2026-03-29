@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/query-keys';
@@ -21,6 +21,7 @@ export default function ProfileSection() {
   const authUser = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
   const router = useRouter();
 
   const [tab, setTab] = useState<Tab>('posts');
@@ -97,6 +98,23 @@ export default function ProfileSection() {
 
       {/* Settings & sign out */}
       <div className="mt-2 bg-surface border-t border-b border-border divide-y divide-border/60">
+        {/* Corper Plus upgrade / manage */}
+        <button
+          onClick={() => setActiveSection('subscriptions')}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left"
+        >
+          <Crown
+            className={`w-4 h-4 flex-shrink-0 ${user.subscriptionTier === 'PREMIUM' ? 'text-primary' : 'text-amber-500'}`}
+          />
+          <span className="text-sm font-medium text-foreground">
+            {user.subscriptionTier === 'PREMIUM' ? 'Manage Subscription' : 'Upgrade to Corper Plus'}
+          </span>
+          {user.subscriptionTier !== 'PREMIUM' && (
+            <span className="ml-auto text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+              ₦1,500/mo
+            </span>
+          )}
+        </button>
         <button
           onClick={() => router.push('/settings')}
           className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left"

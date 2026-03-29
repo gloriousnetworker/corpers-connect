@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Users, BadgeCheck } from 'lucide-react';
+import { Users, BadgeCheck, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getSuggestions } from '@/lib/api/discover';
 import { queryKeys } from '@/lib/query-keys';
@@ -107,6 +107,25 @@ export default function RightPanel() {
           <p className="text-xs text-foreground-secondary leading-relaxed">
             Connect with fellow corpers in your state via the Discover tab.
           </p>
+        </div>
+      )}
+
+      {/* Corper Plus promo — only shown to FREE tier users */}
+      {currentUser?.subscriptionTier !== 'PREMIUM' && (
+        <div className="bg-gradient-to-br from-amber-50 to-primary/5 rounded-2xl border border-amber-200/60 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <Crown size={16} className="text-amber-500 flex-shrink-0" />
+            <p className="text-xs font-bold text-foreground">Corper Plus</p>
+          </div>
+          <p className="text-xs text-foreground-secondary leading-relaxed">
+            Upgrade for CORPER badge, boosted visibility, and priority ranking.
+          </p>
+          <button
+            onClick={() => useUIStore.getState().setActiveSection('subscriptions')}
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            Learn more →
+          </button>
         </div>
       )}
     </div>

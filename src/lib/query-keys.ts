@@ -62,6 +62,7 @@ export const queryKeys = {
   plans: () => ['subscription-plans'] as const,
   subscription: () => ['subscription', 'me'] as const,
   subscriptionHistory: () => ['subscription', 'history'] as const,
+  level: () => ['subscription', 'level'] as const,
 
   // Calls
   callHistory: () => ['calls'] as const,

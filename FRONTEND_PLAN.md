@@ -766,18 +766,48 @@ src/__tests__/unit/marketplace.test.tsx
 - `src/components/layout/DesktopSideNav.tsx` — added "Opportunities" nav item
 - `src/components/layout/TopBar.tsx` — added "Opportunities" section title
 
-### Phase 9 — Subscriptions & Premium Features (Week 5)
+### Phase 9 — Subscriptions & Premium Features ✅ Complete
 **Goal:** Users can subscribe via Paystack; premium features gate correctly.
 
-- [ ] Plans page with clear benefit comparison
-- [ ] Paystack payment modal (inline embed)
-- [ ] Payment success/failure screens
-- [ ] `PremiumGate` component (blur + CTA overlay for locked features)
-- [ ] Current subscription status display
-- [ ] Cancel subscription flow
-- [ ] Subscription history
-- [ ] Level display and progression card on profile
-- [ ] Unit tests: PlanCard, PremiumGate
+- [x] Plans page with benefit comparison (Monthly ₦1,500 / Annual ₦14,000)
+- [x] Paystack redirect payment flow (initialize → redirect → verify → success/fail)
+- [x] PaymentPendingView — auto-verifies on Paystack redirect return
+- [x] PaymentSuccessView — celebration screen + CORPER badge unlock
+- [x] PaymentFailedView — error screen with retry + support link
+- [x] `PremiumGate` component (blur + CTA overlay for locked features)
+- [x] SubscriptionDashboard — FREE pitch + PREMIUM active card + days remaining
+- [x] Cancel subscription flow with warning about lost benefits
+- [x] Subscription history page (plan, amount, date range, status, Paystack ref)
+- [x] LevelProgressCard — requirements checklist + progress bar
+- [x] LevelProgressPage — all levels perks display
+- [x] Navigation: DesktopSideNav "Corper Plus" (Crown), ProfileSection upgrade/manage button, RightPanel promo card
+- [x] Unit tests: PlanCard (11), PremiumGate (7), LevelProgressCard (8) = 26 tests
+
+**Files added:**
+- `src/lib/api/subscriptions.ts` — full API module (8 functions)
+- `src/store/subscriptions.store.ts` — SPA view router (8 views)
+- `src/components/subscriptions/PlanCard.tsx`
+- `src/components/subscriptions/PremiumGate.tsx`
+- `src/components/subscriptions/LevelProgressCard.tsx`
+- `src/components/subscriptions/PlansPage.tsx`
+- `src/components/subscriptions/PaymentPendingView.tsx`
+- `src/components/subscriptions/PaymentSuccessView.tsx`
+- `src/components/subscriptions/PaymentFailedView.tsx`
+- `src/components/subscriptions/CancelConfirmPage.tsx`
+- `src/components/subscriptions/SubscriptionHistoryPage.tsx`
+- `src/components/subscriptions/LevelProgressPage.tsx`
+- `src/components/subscriptions/SubscriptionDashboard.tsx`
+- `src/components/subscriptions/SubscriptionsSection.tsx`
+- `src/__tests__/unit/subscriptions.test.tsx` — 26 tests
+
+**Files modified:**
+- `src/store/ui.store.ts` — added `subscriptions` to `ActiveSection`
+- `src/lib/query-keys.ts` — added `level` key
+- `src/components/dashboard/Dashboard.tsx` — registered SubscriptionsSection
+- `src/components/layout/DesktopSideNav.tsx` — added Crown "Corper Plus" nav item
+- `src/components/layout/TopBar.tsx` — added "Corper Plus" section title
+- `src/components/sections/ProfileSection.tsx` — added upgrade/manage button
+- `src/components/layout/RightPanel.tsx` — added FREE-tier promo card
 
 ### Phase 10 — Settings & Security (Week 5-6)
 **Goal:** Complete settings screens.
@@ -963,7 +993,7 @@ src/app/layout.tsx                        — renders <InstallPrompt> globally
 | Phase 6 | Calls | ✅ Complete |
 | Phase 7 | Marketplace | ✅ Complete |
 | Phase 8 | Opportunities | ✅ Complete |
-| Phase 9 | Subscriptions | 🔴 Not Started |
+| Phase 9 | Subscriptions & Premium Features | ✅ Complete |
 | Phase 10 | Settings + Security | 🔴 Not Started |
 | Phase 11 | PWA + Performance | 🔴 Not Started |
 | Phase 12 | Testing + Deploy | 🔴 Not Started |
