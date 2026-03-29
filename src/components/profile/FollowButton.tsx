@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { followUser, unfollowUser } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
+import { useHaptic } from '@/hooks/useHaptic';
 
 interface FollowButtonProps {
   userId: string;
@@ -19,6 +20,7 @@ export default function FollowButton({
   onToggle,
 }: FollowButtonProps) {
   const queryClient = useQueryClient();
+  const haptic = useHaptic();
   // Optimistic local state — avoids waiting for query refetch
   const [following, setFollowing] = useState(initialIsFollowing);
 
@@ -56,7 +58,7 @@ export default function FollowButton({
   if (following) {
     return (
       <button
-        onClick={() => mutation.mutate(false)}
+        onClick={() => { haptic.light(); mutation.mutate(false); }}
         disabled={mutation.isPending}
         className={`${sizeClass} rounded-full border border-border font-semibold text-foreground-secondary hover:bg-error/10 hover:text-error hover:border-error/30 transition-colors disabled:opacity-50`}
       >
@@ -67,7 +69,7 @@ export default function FollowButton({
 
   return (
     <button
-      onClick={() => mutation.mutate(true)}
+      onClick={() => { haptic.medium(); mutation.mutate(true); }}
       disabled={mutation.isPending}
       className={`${sizeClass} rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50`}
     >

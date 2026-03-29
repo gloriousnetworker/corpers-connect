@@ -45,6 +45,12 @@ const config: Config = {
         border: '#E5E7EB',
         input: '#F1F3F4',
         ring: '#008751',
+        // shadcn/ui compat aliases — map to our design tokens
+        muted: {
+          DEFAULT: '#F1F3F4',
+          foreground: '#9CA3AF',
+        },
+        background: '#F8F9FA',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],

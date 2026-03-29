@@ -30,6 +30,10 @@ export default withPWA({
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === 'development',
+  // Serve /offline when navigation fails with no cached response
+  fallbacks: {
+    document: '/offline',
+  },
   workboxOptions: {
     disableDevLogs: true,
     // Never precache the Firebase messaging SW — it must always be fetched

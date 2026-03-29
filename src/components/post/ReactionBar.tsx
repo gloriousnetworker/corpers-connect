@@ -9,6 +9,7 @@ import { bookmarkPost, unbookmarkPost } from '@/lib/api/posts';
 import { REACTION_EMOJI } from '@/lib/constants';
 import { queryKeys } from '@/lib/query-keys';
 import { formatCount } from '@/lib/utils';
+import { useHaptic } from '@/hooks/useHaptic';
 import type { Post } from '@/types/models';
 import type { ReactionType } from '@/types/enums';
 import ReactionPicker from './ReactionPicker';
@@ -23,6 +24,7 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
   const [pickerOpen, setPickerOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
+  const haptic = useHaptic();
 
   const invalidateFeed = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
@@ -79,6 +81,7 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
   });
 
   const handleReactionClick = () => {
+    haptic.medium();
     if (post.myReaction) {
       reactionMutation.mutate(null);
     } else {

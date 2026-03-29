@@ -66,13 +66,13 @@ export default function MarketplaceHome() {
         {/* Search + filter row */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search listings…"
-              className="w-full pl-9 pr-4 py-2 rounded-lg bg-muted border border-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-alt border border-transparent text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
           <button
@@ -81,7 +81,7 @@ export default function MarketplaceHome() {
               'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors',
               hasActiveFilters
                 ? 'bg-primary/10 border-primary text-primary'
-                : 'bg-muted border-transparent text-muted-foreground hover:text-foreground',
+                : 'bg-surface-alt border-transparent text-foreground-muted hover:text-foreground',
             ].join(' ')}
           >
             <SlidersHorizontal size={15} />
@@ -102,10 +102,10 @@ export default function MarketplaceHome() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="rounded-xl border border-border overflow-hidden animate-pulse">
-                <div className="aspect-square bg-muted" />
+                <div className="aspect-square bg-surface-alt" />
                 <div className="p-3 space-y-2">
-                  <div className="h-3 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-1/2" />
+                  <div className="h-3 bg-surface-alt rounded w-3/4" />
+                  <div className="h-4 bg-surface-alt rounded w-1/2" />
                 </div>
               </div>
             ))}
@@ -115,7 +115,7 @@ export default function MarketplaceHome() {
         {isError && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-4xl mb-3">😕</p>
-            <p className="text-muted-foreground text-sm">Failed to load listings. Pull to retry.</p>
+            <p className="text-foreground-muted text-sm">Failed to load listings. Pull to retry.</p>
           </div>
         )}
 
@@ -123,7 +123,7 @@ export default function MarketplaceHome() {
           <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
             <p className="text-5xl">🛒</p>
             <p className="font-semibold text-foreground">No listings found</p>
-            <p className="text-sm text-muted-foreground max-w-[240px]">
+            <p className="text-sm text-foreground-muted max-w-[240px]">
               {search || catFilter !== 'ALL' || hasActiveFilters
                 ? 'Try adjusting your search or filters.'
                 : 'Be the first to list something in your state!'}
@@ -156,7 +156,7 @@ export default function MarketplaceHome() {
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
-                  className="px-6 py-2.5 rounded-full border border-border text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+                  className="px-6 py-2.5 rounded-full border border-border text-sm font-medium text-foreground hover:bg-surface-alt disabled:opacity-50 transition-colors"
                 >
                   {isFetchingNextPage ? 'Loading…' : 'Load more'}
                 </button>
@@ -170,7 +170,7 @@ export default function MarketplaceHome() {
       <div className="px-4 pb-4">
         <button
           onClick={() => setView('my-listings')}
-          className="w-full py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-xl border border-dashed border-border text-sm text-foreground-muted hover:bg-surface-alt transition-colors flex items-center justify-center gap-2"
         >
           <Store size={16} />
           View my listings

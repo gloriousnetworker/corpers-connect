@@ -60,13 +60,13 @@ export default function OpportunitiesHome() {
         {/* Search row */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search jobs, companies…"
-              className="w-full pl-9 pr-4 py-2 rounded-lg bg-muted border border-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-alt border border-transparent text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
           <button
@@ -75,7 +75,7 @@ export default function OpportunitiesHome() {
               'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors',
               remoteOnly
                 ? 'bg-teal-100 border-teal-400 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
-                : 'bg-muted border-transparent text-muted-foreground hover:text-foreground',
+                : 'bg-surface-alt border-transparent text-foreground-muted hover:text-foreground',
             ].join(' ')}
           >
             <Wifi size={14} />
@@ -94,16 +94,16 @@ export default function OpportunitiesHome() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="p-4 rounded-2xl border border-border animate-pulse space-y-3">
                 <div className="flex gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-muted flex-shrink-0" />
+                  <div className="w-11 h-11 rounded-xl bg-surface-alt flex-shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-muted rounded w-1/3" />
-                    <div className="h-3 bg-muted rounded w-1/4" />
+                    <div className="h-3 bg-surface-alt rounded w-1/3" />
+                    <div className="h-3 bg-surface-alt rounded w-1/4" />
                   </div>
                 </div>
-                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-4 bg-surface-alt rounded w-3/4" />
                 <div className="flex gap-2">
-                  <div className="h-5 w-16 bg-muted rounded-full" />
-                  <div className="h-5 w-20 bg-muted rounded-full" />
+                  <div className="h-5 w-16 bg-surface-alt rounded-full" />
+                  <div className="h-5 w-20 bg-surface-alt rounded-full" />
                 </div>
               </div>
             ))}
@@ -113,7 +113,7 @@ export default function OpportunitiesHome() {
         {isError && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-4xl mb-3">😕</p>
-            <p className="text-muted-foreground text-sm">Failed to load opportunities.</p>
+            <p className="text-foreground-muted text-sm">Failed to load opportunities.</p>
           </div>
         )}
 
@@ -121,7 +121,7 @@ export default function OpportunitiesHome() {
           <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
             <p className="text-5xl">💼</p>
             <p className="font-semibold text-foreground">No opportunities found</p>
-            <p className="text-sm text-muted-foreground max-w-[240px]">
+            <p className="text-sm text-foreground-muted max-w-[240px]">
               {search || typeFilter !== 'ALL' || remoteOnly
                 ? 'Try adjusting your search or filters.'
                 : 'Be the first to post an opportunity for your fellow corps members!'}
@@ -151,7 +151,7 @@ export default function OpportunitiesHome() {
               <button
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                className="w-full py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+                className="w-full py-3 rounded-xl border border-dashed border-border text-sm text-foreground-muted hover:bg-surface-alt disabled:opacity-50 transition-colors"
               >
                 {isFetchingNextPage ? 'Loading…' : 'Load more'}
               </button>
@@ -164,19 +164,19 @@ export default function OpportunitiesHome() {
       <div className="px-4 pb-6 flex gap-2">
         <button
           onClick={() => setView('my-posts')}
-          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-foreground-muted hover:bg-surface-alt transition-colors flex items-center justify-center gap-1.5"
         >
           <Briefcase size={13} /> My Posts
         </button>
         <button
           onClick={() => setView('saved')}
-          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-foreground-muted hover:bg-surface-alt transition-colors flex items-center justify-center gap-1.5"
         >
           🔖 Saved
         </button>
         <button
           onClick={() => setView('my-applications')}
-          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+          className="flex-1 py-2.5 rounded-xl border border-dashed border-border text-xs text-foreground-muted hover:bg-surface-alt transition-colors flex items-center justify-center gap-1.5"
         >
           📋 Applications
         </button>
