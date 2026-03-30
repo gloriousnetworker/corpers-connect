@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { createConversation, searchUsers } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
 import type { Conversation } from '@/types/models';
@@ -128,7 +128,7 @@ export default function NewConversationModal({
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
                         {u.profilePicture ? (
                           <Image
-                            src={u.profilePicture}
+                            src={getAvatarUrl(u.profilePicture, 80)}
                             alt={initials}
                             width={40}
                             height={40}

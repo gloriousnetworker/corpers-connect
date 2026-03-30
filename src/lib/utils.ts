@@ -109,14 +109,30 @@ export function getFileExtension(filename: string): string {
 // ── URL utilities ─────────────────────────────────────────────────────────
 
 /**
- * Inserts Cloudinary delivery transformations (high-quality auto-format) into
- * a full Cloudinary URL so images are served at best quality without re-uploading.
+ * Inserts Cloudinary delivery transforms into a full Cloudinary URL.
+ * q_auto:good = auto quality balanced for speed (smaller than :best).
+ * f_auto      = serve WebP/AVIF to supported browsers automatically.
  * Non-Cloudinary URLs are returned unchanged.
  */
-export function getOptimisedUrl(url: string): string {
+export function getOptimisedUrl(url: string, width?: number): string {
   if (!url || !url.includes('res.cloudinary.com')) return url;
-  // Insert quality/format transforms right after /upload/
-  return url.replace('/upload/', '/upload/q_auto:best,f_auto/');
+  // Avoid double-inserting transforms
+  if (url.includes('/upload/f_auto') || url.includes('/upload/q_auto')) return url;
+  const widthTransform = width ? `,w_${width}` : '';
+  return url.replace('/upload/', `/upload/f_auto,q_auto:good${widthTransform}/`);
+}
+
+/**
+ * Returns a properly-sized Cloudinary URL for avatars/profile pictures.
+ * Serves a small square crop so full-resolution uploads aren't downloaded
+ * just to render a 40px avatar.
+ * @param size pixel size (default 80 — covers 1x and 2x @40px render)
+ */
+export function getAvatarUrl(url: string | null | undefined, size = 80): string {
+  if (!url) return '';
+  if (!url.includes('res.cloudinary.com')) return url;
+  if (url.includes('/upload/f_auto') || url.includes('/upload/q_auto')) return url;
+  return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,f_auto,q_auto:good/`);
 }
 
 export function buildCloudinaryUrl(

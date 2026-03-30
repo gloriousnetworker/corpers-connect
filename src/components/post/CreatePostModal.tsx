@@ -10,7 +10,7 @@ import { createPost, updatePost, uploadToCloudinary } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import {
   MAX_POST_LENGTH,
   MAX_MEDIA_PER_POST,
@@ -220,7 +220,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                 {currentUser?.profilePicture ? (
                   <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                     <Image
-                      src={currentUser.profilePicture}
+                      src={getAvatarUrl(currentUser.profilePicture, 80)}
                       alt={userInitials}
                       fill
                       className="object-cover"

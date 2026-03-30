@@ -15,7 +15,7 @@ import { getExistingSocket } from '@/lib/socket';
 import { useCallsStore, type ActiveCallData } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { IncomingCallData } from '@/store/calls.store';
 
 const RING_TIMEOUT_MS = 30_000;
@@ -111,7 +111,7 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
           <div className="relative w-32 h-32 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center border-4 border-primary/50">
             {call.caller.profilePicture ? (
               <Image
-                src={call.caller.profilePicture}
+                src={getAvatarUrl(call.caller.profilePicture, 256)}
                 alt={callerName}
                 fill
                 className="object-cover"

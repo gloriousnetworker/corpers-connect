@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Plus } from 'lucide-react';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { User } from '@/types/models';
 
 interface StoryRingProps {
@@ -104,7 +104,7 @@ export default function StoryRing({
                 )
               ) : author.profilePicture && !isAddButton ? (
                 <Image
-                  src={author.profilePicture}
+                  src={getAvatarUrl(author.profilePicture, 128)}
                   alt={initials}
                   fill
                   className="object-cover"

@@ -7,7 +7,7 @@ import { getSuggestions } from '@/lib/api/discover';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import FollowButton from '@/components/profile/FollowButton';
 
 export default function RightPanel() {
@@ -57,7 +57,7 @@ export default function RightPanel() {
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
                       {u.profilePicture ? (
                         <Image
-                          src={u.profilePicture}
+                          src={getAvatarUrl(u.profilePicture, 72)}
                           alt={initials}
                           width={36}
                           height={36}

@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { ListingStatus, ListingType } from '@/types/enums';
 import Image from 'next/image';
+import { getAvatarUrl } from '@/lib/utils';
 import ImageGallery from './ImageGallery';
 
 const TYPE_LABEL: Record<ListingType, string> = {
@@ -201,7 +202,7 @@ export default function ListingDetail() {
         >
           {listing.seller.profilePicture ? (
               <Image
-                src={listing.seller.profilePicture}
+                src={getAvatarUrl(listing.seller.profilePicture, 88)}
                 alt={listing.seller.firstName}
                 width={44}
                 height={44}

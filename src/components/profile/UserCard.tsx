@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import LevelBadge from './LevelBadge';
 import FollowButton from './FollowButton';
 import type { User } from '@/types/models';
@@ -29,7 +29,7 @@ export default function UserCard({ user, showFollow = true, onClick }: UserCardP
         <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
           {user.profilePicture ? (
             <Image
-              src={user.profilePicture}
+              src={getAvatarUrl(user.profilePicture, 88)}
               alt={initials}
               width={44}
               height={44}

@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { PhoneOff, Phone, Video } from 'lucide-react';
 import { getExistingSocket } from '@/lib/socket';
 import { useCallsStore } from '@/store/calls.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { OutboundCallData } from '@/store/calls.store';
 
 const RING_TIMEOUT_MS = 45_000; // Cancel automatically after 45 s
@@ -58,7 +58,7 @@ export default function OutboundCallOverlay({ call }: OutboundCallOverlayProps) 
           <div className="relative w-32 h-32 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center border-4 border-primary/50">
             {call.partner.profilePicture ? (
               <Image
-                src={call.partner.profilePicture}
+                src={getAvatarUrl(call.partner.profilePicture, 256)}
                 alt={partnerName}
                 fill
                 className="object-cover"

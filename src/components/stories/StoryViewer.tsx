@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { viewStory, deleteStory } from '@/lib/api/stories';
 import { queryKeys } from '@/lib/query-keys';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
 import StoryProgress from './StoryProgress';
@@ -285,13 +285,13 @@ export default function StoryViewer({
             </div>
           )}
 
-          {/* Hidden preloader for next video */}
+          {/* Preloader for next story video — use metadata only, not full download */}
           {nextStory && nextIsVideo && (
             <video
               key={`preload-${nextStory.id}`}
               ref={nextVideoRef}
               src={nextStory.mediaUrl}
-              preload="auto"
+              preload="metadata"
               className="hidden"
               muted
               playsInline
@@ -320,7 +320,7 @@ export default function StoryViewer({
             {/* Avatar */}
             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white bg-surface-alt flex-shrink-0">
               {author.profilePicture ? (
-                <Image src={author.profilePicture} alt={initials} width={36} height={36} className="object-cover w-full h-full" />
+                <Image src={getAvatarUrl(author.profilePicture, 72)} alt={initials} width={36} height={36} className="object-cover w-full h-full" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-primary/20">
                   <span className="text-xs font-bold text-white uppercase">{initials}</span>

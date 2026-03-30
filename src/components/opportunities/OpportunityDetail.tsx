@@ -15,6 +15,7 @@ import { useOpportunitiesStore } from '@/store/opportunities.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { OpportunityType } from '@/types/enums';
+import { getAvatarUrl } from '@/lib/utils';
 import ApplyModal from './ApplyModal';
 
 const TYPE_STYLE: Record<OpportunityType, { label: string; cls: string }> = {
@@ -255,7 +256,7 @@ export default function OpportunityDetail() {
         >
           {opp.author.profilePicture ? (
             <Image
-              src={opp.author.profilePicture}
+              src={getAvatarUrl(opp.author.profilePicture, 80)}
               alt={opp.author.firstName}
               width={40}
               height={40}

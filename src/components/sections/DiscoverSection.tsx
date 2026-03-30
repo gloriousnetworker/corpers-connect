@@ -10,7 +10,7 @@ import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 import LevelBadge from '@/components/profile/LevelBadge';
 import FollowButton from '@/components/profile/FollowButton';
-import { getInitials, debounce } from '@/lib/utils';
+import { getInitials, debounce, getAvatarUrl } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils';
 import type { DiscoverUser } from '@/lib/api/discover';
 import type { Post, MarketplaceListing } from '@/types/models';
@@ -328,7 +328,7 @@ function DiscoverUserRow({
         <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
           {user.profilePicture ? (
             <Image
-              src={user.profilePicture}
+              src={getAvatarUrl(user.profilePicture, 88)}
               alt={initials}
               width={44}
               height={44}
@@ -384,7 +384,7 @@ function SuggestionChip({
       >
         {user.profilePicture ? (
           <Image
-            src={user.profilePicture}
+            src={getAvatarUrl(user.profilePicture, 128)}
             alt={initials}
             width={64}
             height={64}
@@ -454,7 +454,7 @@ function SearchPostRow({ post }: { post: Post }) {
       <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
         {post.author.profilePicture ? (
           <Image
-            src={post.author.profilePicture}
+            src={getAvatarUrl(post.author.profilePicture, 72)}
             alt={initials}
             width={36}
             height={36}

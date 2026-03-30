@@ -6,7 +6,7 @@ import {
   MessageSquare, PhoneMissed, Star, Bell,
   TrendingUp, ShoppingBag, CheckCircle, XCircle,
 } from 'lucide-react';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { NotificationType } from '@/types/enums';
 import type { Notification } from '@/types/models';
 
@@ -69,7 +69,7 @@ export default function NotificationItem({ notification, onPress }: Notification
           <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
             {actor.profilePicture ? (
               <Image
-                src={actor.profilePicture}
+                src={getAvatarUrl(actor.profilePicture, 80)}
                 alt={actorInitials}
                 width={40}
                 height={40}

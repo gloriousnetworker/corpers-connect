@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
-import { getInitials, formatCount } from '@/lib/utils';
+import { getInitials, formatCount, getAvatarUrl } from '@/lib/utils';
 import LevelBadge from './LevelBadge';
 import CorperTagBadge from './CorperTagBadge';
 import type { User } from '@/types/models';
@@ -37,7 +37,7 @@ export default function ProfileHeader({
           <div className="w-20 h-20 rounded-full overflow-hidden bg-surface border-4 border-surface flex items-center justify-center flex-shrink-0">
             {user.profilePicture ? (
               <Image
-                src={user.profilePicture}
+                src={getAvatarUrl(user.profilePicture, 200)}
                 alt={initials}
                 width={80}
                 height={80}

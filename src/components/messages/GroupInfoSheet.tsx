@@ -12,7 +12,7 @@ import {
   searchUsers,
 } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
 import { ParticipantRole } from '@/types/enums';
@@ -190,7 +190,7 @@ export default function GroupInfoSheet({
                       >
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
                           {u.profilePicture ? (
-                            <Image src={u.profilePicture} alt={initials} width={32} height={32} className="object-cover" />
+                            <Image src={getAvatarUrl(u.profilePicture, 64)} alt={initials} width={32} height={32} className="object-cover" />
                           ) : (
                             <span className="text-xs font-bold text-primary uppercase">{initials}</span>
                           )}
@@ -215,7 +215,7 @@ export default function GroupInfoSheet({
                     <div key={p.userId} className="flex items-center gap-3 px-4 py-3">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
                         {p.user.profilePicture ? (
-                          <Image src={p.user.profilePicture} alt={initials} width={40} height={40} className="object-cover w-full h-full" />
+                          <Image src={getAvatarUrl(p.user.profilePicture, 80)} alt={initials} width={40} height={40} className="object-cover w-full h-full" />
                         ) : (
                           <span className="text-sm font-bold text-primary uppercase">{initials}</span>
                         )}

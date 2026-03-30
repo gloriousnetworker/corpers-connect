@@ -15,7 +15,7 @@ import { getComments, addComment } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
 import { formatCount } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import CommentItem from './CommentItem';
 import type { Comment } from '@/types/models';
 import Image from 'next/image';
@@ -218,7 +218,7 @@ export default function CommentSheet({
                 {currentUser?.profilePicture ? (
                   <div className="relative w-8 h-8 rounded-full overflow-hidden">
                     <Image
-                      src={currentUser.profilePicture}
+                      src={getAvatarUrl(currentUser.profilePicture, 64)}
                       alt={userInitials}
                       fill
                       className="object-cover"

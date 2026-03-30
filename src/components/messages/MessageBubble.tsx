@@ -12,7 +12,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -189,12 +189,19 @@ export default function MessageBubble({
       return (
         <button
           onClick={() => setPreviewUrl(message.mediaUrl!)}
-          className="relative w-52 h-52 block bg-black"
+          className="relative w-52 h-52 block bg-black overflow-hidden rounded-xl"
           aria-label="Play video"
         >
-          <video src={message.mediaUrl} className="w-full h-full object-cover" />
+          {/* preload="none" — don't download video bytes just to show a thumbnail */}
+          <video
+            src={message.mediaUrl}
+            preload="none"
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <svg className="w-6 h-6 text-white translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
@@ -244,7 +251,7 @@ export default function MessageBubble({
               message.sender.profilePicture ? (
                 <div className="relative w-7 h-7 rounded-full overflow-hidden">
                   <Image
-                    src={message.sender.profilePicture}
+                    src={getAvatarUrl(message.sender.profilePicture, 56)}
                     alt={initials}
                     fill
                     className="object-cover"

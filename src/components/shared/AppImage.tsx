@@ -1,26 +1,13 @@
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn, getOptimisedUrl } from '@/lib/utils';
 
 /**
- * A base64 SVG shimmer used as the blur placeholder for every AppImage.
- * It renders a grey rectangle that animates while the real image loads,
- * giving the same shimmer effect as the `.skeleton` CSS class.
+ * Pre-computed base64 shimmer placeholder — avoids calling Buffer.from() at
+ * runtime (which can cause issues in edge runtimes and costs a tiny bit of CPU
+ * on every render).
  */
-const SHIMMER_SVG = `
-<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#E8EBEF" stop-opacity="1"/>
-      <stop offset="50%"  stop-color="#F1F3F5" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#E8EBEF" stop-opacity="1"/>
-      <animateTransform attributeName="gradientTransform" type="translate"
-        from="-1 0" to="2 0" dur="1.5s" repeatCount="indefinite"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="400" fill="url(#g)"/>
-</svg>`;
-
-const BLUR_DATA_URL = `data:image/svg+xml;base64,${Buffer.from(SHIMMER_SVG).toString('base64')}`;
+const BLUR_DATA_URL =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRThFQkVGIiBzdG9wLW9wYWNpdHk9IjEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI0YxRjNGNSIgc3RvcC1vcGFjaXR5PSIxIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRThFQkVGIiBzdG9wLW9wYWNpdHk9IjEiLz48YW5pbWF0ZVRyYW5zZm9ybSBhdHRyaWJ1dGVOYW1lPSJncmFkaWVudFRyYW5zZm9ybSIgdHlwZT0idHJhbnNsYXRlIiBmcm9tPSItMSAwIiB0bz0iMiAwIiBkdXI9IjEuNXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4=';
 
 interface AppImageProps {
   src: string | null | undefined;
@@ -39,9 +26,9 @@ interface AppImageProps {
 /**
  * AppImage — drop-in replacement for `next/image` that:
  *  1. Shows a shimmer blur placeholder while loading
- *  2. Falls back to a grey background if the src is empty
+ *  2. Falls back to a grey skeleton if src is empty/null
  *  3. Lazy-loads by default (priority=false)
- *  4. All user-content images should use this component
+ *  4. Automatically applies Cloudinary f_auto,q_auto:good transforms
  */
 export default function AppImage({
   src,
@@ -73,7 +60,7 @@ export default function AppImage({
 
   return (
     <Image
-      src={src}
+      src={getOptimisedUrl(src, width)}
       alt={alt}
       fill={fill}
       width={!fill ? width : undefined}

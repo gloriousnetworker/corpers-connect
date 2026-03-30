@@ -3,7 +3,7 @@
 import { Image as ImageIcon, Smile, PenSquare } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import Image from 'next/image';
 import InfiniteFeed from '@/components/feed/InfiniteFeed';
 import CreatePostModal from '@/components/post/CreatePostModal';
@@ -29,7 +29,7 @@ export default function FeedSection() {
           <div className="flex-shrink-0">
             {user?.profilePicture ? (
               <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                <Image src={user.profilePicture} alt={initials} fill className="object-cover" />
+                <Image src={getAvatarUrl(user.profilePicture, 80)} alt={initials} fill className="object-cover" sizes="40px" />
               </div>
             ) : (
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

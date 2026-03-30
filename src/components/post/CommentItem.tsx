@@ -8,7 +8,7 @@ import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { deleteComment, reactToComment, removeCommentReaction } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import type { Comment } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
@@ -119,7 +119,7 @@ export default function CommentItem({ postId, comment, onReply, onDeleted, isRep
       <div className="flex-shrink-0 mt-0.5">
         {author.profilePicture ? (
           <div className="relative w-8 h-8 rounded-full overflow-hidden">
-            <Image src={author.profilePicture} alt={initials} fill className="object-cover" />
+            <Image src={getAvatarUrl(author.profilePicture, 64)} alt={initials} fill className="object-cover" />
           </div>
         ) : (
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">

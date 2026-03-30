@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { getOpportunityApplications, updateApplicationStatus } from '@/lib/api/opportunities';
 import { useOpportunitiesStore } from '@/store/opportunities.store';
 import { ApplicationStatus } from '@/types/enums';
+import { getAvatarUrl } from '@/lib/utils';
 import type { OpportunityApplication } from '@/types/models';
 
 const STATUS_OPTS: { value: ApplicationStatus; label: string }[] = [
@@ -114,7 +115,7 @@ export default function ApplicationsViewer() {
             <div className="flex items-center gap-3">
               {app.applicant?.profilePicture ? (
                 <Image
-                  src={app.applicant.profilePicture}
+                  src={getAvatarUrl(app.applicant.profilePicture, 80)}
                   alt={app.applicant.firstName}
                   width={40}
                   height={40}

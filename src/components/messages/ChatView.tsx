@@ -25,7 +25,7 @@ import { useCallsStore } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
 import { getExistingSocket } from '@/lib/socket';
-import { getInitials, formatRelativeTime } from '@/lib/utils';
+import { getInitials, formatRelativeTime, getAvatarUrl } from '@/lib/utils';
 import { CallType, ConversationType, MessageType } from '@/types/enums';
 import type { Conversation, Message } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
@@ -760,7 +760,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
                   <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                     {dmPartner.profilePicture ? (
                       <Image
-                        src={dmPartner.profilePicture}
+                        src={getAvatarUrl(dmPartner.profilePicture, 192)}
                         alt={headerName}
                         width={96}
                         height={96}

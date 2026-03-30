@@ -16,7 +16,7 @@ import { getExistingSocket } from '@/lib/socket';
 import { useCallsStore } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import CallDurationTimer from './CallDurationTimer';
 import CallControls from './CallControls';
 import type { ActiveCallData } from '@/store/calls.store';
@@ -82,7 +82,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center">
                   {call.partner.profilePicture ? (
                     <Image
-                      src={call.partner.profilePicture}
+                      src={getAvatarUrl(call.partner.profilePicture, 192)}
                       alt={partnerName}
                       width={96}
                       height={96}
@@ -111,7 +111,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
           <div className="w-28 h-28 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center border-4 border-primary/30">
             {call.partner.profilePicture ? (
               <Image
-                src={call.partner.profilePicture}
+                src={getAvatarUrl(call.partner.profilePicture, 224)}
                 alt={partnerName}
                 width={112}
                 height={112}

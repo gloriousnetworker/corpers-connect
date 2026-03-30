@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Globe, Users, Lock, MapPin } from 'lucide-react';
 import { useUIStore } from '@/store/ui.store';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
 import MediaGrid from './MediaGrid';
@@ -65,15 +65,16 @@ export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
             onClick={() => setViewingUser(author.id, 'feed')}
             className="flex items-center gap-3 min-w-0 text-left"
           >
-            {/* Avatar */}
+            {/* Avatar — use sized Cloudinary URL (80px covers 2x @40px) */}
             <div className="flex-shrink-0">
               {author.profilePicture ? (
                 <div className="relative w-10 h-10 rounded-full overflow-hidden">
                   <Image
-                    src={author.profilePicture}
+                    src={getAvatarUrl(author.profilePicture, 80)}
                     alt={initials}
                     fill
                     className="object-cover"
+                    sizes="40px"
                   />
                 </div>
               ) : (

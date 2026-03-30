@@ -6,7 +6,7 @@ import { Film, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-rea
 import Image from 'next/image';
 import { getReels } from '@/lib/api/reels';
 import { queryKeys } from '@/lib/query-keys';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { Post } from '@/types/models';
 
 export default function ReelsSection() {
@@ -173,6 +173,9 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
               loop
               playsInline
               muted={muted}
+              // Active reel: preload metadata so first frame shows immediately.
+              // Inactive reels: preload nothing to avoid wasting bandwidth.
+              preload={isActive ? 'metadata' : 'none'}
               className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
@@ -200,7 +203,7 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
             <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border-2 border-white/50 flex-shrink-0">
               {reel.author.profilePicture ? (
                 <Image
-                  src={reel.author.profilePicture}
+                  src={getAvatarUrl(reel.author.profilePicture, 72)}
                   alt={initials}
                   width={36}
                   height={36}

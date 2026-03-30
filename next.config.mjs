@@ -9,6 +9,16 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
+    // Explicit sizes so Next.js generates a tight srcset covering common mobile
+    // screens (390–430px) and desktop feed widths (680px).
+    // Without this, Next.js defaults generate 640/750/828/1080/1200… wasting
+    // bandwidth on images that will never be that large in the feed.
+    deviceSizes: [390, 430, 680, 828, 1080],
+    imageSizes: [40, 80, 160, 320, 480],
+    // 31-day browser cache for optimised images (Cloudinary CDN handles freshness)
+    minimumCacheTTL: 60 * 60 * 24 * 31,
+    // Serve AVIF where supported — better compression than WebP
+    formats: ['image/avif', 'image/webp'],
   },
   reactStrictMode: true,
   // Dev-only proxy: routes /api/proxy/* → Railway backend to avoid CORS in local dev.

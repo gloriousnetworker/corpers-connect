@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import Image from 'next/image';
 import { Users } from 'lucide-react';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import type { Conversation } from '@/types/models';
 import { ConversationType, MessageType } from '@/types/enums';
 
@@ -118,7 +118,7 @@ export default function ConversationItem({
         <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
           {display.avatar ? (
             <Image
-              src={display.avatar}
+              src={getAvatarUrl(display.avatar, 96)}
               alt={display.name}
               width={48}
               height={48}

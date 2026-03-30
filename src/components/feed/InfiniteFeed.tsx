@@ -37,12 +37,18 @@ export default function InfiniteFeed() {
   } = useInfiniteQuery({
     queryKey: queryKeys.feed(),
     queryFn: ({ pageParam }) =>
-      getFeed({ cursor: pageParam as string | undefined }),
+      getFeed({
+        cursor: pageParam as string | undefined,
+        // Fetch only 10 posts on the first page so the feed paints faster.
+        // Subsequent pages load 20 to reduce round trips while scrolling.
+        limit: pageParam ? 20 : 10,
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) =>
       last.hasMore ? (last.nextCursor ?? undefined) : undefined,
-    staleTime: 1000 * 60 * 2, // 2 min
-    refetchInterval: 1000 * 60 * 2, // background re-poll every 2 min
+    staleTime: 1000 * 60 * 3,       // 3 min — less aggressive than before
+    refetchInterval: 1000 * 60 * 5, // background poll every 5 min (was 2 min)
+    gcTime: 1000 * 60 * 15,         // keep cached feed in memory for 15 min
   });
 
   const posts = data?.pages.flatMap((p) => p.items) ?? [];
