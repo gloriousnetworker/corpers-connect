@@ -117,6 +117,10 @@ api.interceptors.response.use(
         safeLocalStorage().remove(STORAGE_KEYS.USER);
         safeLocalStorage().remove(STORAGE_KEYS.SESSION_FLAG);
 
+        // Clear session cookie so middleware doesn't serve stale protected pages
+        if (typeof document !== 'undefined') {
+          document.cookie = 'cc_session=; path=/; max-age=0; SameSite=Lax';
+        }
         // Navigate to login (without importing Next.js router — use window)
         if (typeof window !== 'undefined') {
           window.location.href = '/login';

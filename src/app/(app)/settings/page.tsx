@@ -98,8 +98,8 @@ function ChangePasswordSection() {
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
       setOpen(false);
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? 'Failed to change password');
+    onError: (err: Error) => {
+      toast.error(err.message ?? 'Failed to change password');
     },
   });
 
@@ -198,17 +198,20 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [secret, setSecret] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [phase, setPhase] = useState<'idle' | 'setup' | 'disable'>('idle');
+  const [showSecret, setShowSecret] = useState(false);
 
   const initMutation = useMutation({
     mutationFn: initiate2FA,
     onSuccess: (data) => {
       setQrUrl(data.qrCodeUrl);
+      setSecret(data.secret ?? null);
       setPhase('setup');
     },
-    onError: () => toast.error('Failed to initiate 2FA setup'),
+    onError: (err: Error) => toast.error(err.message ?? 'Failed to initiate 2FA setup'),
   });
 
   const confirmMutation = useMutation({
@@ -218,10 +221,12 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
       queryClient.invalidateQueries({ queryKey: queryKeys.me() });
       setPhase('idle');
       setTotpCode('');
+      setSecret(null);
+      setQrUrl(null);
       setOpen(false);
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? 'Invalid code. Try again.');
+    onError: (err: Error) => {
+      toast.error(err.message ?? 'Invalid code. Try again.');
     },
   });
 
@@ -234,8 +239,8 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
       setDisableCode('');
       setOpen(false);
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? 'Invalid code. Try again.');
+    onError: (err: Error) => {
+      toast.error(err.message ?? 'Invalid code. Try again.');
     },
   });
 
@@ -288,14 +293,37 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
                 </div>
               )}
               {qrUrl && (
-                <div className="flex justify-center py-2">
-                  <Image
-                    src={qrUrl}
-                    alt="2FA QR code"
-                    width={180}
-                    height={180}
-                    className="rounded-xl border border-border"
-                  />
+                <div className="space-y-3">
+                  <div className="flex justify-center py-2">
+                    {/* Use plain img — next/image blocks data: URLs and unknown QR hosts */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrUrl}
+                      alt="2FA QR code"
+                      width={180}
+                      height={180}
+                      className="rounded-xl border border-border"
+                    />
+                  </div>
+                  {secret && (
+                    <div className="bg-surface-alt border border-border rounded-xl p-3 space-y-1">
+                      <p className="text-xs text-foreground-muted font-medium">
+                        Can&apos;t scan? Enter this key manually:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`font-mono text-sm font-bold tracking-wider flex-1 select-all break-all ${showSecret ? 'text-foreground' : 'blur-sm select-none'}`}>
+                          {secret}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowSecret((v) => !v)}
+                          className="text-xs text-primary flex-shrink-0"
+                        >
+                          {showSecret ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <input
@@ -669,7 +697,7 @@ function DeleteAccountSection() {
     onSuccess: () => {
       toast.success('Account deleted');
       clearAuth();
-      router.replace('/auth/login');
+      router.replace('/login');
     },
     onError: () => toast.error('Failed to delete account. Please try again.'),
   });
@@ -732,12 +760,12 @@ function LogoutButton() {
     mutationFn: logout,
     onSuccess: () => {
       clearAuth();
-      router.replace('/auth/login');
+      router.replace('/login');
     },
     onError: () => {
       // Even if server logout fails, clear local auth state
       clearAuth();
-      router.replace('/auth/login');
+      router.replace('/login');
     },
   });
 

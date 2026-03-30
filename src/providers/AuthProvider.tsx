@@ -40,8 +40,22 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         const user = await getMe();
         setAuth(user, tokens.accessToken, tokens.refreshToken);
       } catch {
-        // Token invalid/expired — clear everything
+        // Token invalid/expired — clear everything then redirect to login.
+        // clearAuth() expires the session cookie; window.location forces a full
+        // navigation so middleware re-evaluates and serves the login page cleanly
+        // instead of the user seeing the dashboard with failed/empty queries.
         clearAuth();
+        if (typeof window !== 'undefined') {
+          const { pathname } = window.location;
+          const isAuthPage =
+            pathname === '/login' ||
+            pathname.startsWith('/register') ||
+            pathname.startsWith('/forgot-password') ||
+            pathname.startsWith('/reset-password');
+          if (!isAuthPage) {
+            window.location.replace('/login');
+          }
+        }
       }
     }
 
