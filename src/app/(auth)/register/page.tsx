@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { registerInitiateSchema, type RegisterInitiateInput } from '@/lib/validators';
-import { registerInitiate } from '@/lib/api/auth';
+import { lookupStateCode } from '@/lib/api/auth';
 import { useUIStore } from '@/store/ui.store';
 
 export default function RegisterPage() {
@@ -31,18 +31,17 @@ export default function RegisterPage() {
   const password = watch('password', '');
 
   const mutation = useMutation({
-    mutationFn: (data: RegisterInitiateInput) => registerInitiate(data),
-    onSuccess: (res, vars) => {
+    mutationFn: (data: RegisterInitiateInput) => lookupStateCode(data.stateCode),
+    onSuccess: (nyscData, vars) => {
       setRegistration({
         stateCode: vars.stateCode,
         password: vars.password,
-        otpToken: res.otpToken,
-        maskedEmail: res.maskedEmail,
+        nyscData,
       });
-      router.push('/register/confirm');
+      router.push('/register/details');
     },
     onError: (err: Error) => {
-      toast.error(err.message || 'Registration failed. Please try again.');
+      toast.error(err.message || 'State code not found. Please check and try again.');
     },
   });
 
