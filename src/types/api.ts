@@ -34,9 +34,10 @@ export interface LoginWith2FAResponse {
 }
 
 export interface RegisterInitiateResponse {
-  otpToken: string;
   email: string;
   maskedEmail: string;
+  message: string;
+  devOtp?: string; // only present when EXPOSE_DEV_OTP=true
 }
 
 export interface NyscLookupResponse {

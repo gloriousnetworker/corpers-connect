@@ -21,10 +21,10 @@ export default function RegisterConfirmPage() {
   const { setAuth } = useAuthStore();
 
   useEffect(() => {
-    if (!registration.otpToken) {
+    if (!registration.maskedEmail) {
       router.replace('/register');
     }
-  }, [registration.otpToken, router]);
+  }, [registration.maskedEmail, router]);
 
   const {
     handleSubmit,
