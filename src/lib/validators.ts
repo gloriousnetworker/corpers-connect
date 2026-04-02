@@ -38,7 +38,7 @@ export const registerInitiateSchema = z
   });
 
 export const registerVerifySchema = z.object({
-  otpToken: z.string().min(1),
+  stateCode: z.string().min(1),
   otp: otpSchema,
 });
 

@@ -33,7 +33,7 @@ export default function RegisterConfirmPage() {
     formState: { errors },
   } = useForm<RegisterVerifyInput>({
     resolver: zodResolver(registerVerifySchema),
-    defaultValues: { otpToken: registration.otpToken, otp: '' },
+    defaultValues: { stateCode: registration.stateCode, otp: '' },
   });
 
   const otp = watch('otp', '');

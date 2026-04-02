@@ -20,6 +20,7 @@ export async function lookupStateCode(stateCode: string): Promise<NyscLookupResp
 export async function registerInitiate(payload: {
   stateCode: string;
   password: string;
+  confirmPassword: string;
 }): Promise<RegisterInitiateResponse> {
   const { data } = await api.post<ApiResponse<RegisterInitiateResponse>>(
     '/auth/register/initiate',
@@ -29,7 +30,7 @@ export async function registerInitiate(payload: {
 }
 
 export async function registerVerify(payload: {
-  otpToken: string;
+  stateCode: string;
   otp: string;
 }): Promise<LoginResponse> {
   const { data } = await api.post<ApiResponse<LoginResponse>>(

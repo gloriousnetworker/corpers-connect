@@ -22,7 +22,7 @@ export default function RegisterDetailsPage() {
   }, [stateCode, nyscData, router]);
 
   const mutation = useMutation({
-    mutationFn: () => registerInitiate({ stateCode, password }),
+    mutationFn: () => registerInitiate({ stateCode, password, confirmPassword: password }),
     onSuccess: (res) => {
       setRegistration({ otpToken: res.otpToken, maskedEmail: res.maskedEmail });
       router.push('/register/confirm');
