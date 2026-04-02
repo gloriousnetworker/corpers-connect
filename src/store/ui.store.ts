@@ -65,6 +65,8 @@ interface UIState {
   incrementUnreadMessages: () => void;
 }
 
+const REGISTRATION_KEY = 'cc_reg';
+
 const defaultRegistration: RegistrationState = {
   stateCode: '',
   password: '',
@@ -72,6 +74,28 @@ const defaultRegistration: RegistrationState = {
   otpToken: '',
   maskedEmail: '',
 };
+
+function loadRegistration(): RegistrationState {
+  if (typeof window === 'undefined') return defaultRegistration;
+  try {
+    const raw = sessionStorage.getItem(REGISTRATION_KEY);
+    return raw ? (JSON.parse(raw) as RegistrationState) : defaultRegistration;
+  } catch {
+    return defaultRegistration;
+  }
+}
+
+function saveRegistration(state: RegistrationState) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(REGISTRATION_KEY, JSON.stringify(state));
+  } catch { /* ignore */ }
+}
+
+function clearRegistrationStorage() {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(REGISTRATION_KEY);
+}
 
 const defaultPasswordReset: PasswordResetState = {
   email: '',
@@ -95,12 +119,17 @@ export const useUIStore = create<UIState>((set) => ({
   createPostOpen: false,
   setCreatePostOpen: (open) => set({ createPostOpen: open }),
 
-  registration: defaultRegistration,
+  registration: loadRegistration(),
   setRegistration: (data) =>
-    set((state) => ({
-      registration: { ...state.registration, ...data },
-    })),
-  clearRegistration: () => set({ registration: defaultRegistration }),
+    set((state) => {
+      const next = { ...state.registration, ...data };
+      saveRegistration(next);
+      return { registration: next };
+    }),
+  clearRegistration: () => {
+    clearRegistrationStorage();
+    set({ registration: defaultRegistration });
+  },
 
   passwordReset: defaultPasswordReset,
   setPasswordReset: (data) =>
