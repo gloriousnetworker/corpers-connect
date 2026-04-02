@@ -43,7 +43,7 @@ export default function RegisterConfirmPage() {
     onSuccess: (res) => {
       setAuth(res.user, res.accessToken, res.refreshToken);
       clearRegistration();
-      router.replace('/register/verify');
+      router.replace('/welcome');
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Invalid OTP. Please try again.');

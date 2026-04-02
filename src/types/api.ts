@@ -37,7 +37,6 @@ export interface RegisterInitiateResponse {
   email: string;
   maskedEmail: string;
   message: string;
-  devOtp?: string; // only present when EXPOSE_DEV_OTP=true
 }
 
 export interface NyscLookupResponse {

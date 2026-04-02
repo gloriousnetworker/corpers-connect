@@ -24,11 +24,7 @@ export default function RegisterDetailsPage() {
   const mutation = useMutation({
     mutationFn: () => registerInitiate({ stateCode, password, confirmPassword: password }),
     onSuccess: (res) => {
-      // Backend has no otpToken — use maskedEmail as the guard for confirm page
       setRegistration({ maskedEmail: res.maskedEmail, otpToken: res.maskedEmail });
-      if (res.devOtp) {
-        toast.info(`Dev OTP: ${res.devOtp}`, { duration: 60000 });
-      }
       router.push('/register/confirm');
     },
     onError: (err: Error) => {
