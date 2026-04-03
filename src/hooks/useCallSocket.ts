@@ -15,7 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { getExistingSocket } from '@/lib/socket';
+import { getExistingCallsSocket } from '@/lib/socket';
 import { useAuthStore } from '@/store/auth.store';
 import { useCallsStore } from '@/store/calls.store';
 import { CallType } from '@/types/enums';
@@ -51,7 +51,7 @@ export function useCallSocket() {
     const onIncoming = (payload: IncomingCallPayload) => {
       // If already in an active call → auto-send busy
       if (activeRef.current) {
-        const socket = getExistingSocket();
+        const socket = getExistingCallsSocket();
         socket?.emit('call:busy', { callId: payload.callId });
         return;
       }
@@ -133,7 +133,7 @@ export function useCallSocket() {
       setOutbound(null);
     };
 
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     if (!socket) return;
 
     socket.on('call:incoming',  onIncoming);

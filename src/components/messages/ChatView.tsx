@@ -25,7 +25,7 @@ import { useMessagesStore } from '@/store/messages.store';
 import { useCallsStore } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
-import { getExistingSocket } from '@/lib/socket';
+import { getExistingSocket, getExistingCallsSocket } from '@/lib/socket';
 import { getInitials, formatRelativeTime, getAvatarUrl } from '@/lib/utils';
 import { CallType, ConversationType, MessageType } from '@/types/enums';
 import type { Conversation, Message } from '@/types/models';
@@ -114,7 +114,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     if (!user || !dmPartner) return;
     if (activeCall || outboundCall) return; // already in a call
 
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     if (!socket) return;
 
     socket.emit(

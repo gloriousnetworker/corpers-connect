@@ -9,7 +9,7 @@
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { PhoneOff, Phone, Video } from 'lucide-react';
-import { getExistingSocket } from '@/lib/socket';
+import { getExistingCallsSocket } from '@/lib/socket';
 import { useCallsStore } from '@/store/calls.store';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { OutboundCallData } from '@/store/calls.store';
@@ -26,7 +26,7 @@ export default function OutboundCallOverlay({ call }: OutboundCallOverlayProps) 
 
   const cancel = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     socket?.emit('call:no-answer', { callId: call.callId });
     setOutbound(null);
   };

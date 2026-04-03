@@ -11,7 +11,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Phone, PhoneOff, Video } from 'lucide-react';
-import { getExistingSocket } from '@/lib/socket';
+import { getExistingCallsSocket } from '@/lib/socket';
 import { useCallsStore, type ActiveCallData } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
@@ -43,13 +43,13 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
   }, [setIncoming]);
 
   const handleReject = useCallback(() => {
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     socket?.emit('call:reject', { callId: call.callId });
     dismiss();
   }, [call.callId, dismiss]);
 
   const handleAccept = useCallback(async () => {
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     if (!socket) return;
 
     dismiss();
@@ -82,7 +82,7 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
   // Auto-timeout
   useEffect(() => {
     timeoutRef.current = setTimeout(() => {
-      const socket = getExistingSocket();
+      const socket = getExistingCallsSocket();
       // Receiver side: just dismiss; backend marks MISSED when caller sends call:no-answer
       dismiss();
     }, RING_TIMEOUT_MS);

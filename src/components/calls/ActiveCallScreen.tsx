@@ -12,7 +12,7 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { getExistingSocket } from '@/lib/socket';
+import { getExistingCallsSocket } from '@/lib/socket';
 import { useCallsStore } from '@/store/calls.store';
 import { useAgora } from '@/hooks/useAgora';
 import { refreshCallToken } from '@/lib/api/calls';
@@ -55,7 +55,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
   }, []); // intentionally run once
 
   const handleEnd = async () => {
-    const socket = getExistingSocket();
+    const socket = getExistingCallsSocket();
     socket?.emit('call:end', { callId: call.callId });
     await leave();
     clearCalls();

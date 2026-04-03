@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getSocket, disconnectSocket } from '@/lib/socket';
+import { getSocket, getCallsSocket, disconnectSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/api/client';
 import { useAuthStore } from '@/store/auth.store';
 import { useMessagesStore } from '@/store/messages.store';
@@ -35,6 +35,8 @@ export function useSocket() {
     if (!user || !token) return;
 
     const socket = getSocket(token);
+    // Eagerly init the calls socket so it's ready before the first incoming call
+    getCallsSocket(token);
 
     // ── Incoming new message ──────────────────────────────────────────────────
     socket.on('message:new', (rawMessage: Record<string, unknown>) => {
