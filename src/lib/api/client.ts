@@ -91,7 +91,8 @@ api.interceptors.response.use(
 
         const { data } = await axios.post<{ success: true; data: RefreshResponse }>(
           `${API_URL}/api/v1/auth/refresh`,
-          { refreshToken }
+          { refreshToken },
+          { timeout: 10_000 }
         );
 
         const newAccessToken = data.data.accessToken;
