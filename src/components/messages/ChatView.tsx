@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video, Search } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   getMessages,
+  searchMessages,
   sendMessage,
   editMessage,
   deleteMessage,
@@ -48,6 +49,25 @@ function getDmPartner(conv: Conversation, currentUserId: string) {
 
 let _tempIdCounter = 0;
 function newTempId() { return `temp-${++_tempIdCounter}`; }
+
+function esc(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Split text on query matches and wrap each match in a <mark>. Output used with dangerouslySetInnerHTML — each part is HTML-escaped. */
+function highlightMatch(text: string, query: string): string {
+  if (!query.trim()) return esc(text);
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escapedQuery})`, 'gi');
+  return text
+    .split(re)
+    .map((part, i) =>
+      i % 2 === 1
+        ? `<mark class="bg-amber-200 dark:bg-amber-800 rounded px-0.5">${esc(part)}</mark>`
+        : esc(part)
+    )
+    .join('');
+}
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr);
@@ -127,6 +147,10 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -173,6 +197,31 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const allMessages: Message[] = [...(data?.pages ?? [])]
     .reverse()
     .flatMap((page) => [...page.items].reverse());
+
+  // ── Search within conversation ────────────────────────────────────────────
+  // Debounce the search query so we don't fire on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const {
+    data: searchData,
+    isLoading: searchLoading,
+    fetchNextPage: fetchMoreSearchResults,
+    hasNextPage: hasMoreSearchResults,
+    isFetchingNextPage: fetchingMoreSearchResults,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.messageSearch(conversation.id, debouncedQuery),
+    queryFn: ({ pageParam }) =>
+      searchMessages(conversation.id, debouncedQuery, { cursor: pageParam as string | undefined }),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    enabled: searchOpen && debouncedQuery.trim().length >= 2,
+    staleTime: 30_000,
+  });
+
+  const searchResults: Message[] = searchData?.pages.flatMap((p) => p.items) ?? [];
 
   // ── Scroll to bottom on initial load / new messages ─────────────────────────
   useEffect(() => {
@@ -524,7 +573,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const sharedAudios = allMessages.filter((m) => m.type === MessageType.AUDIO && m.mediaUrl && !m.isDeleted);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1 px-2 py-2 border-b border-border bg-surface flex-shrink-0">
         {/* Back button — always visible on mobile */}
@@ -603,6 +652,21 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           </>
         )}
 
+        {/* Search toggle */}
+        <button
+          onClick={() => {
+            setSearchOpen((v) => {
+              if (!v) setTimeout(() => searchInputRef.current?.focus(), 50);
+              else { setSearchQuery(''); setDebouncedQuery(''); }
+              return !v;
+            });
+          }}
+          className={`p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 ${searchOpen ? 'text-primary' : ''}`}
+          aria-label="Search messages"
+        >
+          <Search className="w-4.5 h-4.5 text-foreground-secondary" />
+        </button>
+
         {/* Info button */}
         <button
           onClick={() => isGroup ? setGroupInfoOpen(true) : setContactInfoOpen(true)}
@@ -612,6 +676,31 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           <Info className="w-4.5 h-4.5 text-foreground-secondary" />
         </button>
       </div>
+
+      {/* ── Search bar ───────────────────────────────────────────────────────── */}
+      {searchOpen && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface flex-shrink-0">
+          <Search className="w-4 h-4 text-foreground-muted flex-shrink-0" />
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search messages…"
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-foreground-muted text-foreground"
+            style={{ fontSize: '16px' }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); setDebouncedQuery(''); }}
+              className="text-foreground-muted hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Pinned message banner ─────────────────────────────────────────── */}
       {pinnedMessage && (
@@ -631,7 +720,58 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         </div>
       )}
 
-      {/* ── Messages list ────────────────────────────────────────────────────── */}
+      {/* ── Search results (replaces message list when active) ───────────────── */}
+      {searchOpen && debouncedQuery.trim().length >= 2 ? (
+        <div className="flex-1 overflow-y-auto divide-y divide-border/50 bg-surface">
+          {searchLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+              <p className="text-sm text-foreground-muted">No messages found for &ldquo;{debouncedQuery}&rdquo;</p>
+            </div>
+          ) : (
+            <>
+              {searchResults.map((msg) => {
+                const isOwn = !!user && msg.senderId === user.id;
+                const senderName = isOwn
+                  ? 'You'
+                  : `${msg.sender?.firstName ?? ''} ${msg.sender?.lastName ?? ''}`.trim();
+                return (
+                  <div key={msg.id} className="flex gap-3 px-4 py-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary uppercase">
+                      {getInitials(msg.sender?.firstName ?? '', msg.sender?.lastName ?? '')}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold text-foreground">{senderName}</span>
+                        <span className="text-[11px] text-foreground-muted">{formatRelativeTime(msg.createdAt)}</span>
+                      </div>
+                      <p
+                        className="text-sm text-foreground-muted leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: highlightMatch(msg.content ?? '(media)', debouncedQuery) }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {hasMoreSearchResults && (
+                <div className="p-4 text-center">
+                  <button
+                    onClick={() => fetchMoreSearchResults()}
+                    disabled={fetchingMoreSearchResults}
+                    className="text-sm text-primary font-semibold disabled:opacity-50"
+                  >
+                    {fetchingMoreSearchResults ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+      /* ── Messages list ────────────────────────────────────────────────────── */
       <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: isDark ? '#0f172a' : '#f0f4f8' }}>
         {/* Animated doodle wallpaper — fixed behind messages */}
         <ChatBackground isDark={isDark} />
@@ -701,6 +841,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         <div ref={bottomRef} />
         </div>
       </div>
+      )} {/* end search ternary */}
 
       {/* ── Input ────────────────────────────────────────────────────────────── */}
       <MessageInput

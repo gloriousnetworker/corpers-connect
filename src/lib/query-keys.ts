@@ -39,6 +39,7 @@ export const queryKeys = {
   conversations: () => ['conversations'] as const,
   conversation: (id: string) => ['conversation', id] as const,
   messages: (conversationId: string) => ['messages', conversationId] as const,
+  messageSearch: (conversationId: string, q: string) => ['messages', conversationId, 'search', q] as const,
 
   // Notifications
   notifications: () => ['notifications'] as const,

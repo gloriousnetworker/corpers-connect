@@ -222,6 +222,23 @@ export async function getMessages(
   };
 }
 
+/** GET /conversations/:id/messages/search */
+export async function searchMessages(
+  conversationId: string,
+  q: string,
+  params: { cursor?: string; limit?: number } = {}
+): Promise<PaginatedData<Message>> {
+  const { data } = await api.get<ApiResponse<PaginatedData<RawMessage>>>(
+    `/conversations/${conversationId}/messages/search`,
+    { params: { q, cursor: params.cursor, limit: params.limit ?? 20 } }
+  );
+  return {
+    items: (data.data.items ?? []).map(normalizeMessage),
+    nextCursor: data.data.nextCursor,
+    hasMore: data.data.hasMore,
+  };
+}
+
 /** POST /conversations/:id/messages */
 export async function sendMessage(
   conversationId: string,
