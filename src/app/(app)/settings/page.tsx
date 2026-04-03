@@ -14,7 +14,7 @@ import {
   changePassword, initiate2FA, confirm2FA, disable2FA,
   getSessions, revokeSession, revokeAllSessions, logout,
 } from '@/lib/api/auth';
-import { deleteAccount, getBlockedUsers, unblockUser } from '@/lib/api/users';
+import { deleteAccount, getBlockedUsers, unblockUser, initiateEmailChange, verifyEmailChange } from '@/lib/api/users';
 import { getMe } from '@/lib/api/users';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/query-keys';
@@ -185,6 +185,133 @@ function ChangePasswordSection() {
             className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {mutation.isPending ? 'Updating…' : 'Update Password'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ── Change Email ───────────────────────────────────────────────────────────────
+
+function ChangeEmailSection() {
+  const [open, setOpen] = useState(false);
+  // step: 'form' → user enters new email + current password
+  //       'otp'  → user enters OTP sent to new email
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+  const [newEmail, setNewEmail] = useState('');
+  const [currentPw, setCurrentPw] = useState('');
+  const [otp, setOtp] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const { clearAuth } = useAuthStore();
+  const router = useRouter();
+
+  const initiateMutation = useMutation({
+    mutationFn: () => initiateEmailChange(newEmail, currentPw),
+    onSuccess: (data) => {
+      setMaskedEmail(data.maskedEmail);
+      setStep('otp');
+      toast.success('Verification code sent');
+    },
+    onError: (err: Error) => toast.error(err.message ?? 'Failed to send code'),
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: () => verifyEmailChange(otp),
+    onSuccess: () => {
+      toast.success('Email updated — please log in again');
+      clearAuth();
+      router.replace('/login');
+    },
+    onError: (err: Error) => toast.error(err.message ?? 'Invalid code'),
+  });
+
+  const handleClose = () => {
+    setOpen(false);
+    setStep('form');
+    setNewEmail(''); setCurrentPw(''); setOtp('');
+  };
+
+  return (
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <button
+        onClick={() => { if (open) handleClose(); else setOpen(true); }}
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-alt transition-colors"
+      >
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Globe className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-foreground">Change Email</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Update your account email address</p>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-foreground-muted transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && step === 'form' && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); initiateMutation.mutate(); }}
+          className="px-4 pb-4 pt-4 space-y-3 border-t border-border"
+        >
+          <input
+            type="email"
+            placeholder="New email address"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            required
+            autoComplete="email"
+            className="form-input"
+          />
+          <input
+            type="password"
+            placeholder="Current password"
+            value={currentPw}
+            onChange={(e) => setCurrentPw(e.target.value)}
+            required
+            autoComplete="current-password"
+            className="form-input"
+          />
+          <button
+            type="submit"
+            disabled={initiateMutation.isPending}
+            className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {initiateMutation.isPending ? 'Sending code…' : 'Send Verification Code'}
+          </button>
+        </form>
+      )}
+
+      {open && step === 'otp' && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); verifyMutation.mutate(); }}
+          className="px-4 pb-4 pt-4 space-y-3 border-t border-border"
+        >
+          <p className="text-xs text-foreground-muted">
+            Enter the 6-digit code sent to <span className="font-medium text-foreground">{maskedEmail}</span>
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="6-digit code"
+            maxLength={6}
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+            required
+            className="form-input text-center tracking-widest text-lg"
+          />
+          <button
+            type="submit"
+            disabled={verifyMutation.isPending || otp.length < 6}
+            className="w-full h-11 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {verifyMutation.isPending ? 'Verifying…' : 'Verify & Update Email'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep('form')}
+            className="w-full text-xs text-foreground-muted underline"
+          >
+            Use a different email
           </button>
         </form>
       )}
@@ -822,6 +949,7 @@ export default function AccountSettingsPage() {
             <SectionLabel>Security</SectionLabel>
             <div className="space-y-3">
               <ChangePasswordSection />
+              <ChangeEmailSection />
               <TwoFASection twoFactorEnabled={me?.twoFactorEnabled ?? false} />
               <SessionsSection />
             </div>

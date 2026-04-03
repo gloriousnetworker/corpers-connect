@@ -104,3 +104,13 @@ export async function removeFcmToken(fcmToken: string): Promise<void> {
 export async function deleteAccount(): Promise<void> {
   await api.delete('/users/me');
 }
+
+export async function initiateEmailChange(newEmail: string, currentPassword: string): Promise<{ maskedEmail: string }> {
+  const { data } = await api.post<ApiResponse<{ maskedEmail: string }>>('/users/me/email/initiate', { newEmail, currentPassword });
+  return data.data;
+}
+
+export async function verifyEmailChange(otp: string): Promise<User> {
+  const { data } = await api.post<ApiResponse<User>>('/users/me/email/verify', { otp });
+  return data.data;
+}
