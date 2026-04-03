@@ -7,6 +7,7 @@ import type { ApiError, RefreshResponse } from '@/types/api';
 const api: AxiosInstance = axios.create({
   baseURL: `${API_URL}/api/v1`,
   timeout: 15000,
+  withCredentials: true, // send httpOnly refresh-token cookie on every request
   headers: {
     'Content-Type': 'application/json',
   },
@@ -54,15 +55,14 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Attempt refresh on 401 when we have either an active access token OR a
-    // stored refresh token (covers PWA cold-start where _accessToken is null
-    // but the user was previously logged in).
-    const hasRefreshToken = !!safeLocalStorage().get(STORAGE_KEYS.REFRESH_TOKEN);
+    // Attempt refresh on 401 when we have an active access token or the user
+    // was previously authenticated. The httpOnly cc_refresh_token cookie is
+    // sent automatically — no localStorage token reading needed.
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       originalRequest.url !== '/auth/refresh' &&
-      (_accessToken !== null || hasRefreshToken)
+      _accessToken !== null
     ) {
       originalRequest._retry = true;
 
@@ -82,25 +82,16 @@ api.interceptors.response.use(
       _refreshing = true;
 
       try {
-        const storage = safeLocalStorage();
-        const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-
+        // Cookie is sent automatically — no body needed.
         const { data } = await axios.post<{ success: true; data: RefreshResponse }>(
           `${API_URL}/api/v1/auth/refresh`,
-          { refreshToken },
-          { timeout: 10_000 }
+          {},
+          { timeout: 10_000, withCredentials: true }
         );
 
         const newAccessToken = data.data.accessToken;
-        const newRefreshToken = data.data.refreshToken;
 
-        // Persist new tokens
         setAccessToken(newAccessToken);
-        storage.set(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
 
         // Flush queue
         _refreshQueue.forEach(({ resolve }) => resolve(newAccessToken));
@@ -114,7 +105,7 @@ api.interceptors.response.use(
         _refreshQueue.forEach(({ reject }) => reject(refreshError));
         _refreshQueue = [];
         setAccessToken(null);
-        safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN);
+        safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN); // clean up any legacy token
         safeLocalStorage().remove(STORAGE_KEYS.USER);
         safeLocalStorage().remove(STORAGE_KEYS.SESSION_FLAG);
 
@@ -122,7 +113,6 @@ api.interceptors.response.use(
         if (typeof document !== 'undefined') {
           document.cookie = 'cc_session=; path=/; max-age=0; SameSite=Lax';
         }
-        // Navigate to login (without importing Next.js router — use window)
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }

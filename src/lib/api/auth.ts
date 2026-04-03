@@ -64,10 +64,9 @@ export async function twoFAChallenge(payload: {
 }
 
 // ── Token management ───────────────────────────────────────────────────────
-export async function refreshTokens(refreshToken: string): Promise<RefreshResponse> {
-  const { data } = await api.post<ApiResponse<RefreshResponse>>('/auth/refresh', {
-    refreshToken,
-  });
+// No body needed — the refresh token is sent automatically via httpOnly cookie.
+export async function refreshTokens(): Promise<RefreshResponse> {
+  const { data } = await api.post<ApiResponse<RefreshResponse>>('/auth/refresh');
   return data.data;
 }
 

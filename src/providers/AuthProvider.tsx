@@ -3,42 +3,31 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { setAccessToken, getAccessToken } from '@/lib/api/client';
-import { STORAGE_KEYS } from '@/lib/constants';
-import { safeLocalStorage } from '@/lib/utils';
 import { refreshTokens } from '@/lib/api/auth';
 import { getMe } from '@/lib/api/users';
 
 /**
  * AuthProvider runs on app mount and restores the session by:
- * 1. Checking localStorage for a refresh token
- * 2. Calling /auth/refresh to get a fresh access token
- * 3. Calling /users/me to get current user data
- * 4. Populating the auth store
+ * 1. Calling /auth/refresh (the httpOnly cc_refresh_token cookie is sent automatically)
+ * 2. Calling /users/me to get current user data
+ * 3. Populating the auth store
  *
- * This runs silently — no redirect happens here (middleware handles that).
+ * No localStorage token reading needed — the refresh token is stored in an
+ * httpOnly cookie by the backend and sent automatically on the /auth/refresh
+ * request. This run silently; middleware handles redirects.
  */
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     async function restoreSession() {
-      const storage = safeLocalStorage();
-      const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (!refreshToken) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        // Get fresh tokens
-        const tokens = await refreshTokens(refreshToken);
+        // Cookie is sent automatically — no token to read from localStorage.
+        const tokens = await refreshTokens();
         setAccessToken(tokens.accessToken);
-        storage.set(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
 
-        // Fetch user profile
         const user = await getMe();
-        setAuth(user, tokens.accessToken, tokens.refreshToken);
+        setAuth(user, tokens.accessToken);
       } catch {
         // Token invalid/expired — clear everything then redirect to login.
         // clearAuth() expires the session cookie; window.location forces a full

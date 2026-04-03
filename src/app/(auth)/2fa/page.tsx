@@ -44,7 +44,7 @@ export default function TwoFAPage() {
   const mutation = useMutation({
     mutationFn: (data: TwoFAChallengeInput) => twoFAChallenge(data),
     onSuccess: (res) => {
-      setAuth(res.user, res.accessToken, res.refreshToken);
+      setAuth(res.user, res.accessToken);
       setTwoFAChallenge(null);
       router.replace('/feed');
     },

@@ -41,7 +41,7 @@ export default function RegisterConfirmPage() {
   const mutation = useMutation({
     mutationFn: (data: RegisterVerifyInput) => registerVerify(data),
     onSuccess: (res) => {
-      setAuth(res.user, res.accessToken, res.refreshToken);
+      setAuth(res.user, res.accessToken);
       clearRegistration();
       router.replace('/welcome');
     },

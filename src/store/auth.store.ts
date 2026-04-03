@@ -11,7 +11,7 @@ interface AuthState {
   isLoading: boolean;
   // Actions
   setUser: (user: User) => void;
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  setAuth: (user: User, accessToken: string) => void;
   updateUser: (updates: Partial<User>) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
@@ -26,12 +26,12 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
 
-      setAuth: (user, accessToken, refreshToken) => {
-        // Store access token in memory (not persisted)
+      setAuth: (user, accessToken) => {
+        // Store access token in memory only — never in localStorage.
+        // The refresh token now lives in an httpOnly cookie set by the backend,
+        // so there is nothing to persist on the client for token rotation.
         setAccessToken(accessToken);
-        // Store refresh token in localStorage
-        safeLocalStorage().set(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-        // Set session cookie for middleware
+        // Set session cookie for Next.js middleware route guard
         if (typeof document !== 'undefined') {
           document.cookie = `${STORAGE_KEYS.SESSION_FLAG}=1; path=/; max-age=2592000; SameSite=Lax`;
         }
@@ -45,6 +45,8 @@ export const useAuthStore = create<AuthState>()(
 
       clearAuth: () => {
         setAccessToken(null);
+        // Remove any legacy refresh token that may still be in localStorage
+        // from before the httpOnly cookie migration.
         safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN);
         safeLocalStorage().remove(STORAGE_KEYS.USER);
         // Clear session cookie

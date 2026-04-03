@@ -45,7 +45,7 @@ function LoginForm() {
         return;
       }
       const fullRes = res as LoginResponse;
-      setAuth(fullRes.user, fullRes.accessToken, fullRes.refreshToken);
+      setAuth(fullRes.user, fullRes.accessToken);
       router.replace(next);
     },
     onError: (err: Error) => {
