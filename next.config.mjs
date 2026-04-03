@@ -21,6 +21,58 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   reactStrictMode: true,
+
+  // ── Security Headers ────────────────────────────────────────────────────────
+  async headers() {
+    // Build the connect-src list from the runtime env so staging/prod Railway
+    // URLs are picked up automatically without hardcoding.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? RAILWAY_URL;
+
+    const csp = [
+      // Only load scripts from the same origin. Next.js requires 'unsafe-eval'
+      // in development (fast refresh) and 'unsafe-inline' for its runtime
+      // chunk loading. In production only 'self' + nonces would be ideal, but
+      // Next.js App Router does not yet support nonce-based CSP out of the box.
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+
+      // Styles from same origin + Google Fonts stylesheet
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+
+      // Fonts: same origin + Google Fonts CDN
+      "font-src 'self' https://fonts.gstatic.com",
+
+      // Images: same origin, data URIs (base64 placeholders), blob (canvas),
+      // Cloudinary (user avatars / listing images), Google user profile pics
+      "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://lh3.googleusercontent.com",
+
+      // XHR/fetch/WebSocket: same origin, Railway API (http + ws), Firebase services
+      `connect-src 'self' ${apiUrl} wss://${new URL(RAILWAY_URL).host} https://*.googleapis.com https://fcmregistrations.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com`,
+
+      // Frames: no embedding allowed (clickjacking protection)
+      "frame-src 'none'",
+      "frame-ancestors 'none'",
+
+      // Only load workers from same origin (PWA service worker + Firebase SW)
+      "worker-src 'self' blob:",
+
+      // Manifests from same origin
+      "manifest-src 'self'",
+
+      // Media (audio/video for reels, calls): same origin + Cloudinary
+      "media-src 'self' blob: https://res.cloudinary.com https://*.cloudinary.com",
+    ].join('; ');
+
+    const securityHeaders = [
+      { key: 'Content-Security-Policy', value: csp },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    ];
+
+    return [{ source: '/(.*)', headers: securityHeaders }];
+  },
+
   // Dev-only proxy: routes /api/proxy/* → Railway backend to avoid CORS in local dev.
   // In production NEXT_PUBLIC_API_URL points directly to Railway so this path is never used.
   async rewrites() {
