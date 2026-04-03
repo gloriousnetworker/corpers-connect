@@ -202,6 +202,25 @@ export interface MarketplaceListing {
   updatedAt: string;
 }
 
+export interface ListingReview {
+  id: string;
+  listingId: string;
+  authorId: string;
+  author: Pick<User, 'id' | 'firstName' | 'lastName' | 'profilePicture' | 'isVerified'>;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListingReviewsPage {
+  items: ListingReview[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  averageRating: number;
+  totalReviews: number;
+}
+
 export interface SellerApplication {
   id: string;
   userId: string;

@@ -47,6 +47,7 @@ export const queryKeys = {
   // Marketplace
   listings: (filters: Record<string, unknown>) => ['listings', filters] as const,
   listing: (id: string) => ['listing', id] as const,
+  listingReviews: (id: string) => ['listing', id, 'reviews'] as const,
   myListings: () => ['my-listings'] as const,
   myApplication: () => ['seller-application', 'me'] as const,
 

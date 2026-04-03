@@ -1,6 +1,6 @@
 import api from './client';
 import type { ApiResponse, PaginatedData } from '@/types/api';
-import type { MarketplaceListing, SellerApplication } from '@/types/models';
+import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage } from '@/types/models';
 import type { ListingType, ListingCategory, ListingStatus } from '@/types/enums';
 
 // ── Filters ───────────────────────────────────────────────────────────────
@@ -172,6 +172,37 @@ export async function applyAsSeller(idDoc: File): Promise<SellerApplication> {
     formData
   );
   return data.data;
+}
+
+// ── Reviews ────────────────────────────────────────────────────────────────
+
+export async function getListingReviews(
+  listingId: string,
+  params: { cursor?: string; limit?: number } = {}
+): Promise<ListingReviewsPage> {
+  const { data } = await api.get<ApiResponse<ListingReviewsPage>>(
+    `/marketplace/listings/${listingId}/reviews`,
+    { params: { cursor: params.cursor, limit: params.limit ?? 20 } }
+  );
+  return data.data;
+}
+
+export async function createListingReview(
+  listingId: string,
+  payload: { rating: number; comment?: string }
+): Promise<ListingReview> {
+  const { data } = await api.post<ApiResponse<ListingReview>>(
+    `/marketplace/listings/${listingId}/reviews`,
+    payload
+  );
+  return data.data;
+}
+
+export async function deleteListingReview(
+  listingId: string,
+  reviewId: string
+): Promise<void> {
+  await api.delete(`/marketplace/listings/${listingId}/reviews/${reviewId}`);
 }
 
 export async function getMyApplication(): Promise<SellerApplication | null> {

@@ -15,6 +15,7 @@ import { ListingStatus, ListingType } from '@/types/enums';
 import Image from 'next/image';
 import { getAvatarUrl } from '@/lib/utils';
 import ImageGallery from './ImageGallery';
+import ListingReviews from './ListingReviews';
 
 const TYPE_LABEL: Record<ListingType, string> = {
   [ListingType.FOR_SALE]: 'For Sale',
@@ -193,6 +194,11 @@ export default function ListingDetail() {
           <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
             {listing.description}
           </p>
+        </div>
+
+        {/* Reviews */}
+        <div className="border-t border-border pt-5">
+          <ListingReviews listingId={listing.id} sellerId={listing.sellerId} />
         </div>
 
         {/* Seller card */}
