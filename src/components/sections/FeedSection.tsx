@@ -6,7 +6,8 @@ import { useUIStore } from '@/store/ui.store';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import Image from 'next/image';
 import InfiniteFeed from '@/components/feed/InfiniteFeed';
-import CreatePostModal from '@/components/post/CreatePostModal';
+import dynamic from 'next/dynamic';
+const CreatePostModal = dynamic(() => import('@/components/post/CreatePostModal'), { ssr: false });
 import StoryTray from '@/components/stories/StoryTray';
 
 export default function FeedSection() {
