@@ -147,6 +147,27 @@ export function useSocket() {
     socket.on('user:online', ({ userId }: { userId: string }) => setUserOnline(userId));
     socket.on('user:offline', ({ userId }: { userId: string }) => setUserOffline(userId));
 
+    // ── Connection status ─────────────────────────────────────────────────────
+    const reconnectToastId = 'socket-reconnecting';
+
+    socket.on('disconnect', () => {
+      toast.loading('Connection lost. Reconnecting…', {
+        id: reconnectToastId,
+        duration: Infinity,
+      });
+    });
+
+    socket.on('reconnect_attempt', () => {
+      toast.loading('Reconnecting…', {
+        id: reconnectToastId,
+        duration: Infinity,
+      });
+    });
+
+    socket.on('connect', () => {
+      toast.dismiss(reconnectToastId);
+    });
+
     // ── Keep-alive ping (60s) ─────────────────────────────────────────────────
     pingRef.current = setInterval(() => {
       socket.emit('ping:online');
@@ -161,7 +182,11 @@ export function useSocket() {
       socket.off('typing:stop');
       socket.off('user:online');
       socket.off('user:offline');
+      socket.off('disconnect');
+      socket.off('reconnect_attempt');
+      socket.off('connect');
       if (pingRef.current) clearInterval(pingRef.current);
+      toast.dismiss(reconnectToastId);
     };
   }, [user, queryClient, router, setTyping, setUserOnline, setUserOffline, setPendingConversation, incrementUnread, setActiveSection, setViewingUser]);
 
