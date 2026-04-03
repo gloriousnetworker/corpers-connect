@@ -7,6 +7,7 @@ import RightPanel from './RightPanel';
 import SocketInitializer from './SocketInitializer';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import CallOverlayManager from '@/components/calls/CallOverlayManager';
+import OfflineBanner from './OfflineBanner';
 
 /**
  * AppShell — single-render layout shell for the authenticated SPA dashboard.
@@ -54,6 +55,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Push-notification permission nudge — shows once for users who haven't decided */}
       <NotificationPermissionBanner />
+
+      {/* Offline connectivity banner — sits above everything except modals */}
+      <OfflineBanner />
 
       {/* Call overlays — rendered above everything (z-[100]) */}
       <CallOverlayManager />
