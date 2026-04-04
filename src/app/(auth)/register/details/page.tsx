@@ -24,11 +24,12 @@ export default function RegisterDetailsPage() {
   const mutation = useMutation({
     mutationFn: () => registerInitiate({ stateCode, password, confirmPassword: password }),
     onSuccess: (res) => {
+      toast.success(`Verification code sent to ${res.maskedEmail}`);
       setRegistration({ maskedEmail: res.maskedEmail, otpToken: res.maskedEmail });
       router.push('/register/confirm');
     },
     onError: (err: Error) => {
-      toast.error(err.message || 'Registration failed. Please try again.');
+      toast.error(err.message || 'Registration failed. Please try again.', { duration: 8000 });
     },
   });
 
