@@ -10,7 +10,7 @@ import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 import LevelBadge from '@/components/profile/LevelBadge';
 import FollowButton from '@/components/profile/FollowButton';
-import { getInitials, debounce, getAvatarUrl } from '@/lib/utils';
+import { getInitials, debounce, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils';
 import type { DiscoverUser } from '@/lib/api/discover';
 import type { Post, MarketplaceListing } from '@/types/models';
@@ -480,7 +480,7 @@ function SearchPostRow({ post }: { post: Post }) {
         {post.mediaUrls?.[0] && (
           <div className="mt-1.5 w-16 h-12 rounded overflow-hidden bg-surface-alt flex-shrink-0">
             <Image
-              src={post.mediaUrls[0]}
+              src={getOptimisedUrl(post.mediaUrls[0], 128)}
               alt="Post media"
               width={64}
               height={48}
@@ -500,7 +500,7 @@ function SearchListingRow({ listing }: { listing: MarketplaceListing }) {
       <div className="w-14 h-14 rounded-lg overflow-hidden bg-surface-alt flex items-center justify-center flex-shrink-0">
         {listing.images?.[0] ? (
           <Image
-            src={listing.images[0]}
+            src={getOptimisedUrl(listing.images[0], 112)}
             alt={listing.title}
             width={56}
             height={56}

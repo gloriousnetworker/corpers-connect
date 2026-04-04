@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Package, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { getMyListings, updateListing } from '@/lib/api/marketplace';
+import { getOptimisedUrl } from '@/lib/utils';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { ListingStatus } from '@/types/enums';
 import type { MarketplaceListing } from '@/types/models';
@@ -100,7 +101,7 @@ export default function MyListings() {
                 >
                   {listing.images[0] ? (
                     <Image
-                      src={listing.images[0]}
+                      src={getOptimisedUrl(listing.images[0], 160)}
                       alt={listing.title}
                       width={80}
                       height={80}

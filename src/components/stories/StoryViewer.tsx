@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { viewStory, deleteStory } from '@/lib/api/stories';
 import { queryKeys } from '@/lib/query-keys';
-import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
 import StoryProgress from './StoryProgress';
@@ -274,7 +274,7 @@ export default function StoryViewer({
             // key forces remount on story change — no stale image flash
             <div key={story.id} className="relative w-full h-full">
               <Image
-                src={story.mediaUrl}
+                src={getOptimisedUrl(story.mediaUrl)}
                 alt={story.caption ?? `Story by ${author.firstName}`}
                 fill
                 className="object-contain"

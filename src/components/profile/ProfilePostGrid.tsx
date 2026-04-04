@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { getOptimisedUrl } from '@/lib/utils';
 import { getUserPosts, getBookmarks } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
 import { ImageIcon, BookmarkIcon, MessageCircle, Film } from 'lucide-react';
@@ -84,7 +85,7 @@ export default function ProfilePostGrid({ userId, mode = 'posts', onPostClick }:
             >
               {firstMedia ? (
                 <Image
-                  src={firstMedia}
+                  src={getOptimisedUrl(firstMedia, 400)}
                   alt="Post"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"

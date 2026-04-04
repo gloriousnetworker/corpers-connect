@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { getOptimisedUrl } from '@/lib/utils';
 
 interface ImageGalleryProps {
   images: string[];
@@ -29,7 +30,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
       {/* Main gallery */}
       <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-muted">
         <Image
-          src={images[current]}
+          src={getOptimisedUrl(images[current], 800)}
           alt={`${alt} — image ${current + 1}`}
           fill
           className="object-cover cursor-zoom-in"
@@ -83,7 +84,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
                 i === current ? 'border-primary' : 'border-transparent'
               }`}
             >
-              <Image src={src} alt={`Thumbnail ${i + 1}`} fill className="object-cover" sizes="56px" />
+              <Image src={getOptimisedUrl(src, 112)} alt={`Thumbnail ${i + 1}`} fill className="object-cover" sizes="56px" />
             </button>
           ))}
         </div>
@@ -108,7 +109,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={images[current]}
+              src={getOptimisedUrl(images[current], 800)}
               alt={`${alt} — image ${current + 1}`}
               fill
               className="object-contain"

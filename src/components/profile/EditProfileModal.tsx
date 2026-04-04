@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { updateMe, uploadAvatar } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import ClientPortal from '@/components/ui/ClientPortal';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -90,7 +90,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
               <div className="relative">
                 <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                   {displayAvatar ? (
-                    <Image src={displayAvatar} alt={initials} width={80} height={80} className="object-cover w-full h-full" />
+                    <Image src={getAvatarUrl(displayAvatar, 160)} alt={initials} width={80} height={80} className="object-cover w-full h-full" />
                   ) : (
                     <span className="font-bold text-primary text-xl uppercase">{initials}</span>
                   )}

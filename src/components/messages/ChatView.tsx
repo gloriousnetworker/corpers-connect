@@ -594,7 +594,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             <div className="relative flex-shrink-0">
               <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                 {headerAvatar ? (
-                  <Image src={headerAvatar} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
+                  <Image src={getAvatarUrl(headerAvatar, 72)} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
                 ) : (
                   <span className="font-bold text-primary text-xs uppercase">{headerInitials}</span>
                 )}
@@ -615,7 +615,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             <div className="relative flex-shrink-0">
               <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                 {headerAvatar ? (
-                  <Image src={headerAvatar} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
+                  <Image src={getAvatarUrl(headerAvatar, 72)} alt={headerName} width={36} height={36} className="object-cover w-full h-full" />
                 ) : (
                   <Users className="w-4 h-4 text-primary" />
                 )}

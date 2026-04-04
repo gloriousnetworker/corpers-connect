@@ -12,7 +12,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -168,7 +168,7 @@ export default function MessageBubble({
             aria-label="View full size"
           >
             <Image
-              src={message.mediaUrl}
+              src={getOptimisedUrl(message.mediaUrl, 420)}
               alt="Image message"
               fill
               className="object-cover"

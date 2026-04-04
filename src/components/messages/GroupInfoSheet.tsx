@@ -134,7 +134,7 @@ export default function GroupInfoSheet({
             <div className="flex flex-col items-center py-6 px-4 border-b border-border">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center mb-3 flex-shrink-0">
                 {conversation.picture ? (
-                  <Image src={conversation.picture} alt={conversation.name ?? 'Group'} width={80} height={80} className="object-cover w-full h-full" />
+                  <Image src={getAvatarUrl(conversation.picture, 160)} alt={conversation.name ?? 'Group'} width={80} height={80} className="object-cover w-full h-full" />
                 ) : (
                   <Users className="w-9 h-9 text-primary" />
                 )}

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { MapPin, Eye } from 'lucide-react';
 import type { MarketplaceListing } from '@/types/models';
 import { ListingType, ListingStatus } from '@/types/enums';
+import { getOptimisedUrl } from '@/lib/utils';
 
 interface ListingCardProps {
   listing: MarketplaceListing;
@@ -31,7 +32,7 @@ export default function ListingCard({ listing, onClick }: ListingCardProps) {
       <div className="relative aspect-square w-full bg-muted overflow-hidden">
         {listing.images[0] ? (
           <Image
-            src={listing.images[0]}
+            src={getOptimisedUrl(listing.images[0], 400)}
             alt={listing.title}
             fill
             className="object-cover transition-transform group-hover:scale-105"
