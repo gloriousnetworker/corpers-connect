@@ -57,8 +57,8 @@ export interface RefreshResponse {
 
 export interface Enable2FAResponse {
   secret: string;
-  qrCodeUrl: string;
-  backupCodes: string[];
+  qrCode: string;
+  backupCodes?: string[];
 }
 
 // Feed response

@@ -94,6 +94,7 @@ export async function resetPassword(payload: {
 export async function changePassword(payload: {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }): Promise<void> {
   await api.put('/auth/change-password', payload);
 }
@@ -104,12 +105,12 @@ export async function initiate2FA(): Promise<Enable2FAResponse> {
   return data.data;
 }
 
-export async function confirm2FA(totpCode: string): Promise<void> {
-  await api.post('/auth/2fa/verify-enable', { totpCode });
+export async function confirm2FA(code: string): Promise<void> {
+  await api.post('/auth/2fa/verify-enable', { code });
 }
 
-export async function disable2FA(totpCode: string): Promise<void> {
-  await api.post('/auth/2fa/disable', { totpCode });
+export async function disable2FA(code: string): Promise<void> {
+  await api.post('/auth/2fa/disable', { code });
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────

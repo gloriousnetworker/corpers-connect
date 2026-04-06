@@ -92,7 +92,7 @@ function ChangePasswordSection() {
   const [showNew, setShowNew] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => changePassword({ currentPassword: currentPw, newPassword: newPw }),
+    mutationFn: () => changePassword({ currentPassword: currentPw, newPassword: newPw, confirmPassword: newPw }),
     onSuccess: () => {
       toast.success('Password changed successfully');
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
@@ -334,7 +334,7 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   const initMutation = useMutation({
     mutationFn: initiate2FA,
     onSuccess: (data) => {
-      setQrUrl(data.qrCodeUrl);
+      setQrUrl(data.qrCode);
       setSecret(data.secret ?? null);
       setPhase('setup');
     },
