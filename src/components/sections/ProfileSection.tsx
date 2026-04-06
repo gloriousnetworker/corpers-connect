@@ -40,8 +40,10 @@ export default function ProfileSection() {
 
   if (!user) return null;
 
+  const setViewingPost = useUIStore((s) => s.setViewingPost);
+
   const handlePostClick = (post: Post) => {
-    router.push(`/post/${post.id}`);
+    setViewingPost(post.id, 'profile');
   };
 
   const logoutMutation = useMutation({
@@ -125,7 +127,7 @@ export default function ProfileSection() {
           )}
         </button>
         <button
-          onClick={() => router.push('/settings')}
+          onClick={() => { useUIStore.setState({ previousSection: 'profile', activeSection: 'settings' }); }}
           className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left"
         >
           <Settings className="w-4 h-4 text-foreground-secondary flex-shrink-0" />

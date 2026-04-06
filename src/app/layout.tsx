@@ -3,7 +3,8 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Providers from '@/providers/Providers';
 import SplashScreen from '@/components/splash/SplashScreen';
-import InstallPrompt from '@/components/pwa/InstallPrompt';
+// InstallPrompt removed — was showing on every screen refresh. Users can
+// install via the browser's native "Add to Home Screen" option instead.
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -69,7 +70,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <SplashScreen />
           {children}
-          <InstallPrompt />
         </Providers>
         {/* Portal root — all modals/sheets/overlays render here to escape stacking contexts */}
         <div id="modal-root" />

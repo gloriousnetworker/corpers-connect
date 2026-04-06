@@ -93,7 +93,11 @@ export default function NotificationsSection() {
     }
 
     if (entityType === 'Post' && entityId) {
-      router.push(`/post/${entityId}`);
+      useUIStore.setState({
+        viewingPostId: entityId,
+        previousSection: 'notifications',
+        activeSection: 'postDetail',
+      });
       return;
     }
 

@@ -24,7 +24,7 @@ export interface PasswordResetState {
   maskedEmail: string;
 }
 
-export type ActiveSection = 'feed' | 'discover' | 'reels' | 'notifications' | 'messages' | 'profile' | 'userProfile' | 'marketplace' | 'opportunities' | 'subscriptions';
+export type ActiveSection = 'feed' | 'discover' | 'reels' | 'notifications' | 'messages' | 'profile' | 'userProfile' | 'marketplace' | 'opportunities' | 'subscriptions' | 'postDetail' | 'settings';
 
 interface UIState {
   // Navigation — SPA section state (no route changes)
@@ -53,6 +53,10 @@ interface UIState {
   viewingUserId: string | null;
   previousSection: ActiveSection;
   setViewingUser: (id: string, from?: ActiveSection) => void;
+
+  // Post detail navigation
+  viewingPostId: string | null;
+  setViewingPost: (id: string, from?: ActiveSection) => void;
 
   // Notifications badge
   unreadNotifications: number;
@@ -114,6 +118,14 @@ export const useUIStore = create<UIState>((set) => ({
       viewingUserId: id,
       previousSection: from ?? state.activeSection as ActiveSection,
       activeSection: 'userProfile',
+    })),
+
+  viewingPostId: null,
+  setViewingPost: (id, from) =>
+    set((state) => ({
+      viewingPostId: id,
+      previousSection: from ?? state.activeSection as ActiveSection,
+      activeSection: 'postDetail',
     })),
 
   createPostOpen: false,

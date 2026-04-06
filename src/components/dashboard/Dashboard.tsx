@@ -16,6 +16,8 @@ import UserProfileSection from '@/components/sections/UserProfileSection';
 import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import OpportunitiesSection from '@/components/opportunities/OpportunitiesSection';
 import SubscriptionsSection from '@/components/subscriptions/SubscriptionsSection';
+import PostDetailSection from '@/components/sections/PostDetailSection';
+import SettingsSection from '@/components/sections/SettingsSection';
 import type { ActiveSection } from '@/store/ui.store';
 import type { ComponentType } from 'react';
 
@@ -30,6 +32,8 @@ const SECTIONS: Record<ActiveSection, ComponentType> = {
   marketplace:   MarketplaceSection,
   opportunities: OpportunitiesSection,
   subscriptions: SubscriptionsSection,
+  postDetail:    PostDetailSection,
+  settings:      SettingsSection,
 };
 
 /**

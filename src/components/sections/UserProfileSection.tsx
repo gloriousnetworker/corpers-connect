@@ -217,7 +217,11 @@ export default function UserProfileSection() {
           userId={user.id}
           mode="posts"
           onPostClick={(post: Post) => {
-            router.push(`/post/${post.id}`);
+            useUIStore.setState({
+              viewingPostId: post.id,
+              previousSection: 'userProfile',
+              activeSection: 'postDetail',
+            });
           }}
         />
       </div>
