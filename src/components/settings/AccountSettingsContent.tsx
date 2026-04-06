@@ -504,6 +504,31 @@ function TwoFASection({ twoFactorEnabled }: { twoFactorEnabled: boolean }) {
   );
 }
 
+// ── User-Agent parser ─────────────────────────────────────────────────────────
+
+function parseDeviceInfo(ua?: string | null): string {
+  if (!ua) return 'Unknown device';
+
+  let browser = 'Browser';
+  if (ua.includes('Edg/')) browser = 'Edge';
+  else if (ua.includes('OPR/') || ua.includes('Opera')) browser = 'Opera';
+  else if (ua.includes('Chrome/') && !ua.includes('Edg/')) browser = 'Chrome';
+  else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Safari';
+  else if (ua.includes('Firefox/')) browser = 'Firefox';
+
+  let os = '';
+  if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac OS')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+
+  const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
+  const device = isMobile ? 'Mobile' : 'Desktop';
+
+  return os ? `${browser} on ${os} (${device})` : `${browser} (${device})`;
+}
+
 // ── Active Sessions ────────────────────────────────────────────────────────────
 
 function SessionsSection() {
@@ -574,16 +599,16 @@ function SessionsSection() {
                   className={`flex items-start gap-3 p-3 rounded-xl border ${session.isCurrent ? 'border-primary/30 bg-primary/5' : 'border-border bg-surface-alt'}`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 mt-0.5">
-                    {session.deviceInfo?.toLowerCase().includes('mobile') ? (
+                    {/Mobile|Android|iPhone|iPad/i.test(session.deviceInfo ?? '') ? (
                       <Smartphone className="w-4 h-4 text-foreground-muted" />
                     ) : (
-                      <Globe className="w-4 h-4 text-foreground-muted" />
+                      <MonitorSmartphone className="w-4 h-4 text-foreground-muted" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-xs font-medium text-foreground truncate">
-                        {session.deviceInfo ?? 'Unknown device'}
+                        {parseDeviceInfo(session.deviceInfo)}
                       </p>
                       {session.isCurrent && (
                         <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
