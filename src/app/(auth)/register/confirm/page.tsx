@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,12 +19,13 @@ export default function RegisterConfirmPage() {
   const router = useRouter();
   const { registration, clearRegistration } = useUIStore();
   const { setAuth } = useAuthStore();
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
-    if (!registration.maskedEmail) {
+    if (!registration.maskedEmail && !verified) {
       router.replace('/register');
     }
-  }, [registration.maskedEmail, router]);
+  }, [registration.maskedEmail, verified, router]);
 
   const {
     handleSubmit,
@@ -41,6 +42,7 @@ export default function RegisterConfirmPage() {
   const mutation = useMutation({
     mutationFn: (data: RegisterVerifyInput) => registerVerify(data),
     onSuccess: (res) => {
+      setVerified(true);
       setAuth(res.user, res.accessToken);
       clearRegistration();
       router.replace('/welcome');
