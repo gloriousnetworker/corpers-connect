@@ -17,6 +17,8 @@ import type { CreatePostPayload } from '@/lib/api/posts';
 interface PostCardProps {
   post: Post;
   onEdit?: (post: Post) => void;
+  /** When true, the comment sheet opens automatically (used on post detail page) */
+  autoOpenComments?: boolean;
 }
 
 const VisibilityIcon = ({ visibility }: { visibility: PostVisibility }) => {
@@ -40,9 +42,9 @@ const VisibilityIcon = ({ visibility }: { visibility: PostVisibility }) => {
   );
 };
 
-export default function PostCard({ post: initialPost, onEdit }: PostCardProps) {
+export default function PostCard({ post: initialPost, onEdit, autoOpenComments = false }: PostCardProps) {
   const [post, setPost] = useState<Post>(initialPost);
-  const [commentOpen, setCommentOpen] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(autoOpenComments);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const setViewingUser = useUIStore((s) => s.setViewingUser);

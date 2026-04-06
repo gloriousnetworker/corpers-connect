@@ -42,7 +42,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ postId: s
             <p className="text-3xl mb-3">🤔</p>
             <p className="font-semibold text-foreground">Post not found</p>
             <p className="text-sm text-foreground-muted mt-1">
-              It may have been deleted or you don't have permission to view it.
+              It may have been deleted or you don&apos;t have permission to view it.
             </p>
             <button
               onClick={() => router.back()}
@@ -52,8 +52,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ postId: s
             </button>
           </div>
         ) : (
-          /* PostCard manages its own comment sheet internally */
-          <PostCard post={post} />
+          <PostCard post={post} autoOpenComments />
         )}
       </div>
     </div>
