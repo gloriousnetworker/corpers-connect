@@ -73,7 +73,11 @@ export default function FollowButton({
     <button
       onClick={() => { haptic.medium(); mutation.mutate(true); }}
       disabled={mutation.isPending}
-      className={`${sizeClass} rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50`}
+      className={`${sizeClass} rounded-full font-semibold transition-colors disabled:opacity-50 ${
+        followsYou
+          ? 'bg-info text-white hover:bg-info/80'
+          : 'bg-primary text-white hover:bg-primary-dark'
+      }`}
     >
       {followsYou ? 'Follow back' : 'Follow'}
     </button>
