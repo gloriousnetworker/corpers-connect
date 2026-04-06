@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Settings, Crown } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
+import { logout } from '@/lib/api/auth';
 import { queryKeys } from '@/lib/query-keys';
 import { getMe } from '@/lib/api/users';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -39,9 +40,17 @@ export default function ProfileSection() {
 
   if (!user) return null;
 
-  const handlePostClick = (_post: Post) => {
-    // TODO: open post detail when Phase 4 post-view is built
+  const handlePostClick = (post: Post) => {
+    router.push(`/post/${post.id}`);
   };
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      clearAuth();
+      router.replace('/login');
+    },
+  });
 
   const openFollowers = () => {
     setFollowersInitialTab('followers');
@@ -123,11 +132,14 @@ export default function ProfileSection() {
           <span className="text-sm font-medium text-foreground">Account Settings</span>
         </button>
         <button
-          onClick={clearAuth}
-          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/5 transition-colors text-left"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/5 transition-colors text-left disabled:opacity-50"
         >
           <LogOut className="w-4 h-4 text-danger flex-shrink-0" />
-          <span className="text-sm font-medium text-danger">Sign Out</span>
+          <span className="text-sm font-medium text-danger">
+            {logoutMutation.isPending ? 'Signing out…' : 'Sign Out'}
+          </span>
         </button>
       </div>
 
