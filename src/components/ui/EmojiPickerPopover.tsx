@@ -40,7 +40,7 @@ export default function EmojiPickerPopover({ onEmojiSelect, placement = 'above' 
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     onEmojiSelect(emojiData.emoji);
-    setOpen(false);
+    // Keep picker open so user can select multiple emojis
   };
 
   return (
