@@ -56,7 +56,7 @@ export default function TwoFAPage() {
   if (!challengeData) return null;
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
+    <div className="flex flex-col px-5 pt-10 pb-8">
       <button
         onClick={() => {
           setTwoFAChallenge(null);
@@ -80,7 +80,7 @@ export default function TwoFAPage() {
 
       <form
         onSubmit={handleSubmit((d) => mutation.mutate(d))}
-        className="space-y-6 flex-1"
+        className="space-y-6"
       >
         <OtpInput
           value={totpCode}

@@ -46,7 +46,7 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
+    <div className="flex flex-col px-5 pt-10 pb-8">
       <div className="flex justify-center mb-8">
         <Logo size="md" />
       </div>
@@ -68,7 +68,7 @@ export default function RegisterPage() {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4 flex-1">
+      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
         <Input
           label="NYSC State Code"
           placeholder="e.g. AB/23A/1234"

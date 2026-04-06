@@ -54,7 +54,7 @@ function LoginForm() {
   });
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-14 pb-8">
+    <div className="flex flex-col px-5 pt-14 pb-8">
       <div className="flex justify-center mb-10">
         <Logo size="lg" />
       </div>
@@ -64,7 +64,7 @@ function LoginForm() {
         <p className="text-sm text-foreground-muted">Sign in to your Corpers Connect account</p>
       </div>
 
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4 flex-1">
+      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
         <Input
           label="Email or State Code"
           placeholder="e.g. user@email.com or AB/23A/1234"

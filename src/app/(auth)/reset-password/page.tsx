@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 px-5 pt-10 pb-8">
+    <div className="flex flex-col px-5 pt-10 pb-8">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-foreground-muted mb-8 touch-manipulation"
@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5 flex-1 mt-4">
+      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5 mt-4">
         <div>
           <p className="text-sm font-medium text-foreground mb-3">Verification code</p>
           <OtpInput
