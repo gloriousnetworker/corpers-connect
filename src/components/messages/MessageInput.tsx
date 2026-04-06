@@ -7,6 +7,7 @@ import { uploadMessageMedia } from '@/lib/api/conversations';
 import { MessageType } from '@/types/enums';
 import type { Message } from '@/types/models';
 import VoiceNoteRecorder, { MicButton } from './VoiceNoteRecorder';
+import EmojiPickerPopover from '@/components/ui/EmojiPickerPopover';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -214,7 +215,7 @@ export default function MessageInput({
           </>
         )}
 
-        <div className="flex-1 flex items-end gap-2 bg-surface-alt rounded-2xl px-3 py-2 min-h-[44px]">
+        <div className="flex-1 flex items-end gap-1 bg-surface-alt rounded-2xl px-3 py-2 min-h-[44px]">
           <textarea
             ref={textareaRef}
             value={text}
@@ -227,6 +228,13 @@ export default function MessageInput({
             enterKeyHint={isMobile ? 'enter' : 'send'}
             className="flex-1 bg-transparent text-foreground text-sm outline-none resize-none placeholder:text-foreground-muted leading-relaxed"
             style={{ fontSize: '16px' }}
+          />
+          <EmojiPickerPopover
+            onEmojiSelect={(emoji) => {
+              setText((prev) => prev + emoji);
+              textareaRef.current?.focus();
+            }}
+            placement="above"
           />
         </div>
 

@@ -56,7 +56,7 @@ export default function EmojiPickerPopover({ onEmojiSelect, placement = 'above' 
 
       {open && (
         <div
-          className={`absolute ${placement === 'above' ? 'bottom-10' : 'top-10'} right-0 z-[100] shadow-2xl rounded-2xl overflow-hidden`}
+          className={`absolute ${placement === 'above' ? 'bottom-10' : 'top-10'} right-0 z-[9999] shadow-2xl rounded-2xl overflow-hidden`}
         >
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
