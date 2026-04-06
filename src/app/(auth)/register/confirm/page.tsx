@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OtpInput from '@/components/auth/OtpInput';
 import { registerVerifySchema, type RegisterVerifyInput } from '@/lib/validators';
-import { registerVerify } from '@/lib/api/auth';
+import { registerVerify, registerInitiate } from '@/lib/api/auth';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -20,6 +20,13 @@ export default function RegisterConfirmPage() {
   const { registration, clearRegistration } = useUIStore();
   const { setAuth } = useAuthStore();
   const [verified, setVerified] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (!registration.maskedEmail && !verified) {
@@ -49,6 +56,23 @@ export default function RegisterConfirmPage() {
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Invalid OTP. Please try again.');
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: () =>
+      registerInitiate({
+        stateCode: registration.stateCode,
+        password: registration.password,
+        confirmPassword: registration.password,
+      }),
+    onSuccess: () => {
+      toast.success('New verification code sent!');
+      setResendCooldown(60);
+      setValue('otp', '');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Could not resend code. Try again.');
     },
   });
 
@@ -104,8 +128,17 @@ export default function RegisterConfirmPage() {
 
         <p className="text-center text-sm text-foreground-muted">
           Didn&apos;t receive a code?{' '}
-          <button type="button" className="text-primary font-medium touch-manipulation">
-            Resend
+          <button
+            type="button"
+            disabled={resendCooldown > 0 || resendMutation.isPending}
+            onClick={() => resendMutation.mutate()}
+            className="text-primary font-medium touch-manipulation disabled:opacity-50"
+          >
+            {resendMutation.isPending
+              ? 'Sending...'
+              : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : 'Resend'}
           </button>
         </p>
       </form>
