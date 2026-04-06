@@ -5,6 +5,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Loader2, ArrowUp } from 'lucide-react';
 import { getFeed } from '@/lib/api/feed';
 import { queryKeys } from '@/lib/query-keys';
+import { useAuthStore } from '@/store/auth.store';
+import { getAccessToken } from '@/lib/api/client';
 import PostCard from '@/components/post/PostCard';
 import PostCardSkeleton from '@/components/post/PostCardSkeleton';
 import CreatePostModal from '@/components/post/CreatePostModal';
@@ -13,6 +15,8 @@ import type { Post } from '@/types/models';
 const PULL_THRESHOLD = 64; // px to trigger refresh
 
 export default function InfiniteFeed() {
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -39,16 +43,19 @@ export default function InfiniteFeed() {
     queryFn: ({ pageParam }) =>
       getFeed({
         cursor: pageParam as string | undefined,
-        // Fetch only 10 posts on the first page so the feed paints faster.
-        // Subsequent pages load 20 to reduce round trips while scrolling.
         limit: pageParam ? 20 : 10,
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) =>
       last.hasMore ? (last.nextCursor ?? undefined) : undefined,
-    staleTime: 1000 * 60 * 3,       // 3 min — less aggressive than before
-    refetchInterval: 1000 * 60 * 5, // background poll every 5 min (was 2 min)
-    gcTime: 1000 * 60 * 15,         // keep cached feed in memory for 15 min
+    staleTime: 1000 * 60 * 3,
+    refetchInterval: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    // Don't fire until AuthProvider has restored the session —
+    // otherwise the request goes out with no token and 401s.
+    enabled: !isAuthLoading && isAuthenticated && !!getAccessToken(),
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const posts = data?.pages.flatMap((p) => p.items) ?? [];
