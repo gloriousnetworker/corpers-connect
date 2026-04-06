@@ -3,15 +3,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ── Timing (ms) ─────────────────────────────────────────────────────────────
-const TOTAL_DURATION = 5400;
+// ── Timing (ms) — synced to 6s audio ────────────────────────────────────────
+const TOTAL_DURATION = 6400;
 const PHASE_TIMING = {
   fragments: 0,       // 0s — polygon fragments fly in
-  logoGlow: 1200,     // 1.2s — logo appears with glow
-  tagline: 2600,      // 2.6s — "Connecting Nigerian Corps Members..."
-  welcome: 3800,      // 3.8s — "WELCOME"
-  flash: 4600,        // 4.6s — white flash
-  exit: 5000,         // 5.0s — fade out
+  logoGlow: 1500,     // 1.5s — logo appears with glow
+  tagline: 3000,      // 3.0s — "Connecting Nigerian Corps Members..."
+  welcome: 4500,      // 4.5s — "WELCOME"
+  flash: 5600,        // 5.6s — white flash
+  exit: 6000,         // 6.0s — fade out (audio finishes)
 };
 
 type Phase = 'fragments' | 'logoGlow' | 'tagline' | 'welcome' | 'flash' | 'exit';
@@ -102,7 +102,7 @@ export default function SplashScreen() {
             className="absolute inset-0"
             initial={{ scale: 1.15 }}
             animate={{ scale: 1.0 }}
-            transition={{ duration: 5, ease: 'easeOut' }}
+            transition={{ duration: 6, ease: 'easeOut' }}
           >
             <div
               className="absolute inset-0 bg-cover bg-center"
@@ -276,7 +276,7 @@ export default function SplashScreen() {
             style={{ background: 'linear-gradient(90deg, #008751, #00b368, #ffffff, #00b368, #008751)' }}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ duration: 3, delay: 0.5, ease: 'easeInOut' }}
+            transition={{ duration: 4, delay: 0.5, ease: 'easeInOut' }}
           />
         </motion.div>
       )}
