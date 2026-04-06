@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Smile } from 'lucide-react';
-import type { EmojiClickData, Theme } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
+import { EmojiStyle, Theme } from 'emoji-picker-react';
 
 // Lazy-load the heavy picker bundle only when the user opens it
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
   loading: () => (
-    <div className="w-[320px] h-[400px] flex items-center justify-center bg-surface rounded-2xl border border-border shadow-2xl">
+    <div className="w-[300px] h-[380px] flex items-center justify-center bg-surface rounded-2xl border border-border shadow-2xl">
       <span className="text-2xl animate-spin">😊</span>
     </div>
   ),
@@ -60,11 +61,12 @@ export default function EmojiPickerPopover({ onEmojiSelect, placement = 'above' 
         >
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
-            theme={'light' as Theme}
-            lazyLoadEmojis
+            emojiStyle={EmojiStyle.NATIVE}
+            theme={Theme.LIGHT}
             searchPlaceholder="Search emoji..."
-            width={320}
-            height={400}
+            width={300}
+            height={380}
+            previewConfig={{ showPreview: false }}
           />
         </div>
       )}
