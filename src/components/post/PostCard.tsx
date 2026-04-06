@@ -10,6 +10,7 @@ import type { Post } from '@/types/models';
 import MediaGrid from './MediaGrid';
 import ReactionBar from './ReactionBar';
 import CommentSheet from './CommentSheet';
+import InlineComments from './InlineComments';
 import PostMenu from './PostMenu';
 import ReportModal from './ReportModal';
 import type { CreatePostPayload } from '@/lib/api/posts';
@@ -164,15 +165,24 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
         />
       </article>
 
-      {/* Comment sheet */}
-      <CommentSheet
-        postId={post.id}
-        commentsCount={post.commentsCount}
-        open={commentOpen}
-        onClose={() => setCommentOpen(false)}
-        onCommentAdded={() => setPost((p) => ({ ...p, commentsCount: (p.commentsCount || 0) + 1 }))}
-        onCommentDeleted={() => setPost((p) => ({ ...p, commentsCount: Math.max(0, (p.commentsCount || 0) - 1) }))}
-      />
+      {/* Inline comments (post detail) or bottom sheet (feed) */}
+      {autoOpenComments ? (
+        <InlineComments
+          postId={post.id}
+          commentsCount={post.commentsCount}
+          onCommentAdded={() => setPost((p) => ({ ...p, commentsCount: (p.commentsCount || 0) + 1 }))}
+          onCommentDeleted={() => setPost((p) => ({ ...p, commentsCount: Math.max(0, (p.commentsCount || 0) - 1) }))}
+        />
+      ) : (
+        <CommentSheet
+          postId={post.id}
+          commentsCount={post.commentsCount}
+          open={commentOpen}
+          onClose={() => setCommentOpen(false)}
+          onCommentAdded={() => setPost((p) => ({ ...p, commentsCount: (p.commentsCount || 0) + 1 }))}
+          onCommentDeleted={() => setPost((p) => ({ ...p, commentsCount: Math.max(0, (p.commentsCount || 0) - 1) }))}
+        />
+      )}
 
       {/* Report modal */}
       <ReportModal
