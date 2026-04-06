@@ -357,6 +357,7 @@ function DiscoverUserRow({
         <FollowButton
           userId={user.id}
           isFollowing={user.isFollowing ?? false}
+          followsYou={user.followsYou ?? false}
           size="sm"
         />
       )}
@@ -400,7 +401,7 @@ function SuggestionChip({
       <p className="text-[10px] text-foreground-muted truncate w-full text-center">{user.servingState}</p>
       {!isOwnProfile && (
         <div className="mt-1.5">
-          <FollowButton userId={user.id} isFollowing={user.isFollowing ?? false} size="sm" />
+          <FollowButton userId={user.id} isFollowing={user.isFollowing ?? false} followsYou={user.followsYou ?? false} size="sm" />
         </div>
       )}
     </div>

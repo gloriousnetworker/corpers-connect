@@ -30,7 +30,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: user, isLoading } = useQuery({
     queryKey: queryKeys.user(userId),
     queryFn: () => getUserProfile(userId),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
     retry: 1,
     enabled: !isSelf,
   });
@@ -72,7 +73,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         onFollowingClick={() => setFollowModal({ open: true, initialTab: 'following' })}
         actionSlot={
           <>
-            <FollowButton userId={userId} isFollowing={user.isFollowing ?? false} />
+            <FollowButton userId={userId} isFollowing={user.isFollowing ?? false} followsYou={user.followsYou ?? false} />
             <button
               onClick={() => router.push(`/messages?userId=${userId}`)}
               className="p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-alt transition-colors"

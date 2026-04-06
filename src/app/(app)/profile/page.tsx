@@ -25,8 +25,10 @@ export default function MyProfilePage() {
   const { data: user, isLoading } = useQuery({
     queryKey: queryKeys.me(),
     queryFn: getMe,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
     placeholderData: storeUser ?? undefined,
+    refetchOnMount: 'always',
   });
 
   if (isLoading && !user) {

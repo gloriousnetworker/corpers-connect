@@ -4,7 +4,6 @@ import './globals.css';
 import Providers from '@/providers/Providers';
 import SplashScreen from '@/components/splash/SplashScreen';
 import InstallPrompt from '@/components/pwa/InstallPrompt';
-import UpdateBanner from '@/components/pwa/UpdateBanner';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -68,7 +67,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${plusJakartaSans.variable} antialiased`}>
         <Providers>
-          <UpdateBanner />
           <SplashScreen />
           {children}
           <InstallPrompt />

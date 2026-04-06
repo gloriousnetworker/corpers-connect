@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, MoreVertical, Flag, UserX, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -17,6 +18,7 @@ import FollowersModal from '@/components/profile/FollowersModal';
 import type { Post } from '@/types/models';
 
 export default function UserProfileSection() {
+  const router = useRouter();
   const viewingUserId = useUIStore((s) => s.viewingUserId);
   const previousSection = useUIStore((s) => s.previousSection);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
@@ -113,6 +115,7 @@ export default function UserProfileSection() {
       <FollowButton
         userId={user.id}
         isFollowing={user.isFollowing ?? false}
+        followsYou={user.followsYou ?? false}
         size="sm"
       />
       {isMutualFollow ? (
@@ -213,8 +216,8 @@ export default function UserProfileSection() {
         <ProfilePostGrid
           userId={user.id}
           mode="posts"
-          onPostClick={(_post: Post) => {
-            // TODO: open post detail
+          onPostClick={(post: Post) => {
+            router.push(`/post/${post.id}`);
           }}
         />
       </div>

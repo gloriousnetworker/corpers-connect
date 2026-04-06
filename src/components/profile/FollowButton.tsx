@@ -9,6 +9,7 @@ import { useHaptic } from '@/hooks/useHaptic';
 interface FollowButtonProps {
   userId: string;
   isFollowing: boolean;
+  followsYou?: boolean;
   size?: 'sm' | 'md';
   onToggle?: (nowFollowing: boolean) => void;
 }
@@ -16,6 +17,7 @@ interface FollowButtonProps {
 export default function FollowButton({
   userId,
   isFollowing: initialIsFollowing,
+  followsYou = false,
   size = 'md',
   onToggle,
 }: FollowButtonProps) {
@@ -73,7 +75,7 @@ export default function FollowButton({
       disabled={mutation.isPending}
       className={`${sizeClass} rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50`}
     >
-      Follow
+      {followsYou ? 'Follow back' : 'Follow'}
     </button>
   );
 }

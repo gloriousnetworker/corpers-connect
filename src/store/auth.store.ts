@@ -45,13 +45,25 @@ export const useAuthStore = create<AuthState>()(
 
       clearAuth: () => {
         setAccessToken(null);
-        // Remove any legacy refresh token that may still be in localStorage
-        // from before the httpOnly cookie migration.
-        safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN);
-        safeLocalStorage().remove(STORAGE_KEYS.USER);
+        // Clear ALL corpers-connect keys from localStorage
+        if (typeof window !== 'undefined') {
+          Object.values(STORAGE_KEYS).forEach((key) => {
+            try { localStorage.removeItem(key); } catch {}
+          });
+          // Also clear any Zustand-persisted stores that use cc_ prefix
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('cc_')) {
+              try { localStorage.removeItem(key); } catch {}
+            }
+          });
+        }
         // Clear session cookie
         if (typeof document !== 'undefined') {
           document.cookie = `${STORAGE_KEYS.SESSION_FLAG}=; path=/; max-age=0`;
+        }
+        // Clear sessionStorage (splash shown flag etc.)
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.clear();
         }
         set({ user: null, isAuthenticated: false, isLoading: false });
       },
