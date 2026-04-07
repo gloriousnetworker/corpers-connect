@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/2fa',
+  '/join',
 ];
 
 const ONBOARDING_PATH = '/onboarding';
