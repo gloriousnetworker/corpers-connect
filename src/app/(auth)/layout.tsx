@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: { default: 'Sign In', template: '%s | Corpers Connect' },
@@ -10,8 +11,18 @@ export const metadata: Metadata = {
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center">
-      <div className="w-full max-w-[420px]">
+    <div className="h-dvh overflow-y-auto bg-surface flex flex-col items-center">
+      {/* Subtle brand watermark — fixed so it stays in place while form scrolls */}
+      <div className="fixed inset-0 pointer-events-none select-none z-0" aria-hidden="true">
+        <Image
+          src="/corpersconnectlogo.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-[0.035]"
+          priority={false}
+        />
+      </div>
+      <div className="w-full max-w-[420px] relative z-10">
         {children}
       </div>
     </div>
