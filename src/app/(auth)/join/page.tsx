@@ -76,7 +76,7 @@ export default function JoinRequestPage() {
 
   if (state === 'success') {
     return (
-      <div className="flex flex-col px-5 pt-14 pb-8 items-center text-center">
+      <div className="flex flex-col px-5 pt-14 pb-8 items-center text-center max-w-lg mx-auto">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
           <CheckCircle className="w-8 h-8 text-primary" />
         </div>
@@ -92,7 +92,7 @@ export default function JoinRequestPage() {
   }
 
   return (
-    <div className="flex flex-col px-5 pt-10 pb-8">
+    <div className="flex flex-col px-5 pt-10 pb-8 max-w-lg mx-auto min-h-screen overflow-y-auto">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation"
@@ -115,14 +115,14 @@ export default function JoinRequestPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="First Name"
+            label="First Name *"
             placeholder="e.g. Iniubong"
             required
             value={form.firstName}
             onChange={(e) => updateField('firstName', e.target.value)}
           />
           <Input
-            label="Last Name"
+            label="Last Name *"
             placeholder="e.g. Udofot"
             required
             value={form.lastName}
@@ -131,7 +131,7 @@ export default function JoinRequestPage() {
         </div>
 
         <Input
-          label="Email"
+          label="Email *"
           type="email"
           placeholder="your@email.com"
           required
@@ -148,7 +148,7 @@ export default function JoinRequestPage() {
         />
 
         <Input
-          label="NYSC State Code"
+          label="NYSC State Code *"
           placeholder="e.g. KG/25C/1234"
           required
           autoCapitalize="characters"
@@ -158,7 +158,7 @@ export default function JoinRequestPage() {
         />
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Serving State</label>
+          <label className="text-sm font-medium text-foreground">Serving State <span className="text-error">*</span></label>
           <select
             required
             value={form.servingState}
@@ -187,7 +187,7 @@ export default function JoinRequestPage() {
         />
 
         <Input
-          label="Batch"
+          label="Batch *"
           placeholder="e.g. 2025C"
           required
           value={form.batch}
@@ -196,7 +196,7 @@ export default function JoinRequestPage() {
 
         {/* Document upload */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">NYSC Posting Letter</label>
+          <label className="text-sm font-medium text-foreground">NYSC Posting Letter <span className="text-error">*</span></label>
           <label className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
             {file ? (
               <div className="flex items-center gap-2 text-primary">
