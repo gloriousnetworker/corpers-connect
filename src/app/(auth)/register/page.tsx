@@ -111,6 +111,13 @@ export default function RegisterPage() {
           Sign in
         </Link>
       </p>
+
+      <p className="text-center text-sm text-foreground-muted mt-3">
+        State code not found?{' '}
+        <Link href="/join" className="text-primary font-semibold touch-manipulation">
+          Request to join
+        </Link>
+      </p>
     </div>
   );
 }
