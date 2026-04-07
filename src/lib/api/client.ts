@@ -123,10 +123,17 @@ api.interceptors.response.use(
     }
 
     // Normalize error message
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      'Something went wrong. Please try again.';
+    let message: string;
+    if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+      message = 'Request timed out. Please check your connection and try again.';
+    } else if (!error.response) {
+      message = 'Unable to reach the server. Please check your connection.';
+    } else {
+      message =
+        error.response.data?.message ||
+        error.message ||
+        'Something went wrong. Please try again.';
+    }
 
     return Promise.reject(new ApiRequestError(message, error.response?.status, error.response?.data));
   }
