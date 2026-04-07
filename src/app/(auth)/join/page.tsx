@@ -97,15 +97,15 @@ export default function JoinRequestPage() {
   // ── Success screen ──────────────────────────────────────────────────────────
   if (submitState === 'success') {
     return (
-      <div className="flex flex-col px-5 pt-14 pb-8 items-center text-center">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-          <CheckCircle className="w-8 h-8 text-primary" />
+      <div className="flex flex-col px-5 pt-10 md:pt-6 pb-8 items-center text-center">
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <CheckCircle className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">Request Submitted!</h1>
-        <p className="text-sm text-foreground-muted max-w-xs mb-2">
+        <h1 className="text-xl font-bold text-foreground mb-2">Request Submitted!</h1>
+        <p className="text-sm text-foreground-muted max-w-xs mb-1">
           We&apos;ve sent a confirmation to <strong className="text-foreground">{form.email}</strong>.
         </p>
-        <p className="text-sm text-foreground-muted max-w-xs mb-8">
+        <p className="text-sm text-foreground-muted max-w-xs mb-6">
           We&apos;ll review your documents and notify you once approved. This usually takes 24-48 hours.
         </p>
         <Button fullWidth onClick={() => router.replace('/login')}>
@@ -115,12 +115,23 @@ export default function JoinRequestPage() {
     );
   }
 
-  // ── Step progress bar ───────────────────────────────────────────────────────
+  // ── Shared parts ────────────────────────────────────────────────────────────
   const progressStep = Math.min(step, 3);
 
-  const StepProgress = () => (
-    <div className="mb-6">
-      <div className="flex gap-2 mb-2">
+  const handleBack = () => {
+    if (step === 1) router.back();
+    else setStep((step - 1) as Step);
+  };
+
+  const BackBtn = () => (
+    <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-foreground-muted mb-3 touch-manipulation">
+      <ArrowLeft className="h-4 w-4" /> Back
+    </button>
+  );
+
+  const Progress = () => (
+    <div className="mb-4">
+      <div className="flex gap-2 mb-1.5">
         {[1, 2, 3].map((s) => (
           <div
             key={s}
@@ -136,41 +147,36 @@ export default function JoinRequestPage() {
     </div>
   );
 
-  // ── Back button logic ───────────────────────────────────────────────────────
-  const handleBack = () => {
-    if (step === 1) router.back();
-    else setStep((step - 1) as Step);
-  };
+  const SectionHeader = ({ icon: Icon, title }: { icon: React.ComponentType<{ className?: string }>; title: string }) => (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+        <Icon className="w-3.5 h-3.5 text-primary" />
+      </div>
+      <h2 className="text-base md:text-sm font-semibold text-foreground">{title}</h2>
+    </div>
+  );
 
   // ── Step 1: Personal Info ───────────────────────────────────────────────────
   if (step === 1) {
     return (
-      <div className="flex flex-col px-5 pt-10 pb-8">
-        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation">
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+        <BackBtn />
 
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4 md:mb-3">
           <Logo size="md" />
         </div>
 
-        <div className="space-y-1 mb-4">
-          <h1 className="text-2xl font-bold text-foreground">Request to Join</h1>
-          <p className="text-sm text-foreground-muted">
+        <div className="space-y-0.5 mb-3">
+          <h1 className="text-xl md:text-lg font-bold text-foreground">Request to Join</h1>
+          <p className="text-sm md:text-xs text-foreground-muted">
             Can&apos;t find your state code? Complete these steps and upload your NYSC posting letter.
           </p>
         </div>
 
-        <StepProgress />
+        <Progress />
+        <SectionHeader icon={User} title="Personal Information" />
 
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground">Personal Information</h2>
-        </div>
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="First Name *"
@@ -203,12 +209,12 @@ export default function JoinRequestPage() {
             onChange={(e) => updateField('phone', e.target.value)}
           />
 
-          <Button fullWidth onClick={validateStep1} className="mt-2">
+          <Button fullWidth onClick={validateStep1} className="mt-1">
             Continue <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
 
-        <p className="text-center text-sm text-foreground-muted mt-6">
+        <p className="text-center text-sm md:text-xs text-foreground-muted mt-5">
           Already have an account?{' '}
           <Link href="/login" className="text-primary font-semibold">Sign in</Link>
         </p>
@@ -219,21 +225,12 @@ export default function JoinRequestPage() {
   // ── Step 2: NYSC Details ────────────────────────────────────────────────────
   if (step === 2) {
     return (
-      <div className="flex flex-col px-5 pt-10 pb-8">
-        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation">
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+        <BackBtn />
+        <Progress />
+        <SectionHeader icon={MapPin} title="NYSC Details" />
 
-        <StepProgress />
-
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <MapPin className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground">NYSC Details</h2>
-        </div>
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Input
             label="NYSC State Code *"
             placeholder="e.g. KG/25C/1234"
@@ -280,7 +277,7 @@ export default function JoinRequestPage() {
             onChange={(e) => updateField('batch', e.target.value.toUpperCase())}
           />
 
-          <Button fullWidth onClick={validateStep2} className="mt-2">
+          <Button fullWidth onClick={validateStep2} className="mt-1">
             Continue <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
@@ -291,26 +288,17 @@ export default function JoinRequestPage() {
   // ── Step 3: Document Upload ─────────────────────────────────────────────────
   if (step === 3) {
     return (
-      <div className="flex flex-col px-5 pt-10 pb-8">
-        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation">
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+        <BackBtn />
+        <Progress />
+        <SectionHeader icon={FileUp} title="Upload Document" />
 
-        <StepProgress />
-
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <FileUp className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
-        </div>
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">
               NYSC Posting Letter <span className="text-error">*</span>
             </label>
-            <label className="flex flex-col items-center gap-2 p-8 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
+            <label className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
               {file ? (
                 <div className="flex items-center gap-2 text-primary">
                   <FileText className="w-5 h-5" />
@@ -318,7 +306,7 @@ export default function JoinRequestPage() {
                 </div>
               ) : (
                 <>
-                  <Upload className="w-8 h-8 text-foreground-muted" />
+                  <Upload className="w-7 h-7 text-foreground-muted" />
                   <span className="text-sm font-medium text-foreground-muted">Tap to upload your posting letter</span>
                   <span className="text-xs text-foreground-muted">PNG, JPG, or PDF — max 5MB</span>
                 </>
@@ -345,7 +333,7 @@ export default function JoinRequestPage() {
             Upload a clear photo or scan of your NYSC posting/call-up letter. This helps us verify your identity.
           </p>
 
-          <Button fullWidth onClick={validateStep3} className="mt-2">
+          <Button fullWidth onClick={validateStep3} className="mt-1">
             Review Details <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
@@ -355,26 +343,24 @@ export default function JoinRequestPage() {
 
   // ── Step 4: Review & Submit ─────────────────────────────────────────────────
   return (
-    <div className="flex flex-col px-5 pt-10 pb-8">
-      <button onClick={handleBack} className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation">
-        <ArrowLeft className="h-4 w-4" /> Back
-      </button>
+    <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+      <BackBtn />
 
-      <div className="space-y-1 mb-6">
-        <h1 className="text-xl font-bold text-foreground">Review Your Details</h1>
-        <p className="text-sm text-foreground-muted">
+      <div className="space-y-0.5 mb-4">
+        <h1 className="text-xl md:text-lg font-bold text-foreground">Review Your Details</h1>
+        <p className="text-sm md:text-xs text-foreground-muted">
           Please confirm everything is correct before submitting.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Personal Info */}
-        <div className="bg-surface-alt rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-surface-alt rounded-xl p-3.5">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>
             <button onClick={() => setStep(1)} className="text-xs text-primary font-medium hover:underline">Edit</button>
           </div>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-1.5 text-sm">
             <Row label="Name" value={`${form.firstName} ${form.lastName}`} />
             <Row label="Email" value={form.email} />
             {form.phone && <Row label="Phone" value={form.phone} />}
@@ -382,12 +368,12 @@ export default function JoinRequestPage() {
         </div>
 
         {/* NYSC Details */}
-        <div className="bg-surface-alt rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-surface-alt rounded-xl p-3.5">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-foreground">NYSC Details</h3>
             <button onClick={() => setStep(2)} className="text-xs text-primary font-medium hover:underline">Edit</button>
           </div>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-1.5 text-sm">
             <Row label="State Code" value={form.stateCode} />
             <Row label="Serving State" value={form.servingState} />
             {form.lga && <Row label="LGA" value={form.lga} />}
@@ -397,8 +383,8 @@ export default function JoinRequestPage() {
         </div>
 
         {/* Document */}
-        <div className="bg-surface-alt rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-surface-alt rounded-xl p-3.5">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-foreground">Document</h3>
             <button onClick={() => setStep(3)} className="text-xs text-primary font-medium hover:underline">Change</button>
           </div>
