@@ -54,13 +54,13 @@ function LoginForm() {
   });
 
   return (
-    <div className="flex flex-col px-5 pt-8 md:pt-6 pb-8">
-      <div className="flex justify-center mb-6 md:mb-4">
+    <div className="flex flex-col px-5 pt-8 pb-8">
+      <div className="flex justify-center mb-6">
         <Logo size="md" />
       </div>
 
-      <div className="space-y-1 mb-5 md:mb-4">
-        <h1 className="text-2xl md:text-xl font-bold text-foreground">Welcome back</h1>
+      <div className="space-y-1 mb-5">
+        <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
         <p className="text-sm text-foreground-muted">Sign in to your Corpers Connect account</p>
       </div>
 

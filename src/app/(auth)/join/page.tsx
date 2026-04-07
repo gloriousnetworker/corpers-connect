@@ -97,7 +97,7 @@ export default function JoinRequestPage() {
   // ── Success screen ──────────────────────────────────────────────────────────
   if (submitState === 'success') {
     return (
-      <div className="flex flex-col px-5 pt-10 md:pt-6 pb-8 items-center text-center">
+      <div className="flex flex-col px-5 pt-10 pt-8 pb-8 items-center text-center">
         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
           <CheckCircle className="w-7 h-7 text-primary" />
         </div>
@@ -152,23 +152,23 @@ export default function JoinRequestPage() {
       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
         <Icon className="w-3.5 h-3.5 text-primary" />
       </div>
-      <h2 className="text-base md:text-sm font-semibold text-foreground">{title}</h2>
+      <h2 className="text-base text-base font-semibold text-foreground">{title}</h2>
     </div>
   );
 
   // ── Step 1: Personal Info ───────────────────────────────────────────────────
   if (step === 1) {
     return (
-      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+      <div className="flex flex-col px-5 pt-5 pt-5 pb-8">
         <BackBtn />
 
-        <div className="flex justify-center mb-4 md:mb-3">
+        <div className="flex justify-center mb-4 mb-4">
           <Logo size="md" />
         </div>
 
         <div className="space-y-0.5 mb-3">
-          <h1 className="text-xl md:text-lg font-bold text-foreground">Request to Join</h1>
-          <p className="text-sm md:text-xs text-foreground-muted">
+          <h1 className="text-xl text-xl font-bold text-foreground">Request to Join</h1>
+          <p className="text-sm text-sm text-foreground-muted">
             Can&apos;t find your state code? Complete these steps and upload your NYSC posting letter.
           </p>
         </div>
@@ -214,7 +214,7 @@ export default function JoinRequestPage() {
           </Button>
         </div>
 
-        <p className="text-center text-sm md:text-xs text-foreground-muted mt-5">
+        <p className="text-center text-sm text-sm text-foreground-muted mt-5">
           Already have an account?{' '}
           <Link href="/login" className="text-primary font-semibold">Sign in</Link>
         </p>
@@ -225,61 +225,44 @@ export default function JoinRequestPage() {
   // ── Step 2: NYSC Details ────────────────────────────────────────────────────
   if (step === 2) {
     return (
-      <div className="flex flex-col px-5 pt-3 md:pt-3 pb-6">
+      <div className="flex flex-col px-5 pt-3 pb-6">
         <BackBtn />
         <Progress />
         <SectionHeader icon={MapPin} title="NYSC Details" />
 
         <div className="space-y-2.5">
-          {/* Row 1: State Code + Serving State */}
-          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-3">
-            <Input
-              label="NYSC State Code *"
-              placeholder="e.g. KG/25C/1234"
-              autoCapitalize="characters"
-              value={form.stateCode}
-              onChange={(e) => updateField('stateCode', e.target.value.toUpperCase())}
-              hint="As shown on your call-up letter"
-            />
+          <Input
+            label="NYSC State Code *"
+            placeholder="e.g. KG/25C/1234"
+            autoCapitalize="characters"
+            value={form.stateCode}
+            onChange={(e) => updateField('stateCode', e.target.value.toUpperCase())}
+            hint="As shown on your call-up letter"
+          />
 
-            <div className="space-y-1.5 mt-2.5 md:mt-0">
-              <label className="text-sm font-medium text-foreground">
-                Serving State <span className="text-error">*</span>
-              </label>
-              <select
-                value={form.servingState}
-                onChange={(e) => updateField('servingState', e.target.value)}
-                className="form-input"
-              >
-                <option value="">Select your serving state</option>
-                {NIGERIAN_STATES.map((s) => (
-                  <option key={s} value={`${s} State`}>{s}</option>
-                ))}
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">
+              Serving State <span className="text-error">*</span>
+            </label>
+            <select
+              value={form.servingState}
+              onChange={(e) => updateField('servingState', e.target.value)}
+              className="form-input"
+            >
+              <option value="">Select your serving state</option>
+              {NIGERIAN_STATES.map((s) => (
+                <option key={s} value={`${s} State`}>{s}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Row 2: LGA + PPA */}
-          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Input
               label="LGA (optional)"
               placeholder="e.g. Lokoja"
               value={form.lga}
               onChange={(e) => updateField('lga', e.target.value)}
             />
-
-            <div className="mt-2.5 md:mt-0">
-              <Input
-                label="PPA (optional)"
-                placeholder="e.g. Federal Ministry of Health"
-                value={form.ppa}
-                onChange={(e) => updateField('ppa', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Batch */}
-          <div className="md:w-1/2">
             <Input
               label="Batch *"
               placeholder="e.g. 2025C, 2025A2"
@@ -287,6 +270,13 @@ export default function JoinRequestPage() {
               onChange={(e) => updateField('batch', e.target.value.toUpperCase())}
             />
           </div>
+
+          <Input
+            label="PPA (optional)"
+            placeholder="e.g. Federal Ministry of Health"
+            value={form.ppa}
+            onChange={(e) => updateField('ppa', e.target.value)}
+          />
 
           <Button fullWidth onClick={validateStep2} className="mt-1">
             Continue <ChevronRight className="w-4 h-4 ml-1" />
@@ -299,7 +289,7 @@ export default function JoinRequestPage() {
   // ── Step 3: Document Upload ─────────────────────────────────────────────────
   if (step === 3) {
     return (
-      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+      <div className="flex flex-col px-5 pt-5 pt-5 pb-8">
         <BackBtn />
         <Progress />
         <SectionHeader icon={FileUp} title="Upload Document" />
@@ -354,12 +344,12 @@ export default function JoinRequestPage() {
 
   // ── Step 4: Review & Submit ─────────────────────────────────────────────────
   return (
-    <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+    <div className="flex flex-col px-5 pt-5 pt-5 pb-8">
       <BackBtn />
 
       <div className="space-y-0.5 mb-4">
-        <h1 className="text-xl md:text-lg font-bold text-foreground">Review Your Details</h1>
-        <p className="text-sm md:text-xs text-foreground-muted">
+        <h1 className="text-xl text-xl font-bold text-foreground">Review Your Details</h1>
+        <p className="text-sm text-sm text-foreground-muted">
           Please confirm everything is correct before submitting.
         </p>
       </div>

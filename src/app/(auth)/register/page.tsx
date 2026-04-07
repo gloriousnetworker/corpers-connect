@@ -46,13 +46,13 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="flex flex-col px-5 pt-8 md:pt-6 pb-8">
-      <div className="flex justify-center mb-5 md:mb-3">
+    <div className="flex flex-col px-5 pt-8 pb-8">
+      <div className="flex justify-center mb-5">
         <Logo size="md" />
       </div>
 
-      <div className="space-y-1 mb-4 md:mb-3">
-        <h1 className="text-2xl md:text-xl font-bold text-foreground">Create account</h1>
+      <div className="space-y-1 mb-4">
+        <h1 className="text-2xl font-bold text-foreground">Create account</h1>
         <p className="text-sm text-foreground-muted">
           Use your NYSC State Code to get started
         </p>
