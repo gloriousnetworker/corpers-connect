@@ -92,7 +92,7 @@ export default function JoinRequestPage() {
   }
 
   return (
-    <div className="flex flex-col px-5 pt-10 pb-8 max-w-lg mx-auto min-h-screen overflow-y-auto">
+    <div className="flex flex-col px-5 pt-10 pb-8">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-foreground-muted mb-6 touch-manipulation"
