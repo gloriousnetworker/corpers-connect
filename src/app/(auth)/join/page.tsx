@@ -225,57 +225,68 @@ export default function JoinRequestPage() {
   // ── Step 2: NYSC Details ────────────────────────────────────────────────────
   if (step === 2) {
     return (
-      <div className="flex flex-col px-5 pt-5 md:pt-4 pb-8">
+      <div className="flex flex-col px-5 pt-3 md:pt-3 pb-6">
         <BackBtn />
         <Progress />
         <SectionHeader icon={MapPin} title="NYSC Details" />
 
-        <div className="space-y-3">
-          <Input
-            label="NYSC State Code *"
-            placeholder="e.g. KG/25C/1234"
-            autoCapitalize="characters"
-            value={form.stateCode}
-            onChange={(e) => updateField('stateCode', e.target.value.toUpperCase())}
-            hint="As shown on your call-up letter"
-          />
+        <div className="space-y-2.5">
+          {/* Row 1: State Code + Serving State */}
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-3">
+            <Input
+              label="NYSC State Code *"
+              placeholder="e.g. KG/25C/1234"
+              autoCapitalize="characters"
+              value={form.stateCode}
+              onChange={(e) => updateField('stateCode', e.target.value.toUpperCase())}
+              hint="As shown on your call-up letter"
+            />
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">
-              Serving State <span className="text-error">*</span>
-            </label>
-            <select
-              value={form.servingState}
-              onChange={(e) => updateField('servingState', e.target.value)}
-              className="form-input"
-            >
-              <option value="">Select your serving state</option>
-              {NIGERIAN_STATES.map((s) => (
-                <option key={s} value={`${s} State`}>{s}</option>
-              ))}
-            </select>
+            <div className="space-y-1.5 mt-2.5 md:mt-0">
+              <label className="text-sm font-medium text-foreground">
+                Serving State <span className="text-error">*</span>
+              </label>
+              <select
+                value={form.servingState}
+                onChange={(e) => updateField('servingState', e.target.value)}
+                className="form-input"
+              >
+                <option value="">Select your serving state</option>
+                {NIGERIAN_STATES.map((s) => (
+                  <option key={s} value={`${s} State`}>{s}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <Input
-            label="LGA (optional)"
-            placeholder="e.g. Lokoja"
-            value={form.lga}
-            onChange={(e) => updateField('lga', e.target.value)}
-          />
+          {/* Row 2: LGA + PPA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-3">
+            <Input
+              label="LGA (optional)"
+              placeholder="e.g. Lokoja"
+              value={form.lga}
+              onChange={(e) => updateField('lga', e.target.value)}
+            />
 
-          <Input
-            label="PPA (optional)"
-            placeholder="e.g. Federal Ministry of Health"
-            value={form.ppa}
-            onChange={(e) => updateField('ppa', e.target.value)}
-          />
+            <div className="mt-2.5 md:mt-0">
+              <Input
+                label="PPA (optional)"
+                placeholder="e.g. Federal Ministry of Health"
+                value={form.ppa}
+                onChange={(e) => updateField('ppa', e.target.value)}
+              />
+            </div>
+          </div>
 
-          <Input
-            label="Batch *"
-            placeholder="e.g. 2025C"
-            value={form.batch}
-            onChange={(e) => updateField('batch', e.target.value.toUpperCase())}
-          />
+          {/* Row 3: Batch */}
+          <div className="md:w-1/2">
+            <Input
+              label="Batch *"
+              placeholder="e.g. 2025C, 2025A2"
+              value={form.batch}
+              onChange={(e) => updateField('batch', e.target.value.toUpperCase())}
+            />
+          </div>
 
           <Button fullWidth onClick={validateStep2} className="mt-1">
             Continue <ChevronRight className="w-4 h-4 ml-1" />
