@@ -1,6 +1,6 @@
 import api from './client';
 import type { ApiResponse, PaginatedData } from '@/types/api';
-import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage } from '@/types/models';
+import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage, SellerProfile, ListingComment, MarketplaceConversationInfo } from '@/types/models';
 import type { ListingType, ListingCategory, ListingStatus } from '@/types/enums';
 
 // ── Filters ───────────────────────────────────────────────────────────────
@@ -163,9 +163,17 @@ export async function getListingInquiries(
 
 // ── Seller application ─────────────────────────────────────────────────────
 
-export async function applyAsSeller(idDoc: File): Promise<SellerApplication> {
+export async function applyAsSeller(payload: {
+  idDoc: File;
+  businessName: string;
+  businessDescription: string;
+  whatTheySell: string;
+}): Promise<SellerApplication> {
   const formData = new FormData();
-  formData.append('idDoc', idDoc);
+  formData.append('idDoc', payload.idDoc);
+  formData.append('businessName', payload.businessName);
+  formData.append('businessDescription', payload.businessDescription);
+  formData.append('whatTheySell', payload.whatTheySell);
 
   const { data } = await api.post<ApiResponse<SellerApplication>>(
     '/marketplace/apply',
@@ -214,4 +222,61 @@ export async function getMyApplication(): Promise<SellerApplication | null> {
   } catch {
     return null;
   }
+}
+
+// ── Seller Profile ────────────────────────────────────────────────────────
+
+export async function getSellerProfile(userId: string): Promise<SellerProfile> {
+  const { data } = await api.get<ApiResponse<SellerProfile>>(`/marketplace/sellers/${userId}`);
+  return data.data;
+}
+
+export async function getSellerListings(userId: string, params: { cursor?: string; limit?: number } = {}): Promise<PaginatedData<MarketplaceListing>> {
+  const { data } = await api.get<ApiResponse<PaginatedData<MarketplaceListing>>>(`/marketplace/sellers/${userId}/listings`, { params });
+  return data.data;
+}
+
+export async function getMySellerProfile(): Promise<SellerProfile | null> {
+  try {
+    const { data } = await api.get<ApiResponse<SellerProfile>>('/marketplace/my-seller-profile');
+    return data.data;
+  } catch { return null; }
+}
+
+// ── Comments / Bidding ────────────────────────────────────────────────────
+
+export async function getListingComments(listingId: string, params: { cursor?: string; limit?: number } = {}): Promise<PaginatedData<ListingComment>> {
+  const { data } = await api.get<ApiResponse<PaginatedData<ListingComment>>>(`/marketplace/listings/${listingId}/comments`, { params });
+  return data.data;
+}
+
+export async function createListingComment(listingId: string, payload: { content: string; bidAmount?: number; parentId?: string }): Promise<ListingComment> {
+  const { data } = await api.post<ApiResponse<ListingComment>>(`/marketplace/listings/${listingId}/comments`, payload);
+  return data.data;
+}
+
+export async function updateListingComment(listingId: string, commentId: string, payload: { content: string; bidAmount?: number }): Promise<ListingComment> {
+  const { data } = await api.patch<ApiResponse<ListingComment>>(`/marketplace/listings/${listingId}/comments/${commentId}`, payload);
+  return data.data;
+}
+
+export async function deleteListingComment(listingId: string, commentId: string): Promise<void> {
+  await api.delete(`/marketplace/listings/${listingId}/comments/${commentId}`);
+}
+
+// ── Marketplace Conversations ─────────────────────────────────────────────
+
+export async function startMarketplaceChat(listingId: string): Promise<MarketplaceConversationInfo> {
+  const { data } = await api.post<ApiResponse<MarketplaceConversationInfo>>(`/marketplace/listings/${listingId}/chat`);
+  return data.data;
+}
+
+export async function getMarketplaceConversations(params: { cursor?: string; limit?: number } = {}): Promise<PaginatedData<MarketplaceConversationInfo>> {
+  const { data } = await api.get<ApiResponse<PaginatedData<MarketplaceConversationInfo>>>('/marketplace/conversations', { params });
+  return data.data;
+}
+
+export async function getMarketplaceConversation(conversationId: string): Promise<MarketplaceConversationInfo> {
+  const { data } = await api.get<ApiResponse<MarketplaceConversationInfo>>(`/marketplace/conversations/${conversationId}`);
+  return data.data;
 }

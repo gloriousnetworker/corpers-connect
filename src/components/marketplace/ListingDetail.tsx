@@ -7,15 +7,16 @@ import {
   Edit2, Trash2, CheckCircle, MoreVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getListing, inquireListing, deleteListing } from '@/lib/api/marketplace';
+import { getListing, deleteListing, startMarketplaceChat } from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useAuthStore } from '@/store/auth.store';
-import { useUIStore } from '@/store/ui.store';
+
 import { ListingStatus, ListingType } from '@/types/enums';
 import Image from 'next/image';
 import { getAvatarUrl } from '@/lib/utils';
 import ImageGallery from './ImageGallery';
 import ListingReviews from './ListingReviews';
+import ListingComments from './ListingComments';
 
 const TYPE_LABEL: Record<ListingType, string> = {
   [ListingType.FOR_SALE]: 'For Sale',
@@ -26,9 +27,8 @@ const TYPE_LABEL: Record<ListingType, string> = {
 
 export default function ListingDetail() {
   const qc = useQueryClient();
-  const { selectedListing, goBack, setView, clearListing } = useMarketplaceStore();
+  const { selectedListing, goBack, setView, clearListing, viewSellerProfile, openMarketplaceChat } = useMarketplaceStore();
   const user = useAuthStore((s) => s.user);
-  const setViewingUser = useUIStore((s) => s.setViewingUser);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -39,14 +39,10 @@ export default function ListingDetail() {
     initialData: selectedListing ?? undefined,
   });
 
-  const inquireMutation = useMutation({
-    mutationFn: () => inquireListing(listing!.id),
+  const chatMutation = useMutation({
+    mutationFn: () => startMarketplaceChat(listing!.id),
     onSuccess: (result) => {
-      toast.success('Message sent!', { description: `Opening chat with ${listing!.seller.firstName}` });
-      useUIStore.getState().setActiveSection('messages');
-      // The conversation will appear in the messages list; pass conversationId via store
-      // For now navigate to messages — the DM will be created server-side
-      void result;
+      openMarketplaceChat(result.conversationId);
     },
     onError: () => toast.error('Could not contact seller. Try again.'),
   });
@@ -201,10 +197,15 @@ export default function ListingDetail() {
           <ListingReviews listingId={listing.id} sellerId={listing.sellerId} />
         </div>
 
+        {/* Bids & Comments */}
+        <div className="border-t border-border pt-5">
+          <ListingComments listingId={listing.id} listingOwnerId={listing.sellerId} />
+        </div>
+
         {/* Seller card */}
         <div
           className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 cursor-pointer hover:bg-muted/60 transition-colors"
-          onClick={() => setViewingUser(listing.sellerId, 'marketplace')}
+          onClick={() => viewSellerProfile(listing.sellerId)}
         >
           {listing.seller.profilePicture ? (
               <Image
@@ -238,12 +239,12 @@ export default function ListingDetail() {
       {!isOwner && isActive && (
         <div className="sticky bottom-0 bg-surface border-t border-border px-4 py-4">
           <button
-            onClick={() => inquireMutation.mutate()}
-            disabled={inquireMutation.isPending}
+            onClick={() => chatMutation.mutate()}
+            disabled={chatMutation.isPending}
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 disabled:opacity-60 transition-colors"
           >
             <MessageCircle size={18} />
-            {inquireMutation.isPending ? 'Opening chat…' : 'Contact Seller'}
+            {chatMutation.isPending ? 'Opening chat…' : 'Chat with Seller'}
           </button>
         </div>
       )}

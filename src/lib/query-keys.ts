@@ -51,6 +51,12 @@ export const queryKeys = {
   listingReviews: (id: string) => ['listing', id, 'reviews'] as const,
   myListings: () => ['my-listings'] as const,
   myApplication: () => ['seller-application', 'me'] as const,
+  sellerProfile: (userId: string) => ['seller-profile', userId] as const,
+  sellerListings: (userId: string, cursor?: string) => ['seller-listings', userId, cursor] as const,
+  listingComments: (listingId: string, cursor?: string) => ['listing-comments', listingId, cursor] as const,
+  marketplaceConversations: (cursor?: string) => ['marketplace-conversations', cursor] as const,
+  marketplaceConversation: (id: string) => ['marketplace-conversation', id] as const,
+  mySellerProfile: () => ['my-seller-profile'] as const,
 
   // Opportunities
   opportunities: (filters: Record<string, unknown>) => ['opportunities', filters] as const,

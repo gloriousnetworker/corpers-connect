@@ -52,6 +52,7 @@ export enum MessageType {
 export enum ConversationType {
   DM = 'DM',
   GROUP = 'GROUP',
+  MARKETPLACE = 'MARKETPLACE',
 }
 
 export enum ParticipantRole {
@@ -112,6 +113,16 @@ export enum NotificationType {
   LEVEL_UP = 'LEVEL_UP',
   SYSTEM = 'SYSTEM',
   BROADCAST = 'BROADCAST',
+  SELLER_APPROVED = 'SELLER_APPROVED',
+  SELLER_REJECTED = 'SELLER_REJECTED',
+  SELLER_DEACTIVATED = 'SELLER_DEACTIVATED',
+  LISTING_COMMENT = 'LISTING_COMMENT',
+  MARKETPLACE_MESSAGE = 'MARKETPLACE_MESSAGE',
+}
+
+export enum SellerStatus {
+  ACTIVE = 'ACTIVE',
+  DEACTIVATED = 'DEACTIVATED',
 }
 
 export enum SellerApplicationStatus {

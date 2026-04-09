@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
+import { useMarketplaceStore } from '@/store/marketplace.store';
 import { getConversation } from '@/lib/api/conversations';
 import FeedSection from '@/components/sections/FeedSection';
 import DiscoverSection from '@/components/sections/DiscoverSection';
@@ -60,22 +61,39 @@ function DeepLinkHandler() {
 
   // Capture the conv param once on mount before it's cleaned from the URL
   const pendingConvRef = useRef<string | null>(null);
+  const pendingMktConvRef = useRef<string | null>(null);
   useEffect(() => {
     pendingConvRef.current = searchParams.get('conv');
+    pendingMktConvRef.current = searchParams.get('mkt-conv');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Once auth is ready, open the pending conversation
   useEffect(() => {
-    if (!user || !pendingConvRef.current) return;
-    const convId = pendingConvRef.current;
-    pendingConvRef.current = null; // prevent double-trigger
+    if (!user) return;
 
-    setActiveSection('messages');
-    router.replace('/');
-    getConversation(convId)
-      .then((conversation) => setPendingConversation(conversation))
-      .catch(() => {/* conversation not found */});
+    // Handle regular conversation deep link
+    if (pendingConvRef.current) {
+      const convId = pendingConvRef.current;
+      pendingConvRef.current = null; // prevent double-trigger
+
+      setActiveSection('messages');
+      router.replace('/');
+      getConversation(convId)
+        .then((conversation) => setPendingConversation(conversation))
+        .catch(() => {/* conversation not found */});
+      return;
+    }
+
+    // Handle marketplace conversation deep link
+    if (pendingMktConvRef.current) {
+      const convId = pendingMktConvRef.current;
+      pendingMktConvRef.current = null; // prevent double-trigger
+
+      setActiveSection('marketplace');
+      useMarketplaceStore.getState().openMarketplaceChat(convId);
+      router.replace('/');
+    }
   }, [user, router, setActiveSection, setPendingConversation]);
 
   return null;

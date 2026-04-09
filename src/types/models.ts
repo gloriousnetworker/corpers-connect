@@ -225,6 +225,9 @@ export interface SellerApplication {
   id: string;
   userId: string;
   idDocUrl: string;
+  businessName: string;
+  businessDescription: string;
+  whatTheySell: string;
   status: SellerApplicationStatus;
   reviewNote?: string | null;
   reviewedAt?: string | null;
@@ -314,6 +317,81 @@ export interface Session {
   expiresAt: string;
   createdAt: string;
   isCurrent?: boolean;
+}
+
+export interface SellerProfile {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+    isVerified: boolean;
+    servingState: string;
+    stateCode: string;
+  };
+  businessName: string;
+  businessDescription: string;
+  whatTheySell: string;
+  sellerStatus: import('./enums').SellerStatus;
+  deactivationReason: string | null;
+  averageRating: number;
+  totalReviews: number;
+  totalListings: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListingComment {
+  id: string;
+  listingId: string;
+  authorId: string;
+  author: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+    isVerified: boolean;
+  };
+  parentId: string | null;
+  content: string;
+  bidAmount: number | null;
+  isEdited: boolean;
+  isDeleted: boolean;
+  repliesCount?: number;
+  replies?: ListingComment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceConversationInfo {
+  id: string;
+  conversationId: string;
+  listingId: string;
+  listing: {
+    id: string;
+    title: string;
+    images: string[];
+    price: number | null;
+    status: string;
+  };
+  buyerId: string;
+  buyer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+  };
+  sellerId: string;
+  seller: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+  };
+  conversation: import('./models').Conversation;
+  createdAt: string;
 }
 
 // Auth types

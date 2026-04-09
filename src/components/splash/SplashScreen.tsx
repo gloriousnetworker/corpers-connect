@@ -16,19 +16,25 @@ const PHASE_TIMING = {
 
 type Phase = 'fragments' | 'logoGlow' | 'tagline' | 'welcome' | 'flash' | 'exit';
 
+// ── Deterministic pseudo-random (same result on server + client) ────────────
+function seeded(seed: number) {
+  const x = Math.sin(seed + 1) * 10000;
+  return x - Math.floor(x);
+}
+
 // ── Fragment data ───────────────────────────────────────────────────────────
 // Each fragment starts off-screen and flies toward center
 const FRAGMENTS = Array.from({ length: 18 }, (_, i) => {
   const angle = (i / 18) * 360;
   const rad = (angle * Math.PI) / 180;
-  const distance = 600 + Math.random() * 400;
+  const distance = 600 + seeded(i * 4) * 400;
   return {
     id: i,
     startX: Math.cos(rad) * distance,
     startY: Math.sin(rad) * distance,
-    startRotate: Math.random() * 360 - 180,
-    size: 12 + Math.random() * 24,
-    delay: Math.random() * 0.4,
+    startRotate: seeded(i * 4 + 1) * 360 - 180,
+    size: 12 + seeded(i * 4 + 2) * 24,
+    delay: seeded(i * 4 + 3) * 0.4,
     isGreen: i % 3 !== 0,
   };
 });

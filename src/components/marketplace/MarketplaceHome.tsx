@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, Plus, Store } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Store, MessageCircle } from 'lucide-react';
 import { getListings } from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import type { ListingFilters } from '@/lib/api/marketplace';
@@ -13,7 +13,7 @@ import ListingCard from './ListingCard';
 import FilterSheet from './FilterSheet';
 
 export default function MarketplaceHome() {
-  const { selectListing, setView, activeFilters, setFilters, clearFilters } = useMarketplaceStore();
+  const { selectListing, setView, activeFilters, setFilters, clearFilters, openMarketplaceConversations } = useMarketplaceStore();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<ListingCategory | 'ALL'>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -54,13 +54,22 @@ export default function MarketplaceHome() {
             <Store size={22} className="text-primary" />
             <h1 className="text-xl font-bold text-foreground">Mami Market</h1>
           </div>
-          <button
-            onClick={() => setView('create')}
-            className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={15} />
-            Sell
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openMarketplaceConversations}
+              className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Marketplace messages"
+            >
+              <MessageCircle size={20} />
+            </button>
+            <button
+              onClick={() => setView('create')}
+              className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={15} />
+              Sell
+            </button>
+          </div>
         </div>
 
         {/* Search + filter row */}

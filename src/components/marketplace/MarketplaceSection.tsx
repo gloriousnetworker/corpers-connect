@@ -13,6 +13,9 @@ import EditListingForm from './EditListingForm';
 import MyListings from './MyListings';
 import SellerApplicationForm from './SellerApplicationForm';
 import ApplicationStatus from './ApplicationStatus';
+import SellerProfileView from './SellerProfile';
+import MarketplaceConversations from './MarketplaceConversations';
+import MarketplaceChatView from './MarketplaceChatView';
 
 /**
  * MarketplaceSection — top-level router for the marketplace SPA section.
@@ -57,6 +60,12 @@ export default function MarketplaceSection() {
       return <SellerApplicationForm />;
     case 'application-status':
       return <ApplicationStatus />;
+    case 'seller-profile':
+      return <SellerProfileView />;
+    case 'marketplace-conversations':
+      return <MarketplaceConversations />;
+    case 'marketplace-chat':
+      return <MarketplaceChatView />;
     default:
       return <MarketplaceHome />;
   }

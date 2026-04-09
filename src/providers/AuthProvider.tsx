@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { setAccessToken, getAccessToken } from '@/lib/api/client';
 import { refreshTokens } from '@/lib/api/auth';
 import { getMe } from '@/lib/api/users';
+import { ACCESS_TOKEN_EXPIRY_MINUTES } from '@/lib/constants';
+
+// Refresh 2 minutes before the access token expires to avoid 401 gaps.
+const REFRESH_INTERVAL_MS = (ACCESS_TOKEN_EXPIRY_MINUTES - 2) * 60 * 1000; // 13 min
 
 /**
  * AuthProvider runs on app mount and restores the session by:
@@ -12,12 +16,46 @@ import { getMe } from '@/lib/api/users';
  * 2. Calling /users/me to get current user data
  * 3. Populating the auth store
  *
- * No localStorage token reading needed — the refresh token is stored in an
- * httpOnly cookie by the backend and sent automatically on the /auth/refresh
- * request. This run silently; middleware handles redirects.
+ * It also starts a background timer that proactively refreshes the access token
+ * before it expires, so users don't get unexpectedly logged out.
  */
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading, isAuthenticated } = useAuthStore();
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const silentRefresh = useCallback(async () => {
+    try {
+      const tokens = await refreshTokens();
+      setAccessToken(tokens.accessToken);
+    } catch {
+      // Refresh token itself expired or revoked — log user out
+      stopRefreshTimer();
+      clearAuth();
+      if (typeof window !== 'undefined') {
+        const { pathname } = window.location;
+        const isAuthPage =
+          pathname === '/login' ||
+          pathname.startsWith('/register') ||
+          pathname.startsWith('/forgot-password') ||
+          pathname.startsWith('/reset-password');
+        if (!isAuthPage) {
+          window.location.replace('/login');
+        }
+      }
+    }
+  }, [clearAuth, stopRefreshTimer]);
+
+  const startRefreshTimer = useCallback(() => {
+    stopRefreshTimer();
+    refreshTimerRef.current = setInterval(silentRefresh, REFRESH_INTERVAL_MS);
+  }, [silentRefresh, stopRefreshTimer]);
 
   useEffect(() => {
     async function restoreSession() {
@@ -28,11 +66,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         const user = await getMe();
         setAuth(user, tokens.accessToken);
+
+        // Start proactive refresh timer now that we have a valid session
+        startRefreshTimer();
       } catch {
         // Token invalid/expired — clear everything then redirect to login.
-        // clearAuth() expires the session cookie; window.location forces a full
-        // navigation so middleware re-evaluates and serves the login page cleanly
-        // instead of the user seeing the dashboard with failed/empty queries.
         clearAuth();
         if (typeof window !== 'undefined') {
           const { pathname } = window.location;
@@ -54,8 +92,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!isAuthenticated || !getAccessToken()) {
       restoreSession();
     } else {
+      // Already authenticated — just start the refresh timer
+      startRefreshTimer();
       setLoading(false);
     }
+
+    return () => stopRefreshTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -18,7 +18,7 @@ jest.mock('@/lib/api/marketplace', () => ({
   updateListing: jest.fn(),
   deleteListing: jest.fn(),
   getMyListings: jest.fn(),
-  getSellerApplicationStatus: jest.fn(),
+  getMyApplication: jest.fn(),
   applyAsSeller: jest.fn(),
 }));
 
@@ -57,7 +57,7 @@ jest.mock('next/image', () => ({
     <img src={src} alt={alt} />,
 }));
 
-import { getListings, getSellerApplicationStatus } from '@/lib/api/marketplace';
+import { getListings, getMyApplication } from '@/lib/api/marketplace';
 import MarketplaceHome from '@/components/marketplace/MarketplaceHome';
 import {
   ListingCategory, ListingType, ListingStatus,
@@ -105,7 +105,7 @@ describe('MarketplaceHome', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (getListings as jest.Mock).mockResolvedValue(listingsPage);
-    (getSellerApplicationStatus as jest.Mock).mockResolvedValue({ status: null });
+    (getMyApplication as jest.Mock).mockResolvedValue({ status: null });
   });
 
   it('renders the Mami Market heading', () => {
