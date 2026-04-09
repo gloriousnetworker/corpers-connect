@@ -215,7 +215,7 @@ export default function MessageInput({
           </>
         )}
 
-        <div className="flex-1 flex items-end gap-1 bg-surface-alt rounded-2xl px-3 py-2 min-h-[44px]">
+        <div className="flex-1 flex items-center gap-1 bg-surface-alt rounded-2xl px-3 py-2 min-h-[44px]">
           <textarea
             ref={textareaRef}
             value={text}

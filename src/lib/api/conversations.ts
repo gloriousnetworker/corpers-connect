@@ -286,7 +286,7 @@ export async function markRead(conversationId: string, messageIds: string[]): Pr
   await api.post(`/conversations/${conversationId}/read`, { messageIds });
 }
 
-/** PATCH /conversations/:id/settings — archive, pin, mute */
+/** PATCH /conversations/:id/settings — archive, pin, mute, mark as unread */
 export async function updateConversationSettings(
   conversationId: string,
   settings: {
@@ -294,9 +294,15 @@ export async function updateConversationSettings(
     isPinned?: boolean;
     isMuted?: boolean;
     mutedUntil?: string;
+    markAsUnread?: boolean;
   }
 ): Promise<void> {
   await api.patch(`/conversations/${conversationId}/settings`, settings);
+}
+
+/** DELETE /conversations/:id/messages — clear all messages for current user */
+export async function clearConversationMessages(conversationId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}/messages`);
 }
 
 /** DELETE /conversations/:id/participants/me — leave group */

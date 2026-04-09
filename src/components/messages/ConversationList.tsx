@@ -105,6 +105,7 @@ export default function ConversationList({
                     isOnline={!!otherId && onlineUsers.has(otherId)}
                     onClick={() => onSelect(conv)}
                     onLongPress={() => setContextConv(conv)}
+                    onContextMenu={() => setContextConv(conv)}
                   />
                 );
               })}

@@ -14,6 +14,7 @@ interface ConversationItemProps {
   isOnline?: boolean;
   onClick: () => void;
   onLongPress?: () => void;
+  onContextMenu?: () => void;
 }
 
 function getConversationDisplay(conv: Conversation, currentUserId: string) {
@@ -56,6 +57,7 @@ export default function ConversationItem({
   isOnline,
   onClick,
   onLongPress,
+  onContextMenu,
 }: ConversationItemProps) {
   const display = getConversationDisplay(conversation, currentUserId);
   const preview = getLastMessagePreview(conversation, currentUserId);
@@ -107,6 +109,7 @@ export default function ConversationItem({
       onPointerCancel={cancelPress}
       onPointerMove={handlePointerMove}
       onClick={handleClick}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(); }}
       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
         isActive
           ? 'bg-primary/10'
