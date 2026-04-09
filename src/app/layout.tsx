@@ -1,12 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
-import dynamic from 'next/dynamic';
 import Providers from '@/providers/Providers';
-
-// SplashScreen must be client-only: it uses Audio, sessionStorage, and Framer Motion
-// transforms that serialize differently on server vs client (causing hydration mismatches).
-const SplashScreen = dynamic(() => import('@/components/splash/SplashScreen'), { ssr: false });
+import SplashScreenLoader from '@/components/splash/SplashScreenLoader';
 // InstallPrompt removed — was showing on every screen refresh. Users can
 // install via the browser's native "Add to Home Screen" option instead.
 
@@ -72,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${plusJakartaSans.variable} antialiased`}>
         <Providers>
-          <SplashScreen />
+          <SplashScreenLoader />
           {children}
         </Providers>
         {/* Portal root — all modals/sheets/overlays render here to escape stacking contexts */}
