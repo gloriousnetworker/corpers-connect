@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import dynamic from 'next/dynamic';
 import Providers from '@/providers/Providers';
-import SplashScreen from '@/components/splash/SplashScreen';
+
+// SplashScreen must be client-only: it uses Audio, sessionStorage, and Framer Motion
+// transforms that serialize differently on server vs client (causing hydration mismatches).
+const SplashScreen = dynamic(() => import('@/components/splash/SplashScreen'), { ssr: false });
 // InstallPrompt removed — was showing on every screen refresh. Users can
 // install via the browser's native "Add to Home Screen" option instead.
 
