@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { setAccessToken, getAccessToken } from '@/lib/api/client';
+import { setAccessToken, getAccessToken, ApiRequestError } from '@/lib/api/client';
 import { refreshTokens } from '@/lib/api/auth';
 import { getMe } from '@/lib/api/users';
 import { ACCESS_TOKEN_EXPIRY_MINUTES } from '@/lib/constants';
@@ -34,21 +34,29 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     try {
       const tokens = await refreshTokens();
       setAccessToken(tokens.accessToken);
-    } catch {
-      // Refresh token itself expired or revoked — log user out
-      stopRefreshTimer();
-      clearAuth();
-      if (typeof window !== 'undefined') {
-        const { pathname } = window.location;
-        const isAuthPage =
-          pathname === '/login' ||
-          pathname.startsWith('/register') ||
-          pathname.startsWith('/forgot-password') ||
-          pathname.startsWith('/reset-password');
-        if (!isAuthPage) {
-          window.location.replace('/login');
+    } catch (err) {
+      // Only force-logout on explicit auth rejection (401/403 = token expired/revoked).
+      // Network errors or server errors are transient — the 401 interceptor in client.ts
+      // will handle expired access tokens when the next API call is made.
+      const isAuthFailure =
+        err instanceof ApiRequestError &&
+        (err.statusCode === 401 || err.statusCode === 403);
+      if (isAuthFailure) {
+        stopRefreshTimer();
+        clearAuth();
+        if (typeof window !== 'undefined') {
+          const { pathname } = window.location;
+          const isAuthPage =
+            pathname === '/login' ||
+            pathname.startsWith('/register') ||
+            pathname.startsWith('/forgot-password') ||
+            pathname.startsWith('/reset-password');
+          if (!isAuthPage) {
+            window.location.replace('/login');
+          }
         }
       }
+      // else: transient failure — skip this cycle, try again next interval
     }
   }, [clearAuth, stopRefreshTimer]);
 
@@ -69,19 +77,30 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         // Start proactive refresh timer now that we have a valid session
         startRefreshTimer();
-      } catch {
-        // Token invalid/expired — clear everything then redirect to login.
-        clearAuth();
-        if (typeof window !== 'undefined') {
-          const { pathname } = window.location;
-          const isAuthPage =
-            pathname === '/login' ||
-            pathname.startsWith('/register') ||
-            pathname.startsWith('/forgot-password') ||
-            pathname.startsWith('/reset-password');
-          if (!isAuthPage) {
-            window.location.replace('/login');
+      } catch (err) {
+        // Only force-logout on explicit auth rejection (401/403).
+        // Network errors or server 5xx are transient — don't log the user out.
+        // Their refresh token cookie is likely still valid; they just had a bad request.
+        const isAuthFailure =
+          err instanceof ApiRequestError &&
+          (err.statusCode === 401 || err.statusCode === 403);
+
+        if (isAuthFailure) {
+          clearAuth();
+          if (typeof window !== 'undefined') {
+            const { pathname } = window.location;
+            const isAuthPage =
+              pathname === '/login' ||
+              pathname.startsWith('/register') ||
+              pathname.startsWith('/forgot-password') ||
+              pathname.startsWith('/reset-password');
+            if (!isAuthPage) {
+              window.location.replace('/login');
+            }
           }
+        } else {
+          // Transient failure — keep any persisted auth state, just stop loading
+          setLoading(false);
         }
       }
     }
