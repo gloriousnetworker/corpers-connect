@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { BadgeCheck, Camera, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,11 @@ interface ProfileHeaderProps {
   actionSlot?: React.ReactNode;
 }
 
+const isVideoUrl = (url?: string | null) =>
+  !!url && /\.(mp4|webm|mov|ogg)/i.test(url);
+
+const isVideoMime = (mime: string) => mime.startsWith('video/');
+
 export default function ProfileHeader({
   user,
   isOwnProfile = false,
@@ -36,25 +41,48 @@ export default function ProfileHeader({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Determine if the banner is a video
-  const isVideoUrl = (url?: string | null) =>
-    !!url && /\.(mp4|webm|mov|ogg)/i.test(url);
+  // Local preview URL (object URL while uploading, then cleared after real URL arrives)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerPreviewIsVideo, setBannerPreviewIsVideo] = useState(false);
+  const previewUrlRef = useRef<string | null>(null);
+
+  // Revoke object URL on unmount or when replaced
+  const revokePreview = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  };
+  useEffect(() => () => revokePreview(), []);
 
   const bannerMutation = useMutation({
     mutationFn: (file: File) => uploadBanner(file),
     onSuccess: (updatedUser) => {
+      // 1. Update auth store
       setUser(updatedUser);
-      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+      // 2. Directly patch the query cache — instant UI update, no refetch needed
+      queryClient.setQueryData<User>(['me'], (old) =>
+        old ? { ...old, bannerImage: updatedUser.bannerImage } : old
+      );
+      // 3. Revoke the temporary object URL
+      revokePreview();
+      setBannerPreview(null);
       toast.success('Banner updated');
     },
-    onError: () => toast.error('Failed to update banner'),
+    onError: () => {
+      revokePreview();
+      setBannerPreview(null);
+      toast.error('Failed to update banner');
+    },
   });
 
   const avatarMutation = useMutation({
     mutationFn: (file: File) => uploadAvatar(file),
     onSuccess: (updatedUser) => {
       setUser(updatedUser);
-      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+      queryClient.setQueryData<User>(['me'], (old) =>
+        old ? { ...old, profilePicture: updatedUser.profilePicture } : old
+      );
       toast.success('Profile photo updated');
     },
     onError: () => toast.error('Failed to update photo'),
@@ -63,6 +91,12 @@ export default function ProfileHeader({
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Show local preview immediately — no waiting for Cloudinary
+    revokePreview();
+    const objectUrl = URL.createObjectURL(file);
+    previewUrlRef.current = objectUrl;
+    setBannerPreview(objectUrl);
+    setBannerPreviewIsVideo(isVideoMime(file.type));
     bannerMutation.mutate(file);
     e.target.value = '';
   };
@@ -74,8 +108,9 @@ export default function ProfileHeader({
     e.target.value = '';
   };
 
-  const bannerUrl = user.bannerImage;
-  const isVideo = isVideoUrl(bannerUrl);
+  // Use local preview while uploading, else use the real URL from the user prop
+  const bannerUrl = bannerPreview ?? user.bannerImage;
+  const isVideo = bannerPreview ? bannerPreviewIsVideo : isVideoUrl(bannerUrl);
 
   return (
     <div className="bg-surface">
@@ -89,6 +124,7 @@ export default function ProfileHeader({
         {bannerUrl ? (
           isVideo ? (
             <video
+              key={bannerUrl}
               src={bannerUrl}
               autoPlay
               loop
