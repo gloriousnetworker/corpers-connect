@@ -65,13 +65,12 @@ export default function ConversationList({
     });
   }, [conversations, search, user?.id]);
 
-  // Split into sections (favorites → pinned → regular)
-  const { favorites, pinned, regular } = useMemo(() => ({
-    favorites: filtered.filter((c) => favIds.has(c.id)),
-    pinned:    filtered.filter((c) => !favIds.has(c.id) && isPinned(c)),
-    regular:   filtered.filter((c) => !favIds.has(c.id) && !isPinned(c)),
+  // Split into pinned / regular (favorites are in their own panel, shown in both sections with star indicator)
+  const { pinned, regular } = useMemo(() => ({
+    pinned:  filtered.filter((c) => isPinned(c)),
+    regular: filtered.filter((c) => !isPinned(c)),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [filtered, favIds, lockedIds]);
+  }), [filtered, lockedIds]);
 
   if (!user) return null;
 
@@ -151,18 +150,6 @@ export default function ConversationList({
             </div>
           ) : (
             <div>
-              {/* Favorites section */}
-              {favorites.length > 0 && (
-                <>
-                  <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-amber-500 uppercase tracking-wide">
-                    ★ Favorites
-                  </p>
-                  <div className="divide-y divide-border/50">
-                    {favorites.map(renderItem)}
-                  </div>
-                </>
-              )}
-
               {/* Pinned section */}
               {pinned.length > 0 && (
                 <>
@@ -178,7 +165,7 @@ export default function ConversationList({
               {/* Regular section */}
               {regular.length > 0 && (
                 <>
-                  {(favorites.length > 0 || pinned.length > 0) && (
+                  {pinned.length > 0 && (
                     <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-foreground-muted uppercase tracking-wide">
                       All messages
                     </p>

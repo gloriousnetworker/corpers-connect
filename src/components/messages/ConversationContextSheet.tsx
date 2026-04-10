@@ -23,6 +23,7 @@ import {
   updateConversationSettings,
   leaveConversation,
   clearConversationMessages,
+  getConversations,
 } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import ClientPortal from '@/components/ui/ClientPortal';
@@ -30,6 +31,8 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { ConversationType } from '@/types/enums';
 import type { Conversation } from '@/types/models';
 import PinEntryModal, { getChatPin } from './PinEntryModal';
+
+const MAX_PINNED = 5;
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 
@@ -68,9 +71,10 @@ export default function ConversationContextSheet({
   const isMuted    = myParticipant?.isMuted    ?? false;
   const isGroup    = conversation.type === ConversationType.GROUP;
 
-  const [isLocked,    setIsLocked]    = useState(false);
-  const [isFavorite,  setIsFavorite]  = useState(false);
-  const [showSetPin,  setShowSetPin]  = useState(false);
+  const [isLocked,     setIsLocked]     = useState(false);
+  const [isFavorite,   setIsFavorite]   = useState(false);
+  const [showSetPin,   setShowSetPin]   = useState(false);
+  const [showUnlockPin, setShowUnlockPin] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -105,18 +109,14 @@ export default function ConversationContextSheet({
   // ── Lock / Unlock ──────────────────────────────────────────────────────────
 
   const handleToggleLock = () => {
-    const locked = getSet('cc_locked_convs');
     if (isLocked) {
-      // Unlock immediately — no PIN required to unlock, only to open
-      locked.delete(conversation.id);
-      saveSet('cc_locked_convs', locked);
-      setIsLocked(false);
-      toast.success('Chat unlocked');
-      onClose();
+      // Unlock: require PIN verification first
+      setShowUnlockPin(true);
     } else {
       // Lock: check if a global PIN exists first
+      const locked = getSet('cc_locked_convs');
       if (!getChatPin()) {
-        setShowSetPin(true); // open set-PIN modal
+        setShowSetPin(true);
       } else {
         locked.add(conversation.id);
         saveSet('cc_locked_convs', locked);
@@ -127,6 +127,16 @@ export default function ConversationContextSheet({
     }
   };
 
+  const handleUnlockSuccess = () => {
+    const locked = getSet('cc_locked_convs');
+    locked.delete(conversation.id);
+    saveSet('cc_locked_convs', locked);
+    setIsLocked(false);
+    setShowUnlockPin(false);
+    toast.success('Chat unlocked');
+    onClose();
+  };
+
   const handlePinSet = () => {
     // PIN was just created — now lock the chat
     const locked = getSet('cc_locked_convs');
@@ -135,6 +145,24 @@ export default function ConversationContextSheet({
     setShowSetPin(false);
     toast.success('Chat locked');
     onClose();
+  };
+
+  // ── Pin (with 5-chat limit) ────────────────────────────────────────────────
+
+  const handleTogglePin = () => {
+    if (!isPinned) {
+      // Count pinned conversations for this user from cache
+      const cached = queryClient.getQueryData<Conversation[]>(queryKeys.conversations()) ?? [];
+      const pinnedCount = cached.filter(
+        (c) => c.participants.find((p) => p.userId === currentUserId)?.isPinned,
+      ).length;
+      if (pinnedCount >= MAX_PINNED) {
+        toast.error(`You can only pin up to ${MAX_PINNED} chats`);
+        onClose();
+        return;
+      }
+    }
+    settingsMutation.mutate({ isPinned: !isPinned });
   };
 
   // ── Favorites ─────────────────────────────────────────────────────────────
@@ -221,12 +249,17 @@ export default function ConversationContextSheet({
               </button>
 
               <button
-                onClick={() => settingsMutation.mutate({ isPinned: !isPinned })}
+                onClick={handleTogglePin}
                 disabled={isPending}
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-foreground hover:bg-surface-alt transition-colors disabled:opacity-50"
               >
                 {isPinned ? <PinOff className="w-4 h-4 text-foreground-secondary" /> : <Pin className="w-4 h-4 text-foreground-secondary" />}
-                {isPinned ? 'Unpin' : 'Pin'}
+                <span className="flex-1 text-left">
+                  {isPinned ? 'Unpin' : 'Pin'}
+                  {!isPinned && (
+                    <span className="block text-[11px] text-foreground-muted font-normal">Up to 5 chats</span>
+                  )}
+                </span>
               </button>
 
               <button
@@ -290,6 +323,16 @@ export default function ConversationContextSheet({
         onClose={() => setShowSetPin(false)}
         title="Set a chat PIN"
         subtitle="You'll need this PIN to open any locked chat"
+      />
+
+      {/* PIN entry modal — required before unlocking */}
+      <PinEntryModal
+        mode="enter"
+        open={showUnlockPin}
+        onSuccess={handleUnlockSuccess}
+        onClose={() => setShowUnlockPin(false)}
+        title="Enter PIN to unlock"
+        subtitle="Confirm your PIN to remove the lock from this chat"
       />
     </>
   );
