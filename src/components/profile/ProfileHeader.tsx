@@ -80,7 +80,12 @@ export default function ProfileHeader({
   return (
     <div className="bg-surface">
       {/* ── Banner ─────────────────────────────────────────────────────────── */}
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-primary/60 via-primary/40 to-primary/10">
+      <div
+        className={`relative h-36 overflow-hidden bg-gradient-to-br from-primary/60 via-primary/40 to-primary/10 ${isOwnProfile && !bannerMutation.isPending ? 'cursor-pointer' : ''}`}
+        onClick={isOwnProfile ? () => bannerInputRef.current?.click() : undefined}
+        role={isOwnProfile ? 'button' : undefined}
+        aria-label={isOwnProfile ? 'Change banner' : undefined}
+      >
         {bannerUrl ? (
           isVideo ? (
             <video
@@ -103,35 +108,27 @@ export default function ProfileHeader({
           )
         ) : null}
 
-        {/* Gradient overlay for readability */}
+        {/* Gradient overlay */}
         {bannerUrl && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
         )}
 
-        {/* Banner upload button — own profile only */}
+        {/* Loading overlay */}
+        {bannerMutation.isPending && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-white animate-spin" />
+          </div>
+        )}
+
+        {/* Hidden file input */}
         {isOwnProfile && (
-          <>
-            <button
-              onClick={() => bannerInputRef.current?.click()}
-              disabled={bannerMutation.isPending}
-              className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white text-xs font-medium transition-colors backdrop-blur-sm"
-              aria-label="Change banner"
-            >
-              {bannerMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Camera className="w-3.5 h-3.5" />
-              )}
-              {bannerMutation.isPending ? 'Uploading…' : 'Edit banner'}
-            </button>
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept="image/*,video/mp4,video/webm,video/quicktime"
-              className="hidden"
-              onChange={handleBannerChange}
-            />
-          </>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/*,video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={handleBannerChange}
+          />
         )}
       </div>
 
