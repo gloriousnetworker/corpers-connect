@@ -21,8 +21,12 @@ interface ProfileHeaderProps {
   actionSlot?: React.ReactNode;
 }
 
+// Cloudinary video URLs contain "/video/upload/" in the path — no extension needed
 const isVideoUrl = (url?: string | null) =>
-  !!url && /\.(mp4|webm|mov|ogg)/i.test(url);
+  !!url && (
+    /\.(mp4|webm|mov|ogg)/i.test(url) ||
+    url.includes('/video/upload/')
+  );
 
 const isVideoMime = (mime: string) => mime.startsWith('video/');
 
@@ -69,7 +73,11 @@ export default function ProfileHeader({
       revokeObjectUrl();
       if (updatedUser.bannerImage) {
         setLocalBannerUrl(updatedUser.bannerImage);
+        // Re-check using the full Cloudinary URL (may contain /video/upload/)
         setLocalBannerIsVideo(isVideoUrl(updatedUser.bannerImage));
+      } else {
+        setLocalBannerUrl(null);
+        setLocalBannerIsVideo(false);
       }
       toast.success('Banner updated');
     },
