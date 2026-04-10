@@ -10,6 +10,7 @@ import {
   CornerUpLeft,
   RefreshCw,
   ZoomIn,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRelativeTime, getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
@@ -33,6 +34,8 @@ interface MessageBubbleProps {
   onForward?: (message: Message) => void;
   onReact?: (message: Message, emoji: string) => void;
   onPin?: (message: Message) => void;
+  onLock?: (message: Message) => void;
+  currentUserId?: string;
 }
 
 export default function MessageBubble({
@@ -48,13 +51,18 @@ export default function MessageBubble({
   onForward,
   onReact,
   onPin,
+  onLock,
+  currentUserId,
 }: MessageBubbleProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const isDeleted = message.isDeleted;
+  const isLockedIn = !!(currentUserId && (message.lockedFor ?? []).includes(currentUserId));
+  // A "locked-in" message: sender deleted for everyone but receiver locked it — show content with lock badge
+  const isDeleted = message.isDeleted && !isLockedIn;
+  const isDeletedButLockedIn = message.isDeleted && isLockedIn;
   const isPending = message._pending;
   const isFailed = message._failed;
-  const isMedia = !isDeleted && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
+  const isMedia = !isDeleted && !isDeletedButLockedIn && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
 
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
@@ -69,7 +77,7 @@ export default function MessageBubble({
     : 'bg-white dark:bg-slate-700 border border-border dark:border-slate-600 text-foreground rounded-2xl rounded-bl-sm';
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (isDeleted || isPending || isFailed) return;
+    if ((isDeleted && !isDeletedButLockedIn) || isPending || isFailed) return;
     pointerStartRef.current = { x: e.clientX, y: e.clientY };
     longPressTriggeredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
@@ -91,13 +99,13 @@ export default function MessageBubble({
   };
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isDeleted) setShowActionSheet(true);
+    if (!isDeleted || isDeletedButLockedIn) setShowActionSheet(true);
   };
   const handleRowClick = () => {
     if (longPressTriggeredRef.current) longPressTriggeredRef.current = false;
   };
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (isDeleted) return;
+    if (isDeleted && !isDeletedButLockedIn) return;
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     isSwipingRef.current = false;
   };
@@ -152,6 +160,43 @@ export default function MessageBubble({
         <p className={`text-sm italic ${isOwn ? 'text-white/60' : 'text-foreground-muted'}`}>
           This message was deleted
         </p>
+      );
+    }
+
+    if (isDeletedButLockedIn) {
+      // Show original content with a lock badge overlay indicating it's been locked in
+      return (
+        <div className="relative">
+          {message.type === MessageType.AUDIO && message.mediaUrl ? (
+            <VoiceNotePlayer mediaUrl={message.mediaUrl} isOwn={isOwn} />
+          ) : message.type === MessageType.IMAGE && message.mediaUrl ? (
+            <div>
+              <button
+                onClick={() => setPreviewUrl(message.mediaUrl!)}
+                className="relative w-52 h-52 block group"
+                aria-label="View full size"
+              >
+                <Image
+                  src={getOptimisedUrl(message.mediaUrl, 420)}
+                  alt="Image message"
+                  fill
+                  className="object-cover"
+                  sizes="208px"
+                />
+              </button>
+              {message.content && (
+                <p className="px-3 py-2 text-sm leading-relaxed">{message.content}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-5">
+              {message.content}
+            </p>
+          )}
+          <Lock
+            className={`absolute top-0 right-0 w-3.5 h-3.5 ${isOwn ? 'text-white/60' : 'text-foreground-muted'}`}
+          />
+        </div>
       );
     }
 
@@ -369,14 +414,16 @@ export default function MessageBubble({
         <MessageActionSheet
           message={message}
           isOwn={isOwn}
+          isLockedIn={isLockedIn}
           onClose={() => setShowActionSheet(false)}
           onReply={onReply && !isDeleted ? () => onReply(message) : undefined}
           onCopy={message.type === MessageType.TEXT && !!message.content && !isDeleted ? handleCopy : undefined}
           onForward={onForward && !isDeleted ? () => onForward(message) : undefined}
           onEdit={onEdit && !isDeleted && message.type === MessageType.TEXT ? () => onEdit(message) : undefined}
           onDelete={onDelete && !isDeleted ? () => onDelete(message) : undefined}
-          onReact={onReact ? (emoji) => onReact(message, emoji) : undefined}
-          onPin={onPin ? () => onPin(message) : undefined}
+          onReact={onReact && !isDeleted ? (emoji) => onReact(message, emoji) : undefined}
+          onPin={onPin && !isDeleted ? () => onPin(message) : undefined}
+          onLock={onLock && !isOwn ? () => { onLock(message); setShowActionSheet(false); } : undefined}
         />
       )}
     </>

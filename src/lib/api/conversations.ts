@@ -40,6 +40,7 @@ interface RawMessage {
   isEdited: boolean;
   isDeleted: boolean;
   isPinned?: boolean;
+  lockedFor?: string[];
   reactions?: RawReaction[];
   deliveredAt?: string | null;
   reads?: RawMessageRead[];
@@ -103,6 +104,7 @@ export function normalizeMessage(m: RawMessage): Message {
     isEdited: m.isEdited,
     isDeleted: m.isDeleted,
     isPinned: m.isPinned ?? false,
+    lockedFor: m.lockedFor ?? [],
     reactions: (m.reactions ?? []).map((r) => ({
       id: r.id,
       messageId: r.messageId,
@@ -303,6 +305,22 @@ export async function updateConversationSettings(
 /** DELETE /conversations/:id/messages — clear all messages for current user */
 export async function clearConversationMessages(conversationId: string): Promise<void> {
   await api.delete(`/conversations/${conversationId}/messages`);
+}
+
+/** GET /conversations?archived=true — list archived conversations */
+export async function getArchivedConversations(): Promise<Conversation[]> {
+  const { data } = await api.get<ApiResponse<RawParticipantEntry[]>>('/conversations', { params: { archived: true } });
+  return (data.data ?? []).map(normalizeConvFromEntry);
+}
+
+/** POST /conversations/:id/messages/:msgId/lock — lock a received message in */
+export async function lockMessage(conversationId: string, messageId: string): Promise<void> {
+  await api.post(`/conversations/${conversationId}/messages/${messageId}/lock`);
+}
+
+/** DELETE /conversations/:id/messages/:msgId/lock — unlock a message */
+export async function unlockMessage(conversationId: string, messageId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}/messages/${messageId}/lock`);
 }
 
 /** DELETE /conversations/:id/participants/me — leave group */

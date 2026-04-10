@@ -124,12 +124,22 @@ const config: Config = {
           '0%, 80%, 100%': { transform: 'scale(0)' },
           '40%': { transform: 'scale(1)' },
         },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '15%': { transform: 'translateX(-6px)' },
+          '30%': { transform: 'translateX(6px)' },
+          '45%': { transform: 'translateX(-4px)' },
+          '60%': { transform: 'translateX(4px)' },
+          '75%': { transform: 'translateX(-2px)' },
+          '90%': { transform: 'translateX(2px)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s ease-out',
         'slide-up': 'slide-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
         shimmer: 'shimmer 1.5s infinite linear',
         'bounce-dot': 'bounce-dot 1.4s infinite ease-in-out both',
+        shake: 'shake 0.5s ease-in-out',
       },
       transitionTimingFunction: {
         spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',

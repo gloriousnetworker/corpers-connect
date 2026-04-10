@@ -1,6 +1,6 @@
 'use client';
 
-import { CornerUpLeft, Copy, Share2, Pencil, Trash2, Pin, PinOff } from 'lucide-react';
+import { CornerUpLeft, Copy, Share2, Pencil, Trash2, Pin, PinOff, LockKeyhole, LockKeyholeOpen } from 'lucide-react';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
 
@@ -9,6 +9,7 @@ const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const
 interface MessageActionSheetProps {
   message: Message;
   isOwn: boolean;
+  isLockedIn?: boolean;
   onClose: () => void;
   onReply?: () => void;
   onCopy?: () => void;
@@ -17,6 +18,7 @@ interface MessageActionSheetProps {
   onDelete?: () => void;
   onReact?: (emoji: string) => void;
   onPin?: () => void;
+  onLock?: () => void;
 }
 
 function getMessagePreview(message: Message): string {
@@ -37,6 +39,7 @@ type ActionItem = {
 export default function MessageActionSheet({
   message,
   isOwn,
+  isLockedIn,
   onClose,
   onReply,
   onCopy,
@@ -45,6 +48,7 @@ export default function MessageActionSheet({
   onDelete,
   onReact,
   onPin,
+  onLock,
 }: MessageActionSheetProps) {
   const preview = getMessagePreview(message);
 
@@ -60,6 +64,14 @@ export default function MessageActionSheet({
       : []),
     ...(isOwn && !message.isDeleted && onDelete
       ? [{ label: 'Delete', icon: Trash2, onClick: onDelete, danger: true as const }]
+      : []),
+    // Lock message in — only for received messages (non-own)
+    ...(!isOwn && onLock
+      ? [{
+          label: isLockedIn ? 'Unlock message' : 'Lock message in',
+          icon: isLockedIn ? LockKeyholeOpen : LockKeyhole,
+          onClick: onLock,
+        }]
       : []),
   ];
 

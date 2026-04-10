@@ -160,6 +160,8 @@ export interface Message {
   isEdited: boolean;
   isDeleted: boolean;
   isPinned: boolean;
+  /** User IDs who locked this message in — it persists even if sender deletes for everyone */
+  lockedFor?: string[];
   reactions: MessageReaction[];
   deliveredAt?: string | null;
   readBy?: string[];

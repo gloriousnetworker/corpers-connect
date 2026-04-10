@@ -117,7 +117,13 @@ export function useSocket() {
     // ── Message deleted ───────────────────────────────────────────────────────
     socket.on(
       'message:deleted',
-      ({ messageId, deleteFor, conversationId }: { messageId: string; deleteFor: 'me' | 'all'; conversationId?: string }) => {
+      ({ messageId, deleteFor, conversationId, lockedFor }: {
+        messageId: string;
+        deleteFor: 'me' | 'all';
+        conversationId?: string;
+        lockedFor?: string[];
+      }) => {
+        const currentUserId = user?.id;
         // We don't always know conversationId from the event — iterate all cached queries
         const queries = queryClient.getQueriesData<InfiniteData<PaginatedData<Message>>>({ queryKey: ['messages'] });
         for (const [key, data] of queries) {
@@ -127,7 +133,18 @@ export function useSocket() {
             pages: data.pages.map((p) => ({
               ...p,
               items: deleteFor === 'all'
-                ? p.items.map((m) => m.id === messageId ? { ...m, isDeleted: true, content: null } : m)
+                ? p.items.map((m) => {
+                    if (m.id !== messageId) return m;
+                    // If current user locked this message in, keep content visible
+                    const userLockedIt = currentUserId && (lockedFor ?? []).includes(currentUserId);
+                    return {
+                      ...m,
+                      isDeleted: true,
+                      lockedFor: lockedFor ?? m.lockedFor,
+                      content: userLockedIt ? m.content : null,
+                      mediaUrl: userLockedIt ? m.mediaUrl : null,
+                    };
+                  })
                 : p.items.filter((m) => m.id !== messageId),
             })),
           });

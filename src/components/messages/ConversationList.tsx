@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MessageCircle } from 'lucide-react';
+import { Search, MessageCircle, Archive, ChevronRight } from 'lucide-react';
 import { getConversations } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
@@ -11,14 +11,25 @@ import ConversationItem from './ConversationItem';
 import ConversationContextSheet from './ConversationContextSheet';
 import type { Conversation } from '@/types/models';
 
+// ── localStorage helpers (shared with ConversationContextSheet) ──────────────
+
+function getSet(key: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(key);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch { return new Set(); }
+}
+
 interface ConversationListProps {
   activeConversationId: string | null;
   onSelect: (conv: Conversation) => void;
+  onOpenArchived: () => void;
 }
 
 export default function ConversationList({
   activeConversationId,
   onSelect,
+  onOpenArchived,
 }: ConversationListProps) {
   const user = useAuthStore((s) => s.user);
   const onlineUsers = useMessagesStore((s) => s.onlineUsers);
@@ -32,6 +43,14 @@ export default function ConversationList({
     enabled: !!user,
   });
 
+  // Re-derive on every render (and on context sheet open/close) so badges update
+  const lockedIds = useMemo(() => getSet('cc_locked_convs'), [contextConv]);
+  const favIds    = useMemo(() => getSet('cc_fav_convs'),    [contextConv]);
+
+  // Helper: is this conv pinned for the current user?
+  const isPinned = (c: Conversation) =>
+    !!(c.participants.find((p) => p.userId === user?.id)?.isPinned);
+
   const filtered = useMemo(() => {
     if (!search.trim()) return conversations;
     const q = search.toLowerCase();
@@ -41,12 +60,38 @@ export default function ConversationList({
         (p) =>
           p.userId !== user?.id &&
           p.user &&
-          (`${p.user.firstName} ${p.user.lastName}`.toLowerCase().includes(q))
+          `${p.user.firstName} ${p.user.lastName}`.toLowerCase().includes(q),
       );
     });
   }, [conversations, search, user?.id]);
 
+  // Split into sections (favorites → pinned → regular)
+  const { favorites, pinned, regular } = useMemo(() => ({
+    favorites: filtered.filter((c) => favIds.has(c.id)),
+    pinned:    filtered.filter((c) => !favIds.has(c.id) && isPinned(c)),
+    regular:   filtered.filter((c) => !favIds.has(c.id) && !isPinned(c)),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filtered, favIds, lockedIds]);
+
   if (!user) return null;
+
+  const renderItem = (conv: Conversation) => {
+    const otherId = conv.participants.find((p) => p.userId !== user.id)?.userId;
+    return (
+      <ConversationItem
+        key={conv.id}
+        conversation={conv}
+        currentUserId={user.id}
+        isActive={conv.id === activeConversationId}
+        isOnline={!!otherId && onlineUsers.has(otherId)}
+        isLocked={lockedIds.has(conv.id)}
+        isFavorite={favIds.has(conv.id)}
+        onClick={() => onSelect(conv)}
+        onLongPress={() => setContextConv(conv)}
+        onContextMenu={() => setContextConv(conv)}
+      />
+    );
+  };
 
   return (
     <>
@@ -65,6 +110,18 @@ export default function ConversationList({
             />
           </div>
         </div>
+
+        {/* Archived button */}
+        <button
+          onClick={onOpenArchived}
+          className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-alt transition-colors border-b border-border/60 flex-shrink-0"
+        >
+          <div className="w-10 h-10 rounded-full bg-surface-alt flex items-center justify-center flex-shrink-0">
+            <Archive className="w-4 h-4 text-foreground-secondary" />
+          </div>
+          <span className="text-sm font-medium text-foreground flex-1 text-left">Archived</span>
+          <ChevronRight className="w-4 h-4 text-foreground-muted" />
+        </button>
 
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto">
@@ -93,28 +150,50 @@ export default function ConversationList({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-border/50">
-              {filtered.map((conv) => {
-                const otherId = conv.participants.find((p) => p.userId !== user.id)?.userId;
-                return (
-                  <ConversationItem
-                    key={conv.id}
-                    conversation={conv}
-                    currentUserId={user.id}
-                    isActive={conv.id === activeConversationId}
-                    isOnline={!!otherId && onlineUsers.has(otherId)}
-                    onClick={() => onSelect(conv)}
-                    onLongPress={() => setContextConv(conv)}
-                    onContextMenu={() => setContextConv(conv)}
-                  />
-                );
-              })}
+            <div>
+              {/* Favorites section */}
+              {favorites.length > 0 && (
+                <>
+                  <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-amber-500 uppercase tracking-wide">
+                    ★ Favorites
+                  </p>
+                  <div className="divide-y divide-border/50">
+                    {favorites.map(renderItem)}
+                  </div>
+                </>
+              )}
+
+              {/* Pinned section */}
+              {pinned.length > 0 && (
+                <>
+                  <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-foreground-muted uppercase tracking-wide">
+                    📌 Pinned
+                  </p>
+                  <div className="divide-y divide-border/50">
+                    {pinned.map(renderItem)}
+                  </div>
+                </>
+              )}
+
+              {/* Regular section */}
+              {regular.length > 0 && (
+                <>
+                  {(favorites.length > 0 || pinned.length > 0) && (
+                    <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-foreground-muted uppercase tracking-wide">
+                      All messages
+                    </p>
+                  )}
+                  <div className="divide-y divide-border/50">
+                    {regular.map(renderItem)}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Long-press context sheet */}
+      {/* Context sheet */}
       {contextConv && (
         <ConversationContextSheet
           open={!!contextConv}

@@ -16,6 +16,8 @@ import {
   reactToMessage,
   removeMessageReaction,
   pinMessage,
+  lockMessage,
+  unlockMessage,
 } from '@/lib/api/conversations';
 import { normalizeMessage } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
@@ -33,6 +35,7 @@ import type { PaginatedData } from '@/types/api';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ForwardModal from './ForwardModal';
+import DeleteMessageSheet from './DeleteMessageSheet';
 import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -143,6 +146,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState<Message | null>(null);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -467,7 +471,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             pages: old.pages.map((p) => ({
               ...p,
               items: forAll
-                ? p.items.map((m) => m.id === messageId ? { ...m, isDeleted: true, content: null } : m)
+                // Don't null content — users who locked the message still need it
+                ? p.items.map((m) => m.id === messageId ? { ...m, isDeleted: true } : m)
                 : p.items.filter((m) => m.id !== messageId),
             })),
           };
@@ -528,9 +533,38 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     sendMediaMutation.mutate({ mediaUrl, type });
   };
 
+  // Opens the delete options sheet instead of deleting immediately
   const handleDelete = (msg: Message) => {
-    const forAll = msg.senderId === user?.id;
-    deleteMutation.mutate({ messageId: msg.id, forAll });
+    setDeletingMessage(msg);
+  };
+
+  // ── Lock / unlock message ───────────────────────────────────────────────────
+  const lockMutation = useMutation({
+    mutationFn: (vars: { messageId: string; lock: boolean }) =>
+      vars.lock
+        ? lockMessage(conversation.id, vars.messageId)
+        : unlockMessage(conversation.id, vars.messageId),
+    onMutate: ({ messageId, lock }) => {
+      patchMessages((m) => {
+        if (m.id !== messageId) return m;
+        const lockedFor = m.lockedFor ?? [];
+        return {
+          ...m,
+          lockedFor: lock
+            ? [...lockedFor, user!.id]
+            : lockedFor.filter((id) => id !== user!.id),
+        };
+      });
+    },
+    onError: (err, { lock }) => {
+      // Revert optimistic update
+      toast.error(lock ? 'Failed to lock message' : 'Failed to unlock message');
+    },
+  });
+
+  const handleLockMessage = (msg: Message) => {
+    const alreadyLocked = (msg.lockedFor ?? []).includes(user?.id ?? '');
+    lockMutation.mutate({ messageId: msg.id, lock: !alreadyLocked });
   };
 
   const handleRetry = (msg: Message) => {
@@ -829,6 +863,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
                 onForward={(m) => setForwardingMessage(m)}
                 onReact={handleReact}
                 onPin={handlePin}
+                onLock={handleLockMessage}
+                currentUserId={user?.id ?? ''}
               />
             );
           });
@@ -871,6 +907,22 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           message={forwardingMessage}
           currentUserId={user?.id ?? ''}
           onClose={() => setForwardingMessage(null)}
+        />
+      )}
+
+      {deletingMessage && (
+        <DeleteMessageSheet
+          message={deletingMessage}
+          isOwn={deletingMessage.senderId === user?.id}
+          onDeleteForMe={() => {
+            deleteMutation.mutate({ messageId: deletingMessage.id, forAll: false });
+            setDeletingMessage(null);
+          }}
+          onDeleteForEveryone={() => {
+            deleteMutation.mutate({ messageId: deletingMessage.id, forAll: true });
+            setDeletingMessage(null);
+          }}
+          onClose={() => setDeletingMessage(null)}
         />
       )}
 

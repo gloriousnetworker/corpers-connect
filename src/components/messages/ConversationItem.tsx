@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
-import { Users } from 'lucide-react';
+import { Users, Pin, Lock, Star } from 'lucide-react';
 import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import type { Conversation } from '@/types/models';
 import { ConversationType, MessageType } from '@/types/enums';
@@ -12,6 +12,8 @@ interface ConversationItemProps {
   currentUserId: string;
   isActive?: boolean;
   isOnline?: boolean;
+  isLocked?: boolean;
+  isFavorite?: boolean;
   onClick: () => void;
   onLongPress?: () => void;
   onContextMenu?: () => void;
@@ -55,10 +57,15 @@ export default function ConversationItem({
   currentUserId,
   isActive,
   isOnline,
+  isLocked,
+  isFavorite,
   onClick,
   onLongPress,
   onContextMenu,
 }: ConversationItemProps) {
+  const myParticipant = conversation.participants.find((p) => p.userId === currentUserId);
+  const isPinned = myParticipant?.isPinned ?? false;
+
   const display = getConversationDisplay(conversation, currentUserId);
   const preview = getLastMessagePreview(conversation, currentUserId);
   const timestamp = conversation.lastMessage?.createdAt ?? conversation.updatedAt;
@@ -110,12 +117,20 @@ export default function ConversationItem({
       onPointerMove={handlePointerMove}
       onClick={handleClick}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(); }}
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+      className={[
+        'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors relative',
+        // Pinned: amber tint
+        isPinned && !isActive ? 'bg-amber-50 dark:bg-amber-950/20' : '',
         isActive
           ? 'bg-primary/10'
-          : 'hover:bg-surface-alt active:bg-surface-alt'
-      }`}
+          : !isPinned ? 'hover:bg-surface-alt active:bg-surface-alt' : 'hover:bg-amber-100/60 dark:hover:bg-amber-900/30',
+      ].join(' ')}
     >
+      {/* Pinned left accent */}
+      {isPinned && (
+        <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-amber-400 rounded-r" />
+      )}
+
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
@@ -133,27 +148,37 @@ export default function ConversationItem({
             <span className="font-bold text-primary text-sm uppercase">{display.initials}</span>
           )}
         </div>
+
         {/* Online dot */}
         {isOnline && !display.isGroup && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-surface rounded-full" />
+        )}
+
+        {/* Lock badge */}
+        {isLocked && (
+          <span className="absolute bottom-0 right-0 w-4 h-4 bg-surface border border-border rounded-full flex items-center justify-center">
+            <Lock className="w-2.5 h-2.5 text-foreground-secondary" />
+          </span>
         )}
       </div>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-2">
-          <span className={`text-sm font-semibold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
+          <span className={`text-sm font-semibold truncate flex items-center gap-1 ${isActive ? 'text-primary' : 'text-foreground'}`}>
             {display.name}
+            {isFavorite && <Star className="w-3 h-3 fill-amber-400 text-amber-400 flex-shrink-0" />}
+            {isPinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0" />}
           </span>
           <span className="text-[10px] text-foreground-muted flex-shrink-0">
             {formatRelativeTime(timestamp)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className={`text-xs truncate ${hasUnread ? 'font-medium text-foreground' : 'text-foreground-muted'}`}>
-            {preview}
+          <p className={`text-xs truncate ${isLocked ? 'text-foreground-muted italic' : hasUnread ? 'font-medium text-foreground' : 'text-foreground-muted'}`}>
+            {isLocked ? '🔒 Locked' : preview}
           </p>
-          {hasUnread && (
+          {hasUnread && !isLocked && (
             <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center px-1">
               {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
             </span>
