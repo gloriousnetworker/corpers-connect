@@ -62,9 +62,11 @@ function DeepLinkHandler() {
   // Capture the conv param once on mount before it's cleaned from the URL
   const pendingConvRef = useRef<string | null>(null);
   const pendingMktConvRef = useRef<string | null>(null);
+  const sellerAppealRef = useRef<boolean>(false);
   useEffect(() => {
     pendingConvRef.current = searchParams.get('conv');
     pendingMktConvRef.current = searchParams.get('mkt-conv');
+    sellerAppealRef.current = searchParams.get('seller-appeal') === '1';
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,6 +94,16 @@ function DeepLinkHandler() {
 
       setActiveSection('marketplace');
       useMarketplaceStore.getState().openMarketplaceChat(convId);
+      router.replace('/');
+      return;
+    }
+
+    // Handle seller appeal deep link (from suspension email CTA)
+    if (sellerAppealRef.current) {
+      sellerAppealRef.current = false; // prevent double-trigger
+
+      setActiveSection('marketplace');
+      useMarketplaceStore.getState().setView('application-status');
       router.replace('/');
     }
   }, [user, router, setActiveSection, setPendingConversation]);

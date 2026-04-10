@@ -2,19 +2,30 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Clock, CheckCircle2, XCircle, ShieldCheck, ShieldOff, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, XCircle, ShieldCheck, ShieldOff, Send, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { getMyApplication, getMySellerProfile, submitSellerAppeal, getMyAppeals } from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { SellerApplicationStatus, SellerStatus } from '@/types/enums';
 
+const APPEAL_REASONS = [
+  { value: 'error', label: 'This was done in error — I did not violate any policy' },
+  { value: 'corrected', label: 'I have corrected the issue that led to the suspension' },
+  { value: 'misunderstanding', label: 'There was a misunderstanding about my listing or conduct' },
+  { value: 'other', label: 'Other reason' },
+] as const;
+
+type AppealReason = typeof APPEAL_REASONS[number]['value'];
+
 export default function ApplicationStatus() {
   const { goBack, setView } = useMarketplaceStore();
   const qc = useQueryClient();
 
-  const [appealText, setAppealText] = useState('');
   const [showAppealForm, setShowAppealForm] = useState(false);
   const [showPastAppeals, setShowPastAppeals] = useState(false);
+  const [appealReason, setAppealReason] = useState<AppealReason | ''>('');
+  const [appealExplanation, setAppealExplanation] = useState('');
+  const [appealSteps, setAppealSteps] = useState('');
 
   const { data: application, isLoading } = useQuery({
     queryKey: ['marketplace', 'my-application'],
@@ -37,7 +48,9 @@ export default function ApplicationStatus() {
     mutationFn: submitSellerAppeal,
     onSuccess: () => {
       toast.success('Appeal submitted. We will review it shortly.');
-      setAppealText('');
+      setAppealReason('');
+      setAppealExplanation('');
+      setAppealSteps('');
       setShowAppealForm(false);
       qc.invalidateQueries({ queryKey: ['marketplace', 'my-appeals'] });
     },
@@ -45,6 +58,18 @@ export default function ApplicationStatus() {
   });
 
   const hasPendingAppeal = appeals?.some((a) => a.status === 'PENDING') ?? false;
+
+  function buildAppealMessage() {
+    const reasonLabel = APPEAL_REASONS.find((r) => r.value === appealReason)?.label ?? '';
+    let msg = `Reason: ${reasonLabel}\n\nExplanation:\n${appealExplanation.trim()}`;
+    if (appealSteps.trim()) msg += `\n\nSteps taken / Evidence:\n${appealSteps.trim()}`;
+    return msg;
+  }
+
+  const canSubmitAppeal =
+    appealReason !== '' &&
+    appealExplanation.trim().length >= 20 &&
+    !appealMutation.isPending;
 
   if (isLoading) {
     return (
@@ -204,36 +229,85 @@ export default function ApplicationStatus() {
                 {!showAppealForm ? (
                   <button
                     onClick={() => setShowAppealForm(true)}
-                    className="w-full py-2.5 rounded-full border-2 border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+                    className="w-full py-2.5 rounded-full border-2 border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
                   >
-                    Write an Appeal
+                    <FileText size={15} /> Submit an Appeal
                   </button>
                 ) : (
-                  <div className="text-left space-y-3">
-                    <p className="text-sm font-semibold text-foreground">Write your appeal</p>
-                    <p className="text-xs text-muted-foreground">
-                      Explain why you believe your account should be reinstated. Be honest and clear.
-                    </p>
-                    <textarea
-                      value={appealText}
-                      onChange={(e) => setAppealText(e.target.value)}
-                      rows={4}
-                      placeholder="Explain your situation and why your account should be reinstated..."
-                      className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-surface"
-                    />
-                    <div className="flex gap-2">
+                  <div className="text-left space-y-4 border border-border rounded-2xl p-4 bg-surface">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Appeal Form</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Fill in the form below. Our team will review and respond within 24–48 hours.
+                      </p>
+                    </div>
+
+                    {/* Reason select */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">
+                        Reason for appeal <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={appealReason}
+                        onChange={(e) => setAppealReason(e.target.value as AppealReason)}
+                        className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-surface text-foreground"
+                      >
+                        <option value="" disabled>Select a reason…</option>
+                        {APPEAL_REASONS.map((r) => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Explanation */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">
+                        Your explanation <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={appealExplanation}
+                        onChange={(e) => setAppealExplanation(e.target.value)}
+                        rows={4}
+                        placeholder="Clearly explain why you believe your account should be reinstated. Be honest and specific."
+                        className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-surface"
+                      />
+                      <p className="text-xs text-muted-foreground text-right">
+                        {appealExplanation.trim().length}/20 min
+                      </p>
+                    </div>
+
+                    {/* Steps taken (optional) */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">
+                        Steps taken or supporting evidence <span className="text-muted-foreground font-normal">(optional)</span>
+                      </label>
+                      <textarea
+                        value={appealSteps}
+                        onChange={(e) => setAppealSteps(e.target.value)}
+                        rows={3}
+                        placeholder="e.g. 'I have removed the listing in question', 'I have read the community guidelines'…"
+                        className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-surface"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
                       <button
-                        onClick={() => { setShowAppealForm(false); setAppealText(''); }}
+                        onClick={() => {
+                          setShowAppealForm(false);
+                          setAppealReason('');
+                          setAppealExplanation('');
+                          setAppealSteps('');
+                        }}
                         className="flex-1 py-2 rounded-full border border-border text-sm font-medium text-muted-foreground hover:bg-surface-alt"
                       >
                         Cancel
                       </button>
                       <button
-                        onClick={() => { if (appealText.trim().length >= 10) appealMutation.mutate(appealText.trim()); }}
-                        disabled={appealMutation.isPending || appealText.trim().length < 10}
+                        onClick={() => { if (canSubmitAppeal) appealMutation.mutate(buildAppealMessage()); }}
+                        disabled={!canSubmitAppeal}
                         className="flex-1 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                       >
-                        {appealMutation.isPending ? 'Sending...' : <><Send size={14} /> Send Appeal</>}
+                        {appealMutation.isPending ? 'Sending…' : <><Send size={14} /> Submit Appeal</>}
                       </button>
                     </div>
                   </div>
