@@ -159,17 +159,20 @@ export default function ApplicationStatus() {
         )}
 
         {isDeactivated && (
-          <div>
-            <p className="text-xl font-bold text-foreground text-red-600">Account Suspended</p>
-            <p className="text-sm text-muted-foreground mt-2 max-w-[280px]">
-              Your Mami Market seller account has been deactivated.
+          <div className="w-full max-w-xs">
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">Account Suspended</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Your Mami Market seller account has been temporarily suspended. You cannot create listings or sell until your account is reinstated.
             </p>
             {sellerProfile?.deactivationReason && (
-              <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl max-w-[300px] text-left">
+              <div className="mt-3 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-left">
                 <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1">Reason:</p>
                 <p className="text-sm text-red-700 dark:text-red-300">{sellerProfile.deactivationReason}</p>
               </div>
             )}
+            <p className="text-sm text-muted-foreground mt-3">
+              You can still browse and buy items. To restore your selling access, submit an appeal below.
+            </p>
           </div>
         )}
 

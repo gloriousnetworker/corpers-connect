@@ -75,7 +75,17 @@ export default function CreateListingForm() {
   };
 
   const isFree = listingType === ListingType.FREE;
-  const canSubmit = title.trim() && description.trim() && images.length > 0;
+  const canSubmit = title.trim().length >= 3 && description.trim().length >= 10 && images.length > 0;
+
+  function validate(): string | null {
+    if (!title.trim()) return 'Please enter a title for your listing.';
+    if (title.trim().length < 3) return 'Title is too short — please enter at least 3 characters.';
+    if (!description.trim()) return 'Please add a description.';
+    if (description.trim().length < 10) return 'Description is too short — please write at least 10 characters.';
+    if (images.length === 0) return 'Please add at least one photo.';
+    if (!isFree && price && Number(price) <= 0) return 'Price must be greater than zero.';
+    return null;
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -225,8 +235,12 @@ export default function CreateListingForm() {
       {/* Submit */}
       <div className="sticky bottom-0 bg-surface border-t border-border px-4 py-4">
         <button
-          onClick={() => mutation.mutate()}
-          disabled={!canSubmit || mutation.isPending}
+          onClick={() => {
+            const err = validate();
+            if (err) { toast.error(err); return; }
+            mutation.mutate();
+          }}
+          disabled={mutation.isPending}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {mutation.isPending && <Loader2 size={18} className="animate-spin" />}
