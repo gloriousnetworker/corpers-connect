@@ -1,6 +1,6 @@
 import api from './client';
 import type { ApiResponse, PaginatedData } from '@/types/api';
-import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage, SellerProfile, ListingComment, MarketplaceConversationInfo } from '@/types/models';
+import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage, SellerProfile, SellerAppeal, ListingComment, MarketplaceConversationInfo } from '@/types/models';
 import type { ListingType, ListingCategory, ListingStatus } from '@/types/enums';
 
 // ── Filters ───────────────────────────────────────────────────────────────
@@ -278,5 +278,17 @@ export async function getMarketplaceConversations(params: { cursor?: string; lim
 
 export async function getMarketplaceConversation(conversationId: string): Promise<MarketplaceConversationInfo> {
   const { data } = await api.get<ApiResponse<MarketplaceConversationInfo>>(`/marketplace/conversations/${conversationId}`);
+  return data.data;
+}
+
+// ── Seller Appeals ─────────────────────────────────────────────────────────
+
+export async function submitSellerAppeal(message: string): Promise<SellerAppeal> {
+  const { data } = await api.post<ApiResponse<SellerAppeal>>('/marketplace/my-seller-profile/appeal', { message });
+  return data.data;
+}
+
+export async function getMyAppeals(): Promise<SellerAppeal[]> {
+  const { data } = await api.get<ApiResponse<SellerAppeal[]>>('/marketplace/my-seller-profile/appeals');
   return data.data;
 }

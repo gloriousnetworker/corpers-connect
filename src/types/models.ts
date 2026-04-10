@@ -346,6 +346,17 @@ export interface SellerProfile {
   updatedAt: string;
 }
 
+export interface SellerAppeal {
+  id: string;
+  sellerId: string;
+  message: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  adminResponse: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ListingComment {
   id: string;
   listingId: string;
