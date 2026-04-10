@@ -41,37 +41,43 @@ export default function ProfileHeader({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Local preview URL (object URL while uploading, then cleared after real URL arrives)
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [bannerPreviewIsVideo, setBannerPreviewIsVideo] = useState(false);
-  const previewUrlRef = useRef<string | null>(null);
+  // Local display URL — drives what's shown in the banner at all times.
+  // Starts as null (falls back to user.bannerImage from props).
+  // Set to an object URL on file pick for instant preview.
+  // Set to the real Cloudinary URL on success — never cleared to null,
+  // so there's no gap between object URL being revoked and prop update arriving.
+  const [localBannerUrl, setLocalBannerUrl] = useState<string | null>(null);
+  const [localBannerIsVideo, setLocalBannerIsVideo] = useState(false);
+  const objectUrlRef = useRef<string | null>(null);
 
-  // Revoke object URL on unmount or when replaced
-  const revokePreview = () => {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
+  const revokeObjectUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
     }
   };
-  useEffect(() => () => revokePreview(), []);
+  useEffect(() => () => revokeObjectUrl(), []);
 
   const bannerMutation = useMutation({
     mutationFn: (file: File) => uploadBanner(file),
     onSuccess: (updatedUser) => {
-      // 1. Update auth store
       setUser(updatedUser);
-      // 2. Directly patch the query cache — instant UI update, no refetch needed
       queryClient.setQueryData<User>(['me'], (old) =>
         old ? { ...old, bannerImage: updatedUser.bannerImage } : old
       );
-      // 3. Revoke the temporary object URL
-      revokePreview();
-      setBannerPreview(null);
+      // Switch from object URL to the real Cloudinary URL — no blank gap
+      revokeObjectUrl();
+      if (updatedUser.bannerImage) {
+        setLocalBannerUrl(updatedUser.bannerImage);
+        setLocalBannerIsVideo(isVideoUrl(updatedUser.bannerImage));
+      }
       toast.success('Banner updated');
     },
     onError: () => {
-      revokePreview();
-      setBannerPreview(null);
+      // Revert preview on error
+      revokeObjectUrl();
+      setLocalBannerUrl(user.bannerImage ?? null);
+      setLocalBannerIsVideo(isVideoUrl(user.bannerImage));
       toast.error('Failed to update banner');
     },
   });
@@ -91,12 +97,12 @@ export default function ProfileHeader({
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Show local preview immediately — no waiting for Cloudinary
-    revokePreview();
+    // Show local object URL immediately — video plays before Cloudinary responds
+    revokeObjectUrl();
     const objectUrl = URL.createObjectURL(file);
-    previewUrlRef.current = objectUrl;
-    setBannerPreview(objectUrl);
-    setBannerPreviewIsVideo(isVideoMime(file.type));
+    objectUrlRef.current = objectUrl;
+    setLocalBannerUrl(objectUrl);
+    setLocalBannerIsVideo(isVideoMime(file.type));
     bannerMutation.mutate(file);
     e.target.value = '';
   };
@@ -108,9 +114,9 @@ export default function ProfileHeader({
     e.target.value = '';
   };
 
-  // Use local preview while uploading, else use the real URL from the user prop
-  const bannerUrl = bannerPreview ?? user.bannerImage;
-  const isVideo = bannerPreview ? bannerPreviewIsVideo : isVideoUrl(bannerUrl);
+  // localBannerUrl takes precedence; falls back to the prop
+  const bannerUrl = localBannerUrl ?? user.bannerImage;
+  const isVideo = localBannerUrl ? localBannerIsVideo : isVideoUrl(user.bannerImage);
 
   return (
     <div className="bg-surface">
