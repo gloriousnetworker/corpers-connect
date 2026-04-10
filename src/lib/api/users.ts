@@ -34,6 +34,15 @@ export async function uploadAvatar(file: File): Promise<User> {
   return data.data;
 }
 
+export async function uploadBanner(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append('banner', file);
+  const { data } = await api.post<ApiResponse<User>>('/users/me/banner', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.data;
+}
+
 export async function getUserProfile(userId: string): Promise<User> {
   const { data } = await api.get<ApiResponse<User>>(`/users/${userId}`);
   return data.data;

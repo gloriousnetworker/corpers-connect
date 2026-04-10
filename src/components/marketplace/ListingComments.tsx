@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import {
   MessageSquare, Send, MoreVertical, Edit2, Trash2, ChevronDown, ChevronUp,
-  Loader2, BadgeDollarSign,
+  Loader2, BadgeDollarSign, User, MessageCircle, X,
 } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -14,10 +14,112 @@ import {
   updateListingComment,
   deleteListingComment,
 } from '@/lib/api/marketplace';
+import { createConversation } from '@/lib/api/conversations';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
+import { useMessagesStore } from '@/store/messages.store';
+import { useMarketplaceStore } from '@/store/marketplace.store';
+import { useUIStore } from '@/store/ui.store';
 import { getAvatarUrl, getInitials, formatRelativeTime } from '@/lib/utils';
 import type { ListingComment as ListingCommentType } from '@/types/models';
+
+// ── User action mini sheet ────────────────────────────────────────────────────
+
+interface UserActionSheetProps {
+  userId: string;
+  name: string;
+  avatar?: string | null;
+  initials: string;
+  onClose: () => void;
+}
+
+function UserActionSheet({ userId, name, avatar, initials, onClose }: UserActionSheetProps) {
+  const currentUser = useAuthStore((s) => s.user);
+  const { viewSellerProfile } = useMarketplaceStore();
+  const setPendingConversation = useMessagesStore((s) => s.setPendingConversation);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const [loadingMsg, setLoadingMsg] = useState(false);
+
+  const handleViewProfile = () => {
+    viewSellerProfile(userId);
+    onClose();
+  };
+
+  const handleMessage = async () => {
+    if (!currentUser) return;
+    setLoadingMsg(true);
+    try {
+      const conv = await createConversation({ type: 'DM', participantId: userId });
+      setPendingConversation(conv);
+      setActiveSection('messages');
+      onClose();
+    } catch {
+      toast.error('Could not open chat');
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
+
+  // Don't show "Message" for own comments
+  const isSelf = currentUser?.id === userId;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-2xl shadow-2xl animate-slide-up">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+
+        {/* User preview */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-border">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+            {avatar ? (
+              <Image src={getAvatarUrl(avatar, 80)} alt={name} width={40} height={40} className="object-cover w-full h-full" />
+            ) : (
+              <span className="text-sm font-bold text-primary uppercase">{initials}</span>
+            )}
+          </div>
+          <p className="font-semibold text-foreground text-sm">{name}</p>
+        </div>
+
+        <div className="py-2">
+          <button
+            onClick={handleViewProfile}
+            className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-foreground hover:bg-surface-alt transition-colors"
+          >
+            <User className="w-4 h-4 text-foreground-secondary" />
+            View profile
+          </button>
+
+          {!isSelf && (
+            <button
+              onClick={handleMessage}
+              disabled={loadingMsg}
+              className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-foreground hover:bg-surface-alt transition-colors disabled:opacity-50"
+            >
+              {loadingMsg ? (
+                <Loader2 className="w-4 h-4 text-foreground-secondary animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4 text-foreground-secondary" />
+              )}
+              {loadingMsg ? 'Opening chat…' : 'Send a message'}
+            </button>
+          )}
+        </div>
+
+        <div className="px-4 pb-6 pt-1">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl bg-surface-alt text-sm font-semibold text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 interface ListingCommentsProps {
   listingId: string;
@@ -119,6 +221,7 @@ function CommentItem({
   const [editContent, setEditContent] = useState(comment.content);
   const [editBid, setEditBid] = useState<string>(comment.bidAmount?.toString() ?? '');
   const [repliesExpanded, setRepliesExpanded] = useState(false);
+  const [showUserAction, setShowUserAction] = useState(false);
 
   const isAuthor = user?.id === comment.authorId;
   const isListingOwner = user?.id === listingOwnerId;
@@ -157,32 +260,40 @@ function CommentItem({
     );
   }
 
+  const authorInitials = getInitials(comment.author.firstName, comment.author.lastName);
+
   return (
+    <>
     <div className="flex gap-3">
-      {/* Avatar */}
-      <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+      {/* Avatar — tappable */}
+      <button
+        onClick={() => setShowUserAction(true)}
+        className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-opacity active:scale-95"
+      >
         {comment.author.profilePicture ? (
           <Image
             src={getAvatarUrl(comment.author.profilePicture, 72)}
-            alt={getInitials(comment.author.firstName, comment.author.lastName)}
+            alt={authorInitials}
             width={36}
             height={36}
             className="object-cover w-full h-full"
           />
         ) : (
-          <span className="text-xs font-bold text-primary uppercase">
-            {getInitials(comment.author.firstName, comment.author.lastName)}
-          </span>
+          <span className="text-xs font-bold text-primary uppercase">{authorInitials}</span>
         )}
-      </div>
+      </button>
 
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">
+            {/* Name — tappable */}
+            <button
+              onClick={() => setShowUserAction(true)}
+              className="text-sm font-semibold text-foreground truncate hover:underline text-left"
+            >
               {comment.author.firstName} {comment.author.lastName}
-            </p>
+            </button>
             {comment.author.isVerified && (
               <span className="text-primary flex-shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
@@ -316,6 +427,18 @@ function CommentItem({
         )}
       </div>
     </div>
+
+    {/* User action sheet */}
+    {showUserAction && (
+      <UserActionSheet
+        userId={comment.authorId}
+        name={`${comment.author.firstName} ${comment.author.lastName}`}
+        avatar={comment.author.profilePicture}
+        initials={authorInitials}
+        onClose={() => setShowUserAction(false)}
+      />
+    )}
+    </>
   );
 }
 

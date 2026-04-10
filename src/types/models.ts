@@ -32,6 +32,7 @@ export interface User {
   ppa?: string | null;
   batch: string;
   profilePicture?: string | null;
+  bannerImage?: string | null;
   bio?: string | null;
   corperTag: boolean;
   corperTagLabel?: string | null;

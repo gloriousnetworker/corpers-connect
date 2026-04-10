@@ -1,8 +1,13 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import Image from 'next/image';
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, Camera, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getInitials, formatCount, getAvatarUrl } from '@/lib/utils';
+import { uploadAvatar, uploadBanner } from '@/lib/api/users';
+import { useAuthStore } from '@/store/auth.store';
 import LevelBadge from './LevelBadge';
 import CorperTagBadge from './CorperTagBadge';
 import type { User } from '@/types/models';
@@ -13,7 +18,7 @@ interface ProfileHeaderProps {
   onEditClick?: () => void;
   onFollowersClick?: () => void;
   onFollowingClick?: () => void;
-  actionSlot?: React.ReactNode; // Follow / Message / Block buttons for other-user view
+  actionSlot?: React.ReactNode;
 }
 
 export default function ProfileHeader({
@@ -25,26 +30,152 @@ export default function ProfileHeader({
   actionSlot,
 }: ProfileHeaderProps) {
   const initials = getInitials(user.firstName, user.lastName);
+  const queryClient = useQueryClient();
+  const setUser = useAuthStore((s) => s.setUser);
+
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Determine if the banner is a video
+  const isVideoUrl = (url?: string | null) =>
+    !!url && /\.(mp4|webm|mov|ogg)/i.test(url);
+
+  const bannerMutation = useMutation({
+    mutationFn: (file: File) => uploadBanner(file),
+    onSuccess: (updatedUser) => {
+      setUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+      toast.success('Banner updated');
+    },
+    onError: () => toast.error('Failed to update banner'),
+  });
+
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => uploadAvatar(file),
+    onSuccess: (updatedUser) => {
+      setUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+      toast.success('Profile photo updated');
+    },
+    onError: () => toast.error('Failed to update photo'),
+  });
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    bannerMutation.mutate(file);
+    e.target.value = '';
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    avatarMutation.mutate(file);
+    e.target.value = '';
+  };
+
+  const bannerUrl = user.bannerImage;
+  const isVideo = isVideoUrl(bannerUrl);
 
   return (
     <div className="bg-surface">
-      {/* Cover gradient */}
-      <div className="h-28 bg-gradient-to-br from-primary/60 via-primary/40 to-primary/10" />
+      {/* ── Banner ─────────────────────────────────────────────────────────── */}
+      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-primary/60 via-primary/40 to-primary/10">
+        {bannerUrl ? (
+          isVideo ? (
+            <video
+              src={bannerUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <Image
+              src={bannerUrl}
+              alt="Profile banner"
+              fill
+              className="object-cover"
+              sizes="100vw"
+              priority
+            />
+          )
+        ) : null}
+
+        {/* Gradient overlay for readability */}
+        {bannerUrl && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+        )}
+
+        {/* Banner upload button — own profile only */}
+        {isOwnProfile && (
+          <>
+            <button
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={bannerMutation.isPending}
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white text-xs font-medium transition-colors backdrop-blur-sm"
+              aria-label="Change banner"
+            >
+              {bannerMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Camera className="w-3.5 h-3.5" />
+              )}
+              {bannerMutation.isPending ? 'Uploading…' : 'Edit banner'}
+            </button>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={handleBannerChange}
+            />
+          </>
+        )}
+      </div>
 
       <div className="px-4 pb-4">
         {/* Avatar row */}
         <div className="flex items-end justify-between -mt-12 mb-3">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-surface border-4 border-surface flex items-center justify-center flex-shrink-0">
-            {user.profilePicture ? (
-              <Image
-                src={getAvatarUrl(user.profilePicture, 200)}
-                alt={initials}
-                width={80}
-                height={80}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <span className="font-bold text-primary text-2xl uppercase">{initials}</span>
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-surface border-4 border-surface flex items-center justify-center flex-shrink-0">
+              {user.profilePicture ? (
+                <Image
+                  src={getAvatarUrl(user.profilePicture, 200)}
+                  alt={initials}
+                  width={80}
+                  height={80}
+                  className="object-cover w-full h-full"
+                />
+              ) : (
+                <span className="font-bold text-primary text-2xl uppercase">{initials}</span>
+              )}
+            </div>
+
+            {/* Avatar upload button — own profile only */}
+            {isOwnProfile && (
+              <>
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center border-2 border-surface hover:bg-primary-dark transition-colors"
+                  aria-label="Change profile photo"
+                >
+                  {avatarMutation.isPending ? (
+                    <Loader2 className="w-3 h-3 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-3 h-3 text-white" />
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </>
             )}
           </div>
 
