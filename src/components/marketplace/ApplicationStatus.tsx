@@ -9,7 +9,7 @@ import {
 import { toast } from 'sonner';
 import {
   getMyApplication, getMySellerProfile, submitSellerAppeal,
-  getMyAppeals, replyToAppeal,
+  getMyAppeals, getAppealMessages, replyToAppeal,
 } from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { SellerApplicationStatus, SellerStatus } from '@/types/enums';
@@ -84,20 +84,14 @@ function AppealThreadInline({
   const bottomRef = useRef<HTMLDivElement>(null);
   const isPending = appeal.status === 'PENDING';
 
-  // Poll for new messages while pending
-  const { data: fresh, isLoading } = useQuery({
+  // Poll for new messages using dedicated endpoint
+  const { data: messages = [], isLoading } = useQuery<AppealMessage[]>({
     queryKey: ['marketplace', 'appeal-messages', appeal.id],
-    queryFn: async () => {
-      // Re-fetch all appeals; messages are embedded in each appeal
-      const res = await import('@/lib/api/marketplace').then((m) => m.getMyAppeals());
-      return res.find((a) => a.id === appeal.id)?.messages ?? [];
-    },
+    queryFn: () => getAppealMessages(appeal.id),
     initialData: appeal.messages ?? [],
     refetchInterval: isPending ? 15_000 : false,
     staleTime: 0,
   });
-
-  const messages: AppealMessage[] = fresh ?? appeal.messages ?? [];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -293,6 +293,13 @@ export async function getMyAppeals(): Promise<SellerAppeal[]> {
   return data.data;
 }
 
+export async function getAppealMessages(appealId: string): Promise<AppealMessage[]> {
+  const { data } = await api.get<ApiResponse<AppealMessage[]>>(
+    `/marketplace/my-seller-profile/appeals/${appealId}/messages`
+  );
+  return data.data;
+}
+
 export async function replyToAppeal(appealId: string, content: string): Promise<AppealMessage> {
   const { data } = await api.post<ApiResponse<AppealMessage>>(
     `/marketplace/my-seller-profile/appeals/${appealId}/reply`,
