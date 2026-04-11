@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Clock, CheckCircle2, XCircle, ShieldCheck, ShieldOff,
   Send, ChevronDown, ChevronUp, FileText, MessageSquare, User, Loader2,
+  Paperclip, X as XIcon, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -38,6 +39,36 @@ function relativeTime(iso: string): string {
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 
+function AttachmentChip({
+  url, name, isAdmin,
+}: { url: string; name: string | null; isAdmin: boolean }) {
+  const isImage = /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url);
+  return isImage ? (
+    <a href={url} target="_blank" rel="noreferrer" className="block mt-1.5">
+      <img
+        src={url}
+        alt={name ?? 'attachment'}
+        className="max-w-[180px] rounded-xl border border-white/20 object-cover"
+      />
+    </a>
+  ) : (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className={`mt-1.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-opacity hover:opacity-80 ${
+        isAdmin
+          ? 'bg-white/10 border-white/30 text-white'
+          : 'bg-surface border-border text-foreground'
+      }`}
+    >
+      <FileText size={13} className="flex-shrink-0" />
+      <span className="truncate max-w-[150px]">{name ?? 'Attachment'}</span>
+      <ExternalLink size={11} className="flex-shrink-0 opacity-70" />
+    </a>
+  );
+}
+
 function MessageBubble({ msg }: { msg: AppealMessage }) {
   const isAdmin = msg.senderType === 'ADMIN';
   return (
@@ -56,6 +87,9 @@ function MessageBubble({ msg }: { msg: AppealMessage }) {
             : 'bg-muted/60 text-foreground rounded-tl-sm'
         }`}>
           {msg.content}
+          {msg.attachmentUrl && (
+            <AttachmentChip url={msg.attachmentUrl} name={msg.attachmentName} isAdmin={isAdmin} />
+          )}
         </div>
         <div className={`flex items-center gap-1.5 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
           {isAdmin && msg.admin && (
@@ -80,9 +114,30 @@ function AppealThreadInline({
   onCollapse?: () => void;
 }) {
   const qc = useQueryClient();
-  const [replyMsg, setReplyMsg] = useState('');
+  const [replyMsg, setReplyMsg]           = useState('');
+  const [attachment, setAttachment]       = useState<File | null>(null);
+  const [attachPreview, setAttachPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isPending = appeal.status === 'PENDING';
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    setAttachment(file);
+    if (file.type.startsWith('image/')) {
+      setAttachPreview(URL.createObjectURL(file));
+    } else {
+      setAttachPreview(null);
+    }
+    // reset so same file can be re-selected
+    e.target.value = '';
+  };
+
+  const clearAttachment = () => {
+    setAttachment(null);
+    setAttachPreview(null);
+  };
 
   // Poll for new messages using dedicated endpoint
   const { data: messages = [], isLoading } = useQuery<AppealMessage[]>({
@@ -98,9 +153,11 @@ function AppealThreadInline({
   }, [messages.length]);
 
   const replyMutation = useMutation({
-    mutationFn: (content: string) => replyToAppeal(appeal.id, content),
+    mutationFn: ({ content, file }: { content: string; file: File | null }) =>
+      replyToAppeal(appeal.id, content, file ?? undefined),
     onSuccess: () => {
       setReplyMsg('');
+      clearAttachment();
       qc.invalidateQueries({ queryKey: ['marketplace', 'appeal-messages', appeal.id] });
       qc.invalidateQueries({ queryKey: ['marketplace', 'my-appeals'] });
     },
@@ -108,8 +165,8 @@ function AppealThreadInline({
   });
 
   const handleSend = () => {
-    if (!replyMsg.trim()) return;
-    replyMutation.mutate(replyMsg.trim());
+    if (!replyMsg.trim() && !attachment) return;
+    replyMutation.mutate({ content: replyMsg.trim() || '(see attachment)', file: attachment });
   };
 
   return (
@@ -165,8 +222,47 @@ function AppealThreadInline({
 
       {/* Reply input — only for pending appeals */}
       {isPending && (
-        <div className="px-4 py-3 border-t border-border">
-          <div className="flex gap-2">
+        <div className="px-4 py-3 border-t border-border space-y-2">
+          {/* Attachment preview */}
+          {attachment && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 rounded-xl border border-border">
+              {attachPreview ? (
+                <img src={attachPreview} alt="preview" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FileText size={18} className="text-primary" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{attachment.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {(attachment.size / 1024).toFixed(0)} KB
+                </p>
+              </div>
+              <button onClick={clearAttachment} className="p-1 rounded-full hover:bg-muted text-muted-foreground">
+                <XIcon size={14} />
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2 items-end">
+            {/* Attach file button */}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="p-2.5 rounded-xl border border-border text-muted-foreground hover:bg-surface-alt hover:text-primary transition-colors flex-shrink-0"
+              title="Attach document or image"
+            >
+              <Paperclip size={16} />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,.pdf,.doc,.docx"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
             <textarea
               value={replyMsg}
               onChange={(e) => setReplyMsg(e.target.value)}
@@ -177,19 +273,22 @@ function AppealThreadInline({
                 }
               }}
               rows={2}
-              placeholder="Reply to the admin… (Enter to send)"
+              placeholder="Reply to the admin… attach a document if requested"
               className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-surface"
             />
             <button
               onClick={handleSend}
-              disabled={replyMutation.isPending || !replyMsg.trim()}
-              className="self-end p-2.5 rounded-xl bg-primary text-white disabled:opacity-50"
+              disabled={replyMutation.isPending || (!replyMsg.trim() && !attachment)}
+              className="p-2.5 rounded-xl bg-primary text-white disabled:opacity-50 flex-shrink-0"
             >
               {replyMutation.isPending
                 ? <Loader2 size={16} className="animate-spin" />
                 : <Send size={16} />}
             </button>
           </div>
+          <p className="text-[10px] text-muted-foreground px-1">
+            Accepts images, PDF, DOC, DOCX — max 10 MB
+          </p>
         </div>
       )}
 

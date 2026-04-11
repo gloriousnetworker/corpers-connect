@@ -300,10 +300,18 @@ export async function getAppealMessages(appealId: string): Promise<AppealMessage
   return data.data;
 }
 
-export async function replyToAppeal(appealId: string, content: string): Promise<AppealMessage> {
+export async function replyToAppeal(
+  appealId: string,
+  content: string,
+  attachment?: File,
+): Promise<AppealMessage> {
+  const body = new FormData();
+  body.append('content', content);
+  if (attachment) body.append('attachment', attachment);
+
   const { data } = await api.post<ApiResponse<AppealMessage>>(
     `/marketplace/my-seller-profile/appeals/${appealId}/reply`,
-    { content }
+    body,
   );
   return data.data;
 }

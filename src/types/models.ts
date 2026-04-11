@@ -359,6 +359,8 @@ export interface AppealMessage {
     department: string | null;
     profilePicture: string | null;
   } | null;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
   createdAt: string;
 }
 
