@@ -346,6 +346,22 @@ export interface SellerProfile {
   updatedAt: string;
 }
 
+export interface AppealMessage {
+  id: string;
+  appealId: string;
+  content: string;
+  senderType: 'SELLER' | 'ADMIN';
+  adminId: string | null;
+  admin: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    department: string | null;
+    profilePicture: string | null;
+  } | null;
+  createdAt: string;
+}
+
 export interface SellerAppeal {
   id: string;
   sellerId: string;
@@ -355,6 +371,7 @@ export interface SellerAppeal {
   respondedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  messages?: AppealMessage[];
 }
 
 export interface ListingComment {

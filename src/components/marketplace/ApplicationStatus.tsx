@@ -1,31 +1,236 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Clock, CheckCircle2, XCircle, ShieldCheck, ShieldOff, Send, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import {
+  ArrowLeft, Clock, CheckCircle2, XCircle, ShieldCheck, ShieldOff,
+  Send, ChevronDown, ChevronUp, FileText, MessageSquare, User, Loader2,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { getMyApplication, getMySellerProfile, submitSellerAppeal, getMyAppeals } from '@/lib/api/marketplace';
+import {
+  getMyApplication, getMySellerProfile, submitSellerAppeal,
+  getMyAppeals, replyToAppeal,
+} from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { SellerApplicationStatus, SellerStatus } from '@/types/enums';
+import type { SellerAppeal, AppealMessage } from '@/types/models';
 
 const APPEAL_REASONS = [
-  { value: 'error', label: 'This was done in error — I did not violate any policy' },
-  { value: 'corrected', label: 'I have corrected the issue that led to the suspension' },
+  { value: 'error',          label: 'This was done in error — I did not violate any policy' },
+  { value: 'corrected',      label: 'I have corrected the issue that led to the suspension' },
   { value: 'misunderstanding', label: 'There was a misunderstanding about my listing or conduct' },
-  { value: 'other', label: 'Other reason' },
+  { value: 'other',          label: 'Other reason' },
 ] as const;
 
 type AppealReason = typeof APPEAL_REASONS[number]['value'];
+
+// ── Relative time helper ──────────────────────────────────────────────────────
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+// ── Message bubble ────────────────────────────────────────────────────────────
+
+function MessageBubble({ msg }: { msg: AppealMessage }) {
+  const isAdmin = msg.senderType === 'ADMIN';
+  return (
+    <div className={`flex gap-2 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
+      {/* Avatar */}
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+        isAdmin ? 'bg-primary/10' : 'bg-muted'
+      }`}>
+        <User size={14} className={isAdmin ? 'text-primary' : 'text-muted-foreground'} />
+      </div>
+
+      <div className={`max-w-[78%] space-y-0.5 flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+        <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+          isAdmin
+            ? 'bg-primary text-white rounded-tr-sm'
+            : 'bg-muted/60 text-foreground rounded-tl-sm'
+        }`}>
+          {msg.content}
+        </div>
+        <div className={`flex items-center gap-1.5 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
+          {isAdmin && msg.admin && (
+            <span className="text-[10px] text-muted-foreground">
+              {msg.admin.firstName} · {msg.admin.department ?? 'Admin Team'}
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground">{relativeTime(msg.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Appeal thread (inline) ────────────────────────────────────────────────────
+
+function AppealThreadInline({
+  appeal,
+  onCollapse,
+}: {
+  appeal: SellerAppeal;
+  onCollapse?: () => void;
+}) {
+  const qc = useQueryClient();
+  const [replyMsg, setReplyMsg] = useState('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const isPending = appeal.status === 'PENDING';
+
+  // Poll for new messages while pending
+  const { data: fresh, isLoading } = useQuery({
+    queryKey: ['marketplace', 'appeal-messages', appeal.id],
+    queryFn: async () => {
+      // Re-fetch all appeals; messages are embedded in each appeal
+      const res = await import('@/lib/api/marketplace').then((m) => m.getMyAppeals());
+      return res.find((a) => a.id === appeal.id)?.messages ?? [];
+    },
+    initialData: appeal.messages ?? [],
+    refetchInterval: isPending ? 15_000 : false,
+    staleTime: 0,
+  });
+
+  const messages: AppealMessage[] = fresh ?? appeal.messages ?? [];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
+
+  const replyMutation = useMutation({
+    mutationFn: (content: string) => replyToAppeal(appeal.id, content),
+    onSuccess: () => {
+      setReplyMsg('');
+      qc.invalidateQueries({ queryKey: ['marketplace', 'appeal-messages', appeal.id] });
+      qc.invalidateQueries({ queryKey: ['marketplace', 'my-appeals'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to send message'),
+  });
+
+  const handleSend = () => {
+    if (!replyMsg.trim()) return;
+    replyMutation.mutate(replyMsg.trim());
+  };
+
+  return (
+    <div className="border border-border rounded-2xl overflow-hidden bg-surface text-left">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Appeal Thread</p>
+          <p className="text-xs text-muted-foreground">
+            {new Date(appeal.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+            &nbsp;·&nbsp;
+            <span className={`font-medium ${
+              appeal.status === 'PENDING' ? 'text-amber-600' :
+              appeal.status === 'ACCEPTED' ? 'text-emerald-600' : 'text-red-600'
+            }`}>{appeal.status}</span>
+          </p>
+        </div>
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-surface-alt"
+          >
+            <ChevronUp size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Original appeal */}
+      <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900/30">
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">Your original appeal:</p>
+        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+          {appeal.message}
+        </p>
+      </div>
+
+      {/* Messages */}
+      <div className="px-4 py-4 space-y-3 max-h-72 overflow-y-auto">
+        {isLoading && messages.length === 0 && (
+          <div className="flex justify-center py-4">
+            <Loader2 size={20} className="animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {messages.length === 0 && !isLoading && (
+          <p className="text-xs text-muted-foreground text-center py-2">
+            No messages yet. Our team will respond shortly.
+          </p>
+        )}
+        {messages.map((msg) => (
+          <MessageBubble key={msg.id} msg={msg} />
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Reply input — only for pending appeals */}
+      {isPending && (
+        <div className="px-4 py-3 border-t border-border">
+          <div className="flex gap-2">
+            <textarea
+              value={replyMsg}
+              onChange={(e) => setReplyMsg(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              rows={2}
+              placeholder="Reply to the admin… (Enter to send)"
+              className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-surface"
+            />
+            <button
+              onClick={handleSend}
+              disabled={replyMutation.isPending || !replyMsg.trim()}
+              className="self-end p-2.5 rounded-xl bg-primary text-white disabled:opacity-50"
+            >
+              {replyMutation.isPending
+                ? <Loader2 size={16} className="animate-spin" />
+                : <Send size={16} />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Final response banner for closed appeals */}
+      {!isPending && appeal.adminResponse && (
+        <div className={`px-4 py-3 border-t ${
+          appeal.status === 'ACCEPTED'
+            ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30'
+            : 'bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'
+        }`}>
+          <p className={`text-xs font-semibold mb-1 ${
+            appeal.status === 'ACCEPTED' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
+          }`}>
+            {appeal.status === 'ACCEPTED' ? 'Appeal Accepted' : 'Appeal Rejected'} — Admin Decision:
+          </p>
+          <p className="text-sm text-foreground">{appeal.adminResponse}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ApplicationStatus() {
   const { goBack, setView } = useMarketplaceStore();
   const qc = useQueryClient();
 
-  const [showAppealForm, setShowAppealForm] = useState(false);
+  const [showAppealForm, setShowAppealForm]   = useState(false);
   const [showPastAppeals, setShowPastAppeals] = useState(false);
-  const [appealReason, setAppealReason] = useState<AppealReason | ''>('');
+  const [expandedAppealId, setExpandedAppealId] = useState<string | null>(null);
+
+  const [appealReason, setAppealReason]         = useState<AppealReason | ''>('');
   const [appealExplanation, setAppealExplanation] = useState('');
-  const [appealSteps, setAppealSteps] = useState('');
+  const [appealSteps, setAppealSteps]           = useState('');
 
   const { data: application, isLoading } = useQuery({
     queryKey: ['marketplace', 'my-application'],
@@ -38,10 +243,14 @@ export default function ApplicationStatus() {
     enabled: application?.status === SellerApplicationStatus.APPROVED,
   });
 
+  const isDeactivated = application?.status === SellerApplicationStatus.APPROVED
+    && sellerProfile?.sellerStatus === SellerStatus.DEACTIVATED;
+
   const { data: appeals } = useQuery({
     queryKey: ['marketplace', 'my-appeals'],
     queryFn: getMyAppeals,
-    enabled: sellerProfile?.sellerStatus === SellerStatus.DEACTIVATED,
+    enabled: isDeactivated,
+    refetchInterval: isDeactivated ? 30_000 : false,
   });
 
   const appealMutation = useMutation({
@@ -57,7 +266,8 @@ export default function ApplicationStatus() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to submit appeal'),
   });
 
-  const hasPendingAppeal = appeals?.some((a) => a.status === 'PENDING') ?? false;
+  const pendingAppeal = appeals?.find((a) => a.status === 'PENDING') ?? null;
+  const closedAppeals = appeals?.filter((a) => a.status !== 'PENDING') ?? [];
 
   function buildAppealMessage() {
     const reasonLabel = APPEAL_REASONS.find((r) => r.value === appealReason)?.label ?? '';
@@ -110,10 +320,9 @@ export default function ApplicationStatus() {
     );
   }
 
-  const isPending    = application.status === SellerApplicationStatus.PENDING;
-  const isApproved   = application.status === SellerApplicationStatus.APPROVED;
-  const isRejected   = application.status === SellerApplicationStatus.REJECTED;
-  const isDeactivated = isApproved && sellerProfile?.sellerStatus === SellerStatus.DEACTIVATED;
+  const isPending  = application.status === SellerApplicationStatus.PENDING;
+  const isApproved = application.status === SellerApplicationStatus.APPROVED;
+  const isRejected = application.status === SellerApplicationStatus.REJECTED;
 
   return (
     <div className="flex flex-col min-h-full">
@@ -128,15 +337,15 @@ export default function ApplicationStatus() {
         {/* Status icon */}
         <div className={[
           'w-20 h-20 rounded-full flex items-center justify-center',
-          isPending     ? 'bg-amber-100  dark:bg-amber-900/30'   : '',
-          isDeactivated ? 'bg-red-100    dark:bg-red-900/30'     : '',
-          isApproved && !isDeactivated ? 'bg-emerald-100 dark:bg-emerald-900/30' : '',
-          isRejected    ? 'bg-red-100    dark:bg-red-900/30'     : '',
+          isPending                     ? 'bg-amber-100  dark:bg-amber-900/30'   : '',
+          isDeactivated                 ? 'bg-red-100    dark:bg-red-900/30'     : '',
+          isApproved && !isDeactivated  ? 'bg-emerald-100 dark:bg-emerald-900/30' : '',
+          isRejected                    ? 'bg-red-100    dark:bg-red-900/30'     : '',
         ].join(' ')}>
-          {isPending     && <Clock        size={40} className="text-amber-500" />}
-          {isDeactivated && <ShieldOff    size={40} className="text-red-500" />}
+          {isPending                    && <Clock        size={40} className="text-amber-500" />}
+          {isDeactivated                && <ShieldOff    size={40} className="text-red-500" />}
           {isApproved && !isDeactivated && <CheckCircle2 size={40} className="text-emerald-500" />}
-          {isRejected    && <XCircle      size={40} className="text-red-500" />}
+          {isRejected                   && <XCircle      size={40} className="text-red-500" />}
         </div>
 
         {/* Status text */}
@@ -210,10 +419,10 @@ export default function ApplicationStatus() {
             <span className="text-muted-foreground">Status</span>
             <span className={[
               'font-semibold',
-              isPending     ? 'text-amber-500'   : '',
-              isDeactivated ? 'text-red-500'     : '',
+              isPending                    ? 'text-amber-500'   : '',
+              isDeactivated                ? 'text-red-500'     : '',
               isApproved && !isDeactivated ? 'text-emerald-500' : '',
-              isRejected    ? 'text-red-500'     : '',
+              isRejected                   ? 'text-red-500'     : '',
             ].join(' ')}>
               {isDeactivated ? 'SUSPENDED' : application.status}
             </span>
@@ -222,12 +431,15 @@ export default function ApplicationStatus() {
 
         {/* ── Appeal section (deactivated sellers) ── */}
         {isDeactivated && (
-          <div className="w-full max-w-xs space-y-3">
-            {hasPendingAppeal ? (
-              <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-300">
-                Your appeal is under review. We'll notify you when a decision is made.
-              </div>
-            ) : (
+          <div className="w-full max-w-xs space-y-4">
+
+            {/* Active pending appeal — show thread */}
+            {pendingAppeal && (
+              <AppealThreadInline appeal={pendingAppeal} />
+            )}
+
+            {/* No pending appeal — show submit form or button */}
+            {!pendingAppeal && (
               <>
                 {!showAppealForm ? (
                   <button
@@ -318,37 +530,49 @@ export default function ApplicationStatus() {
               </>
             )}
 
-            {/* Past appeals accordion */}
-            {appeals && appeals.length > 0 && (
+            {/* Past (closed) appeals accordion */}
+            {closedAppeals.length > 0 && (
               <div className="border border-border rounded-xl overflow-hidden">
                 <button
                   onClick={() => setShowPastAppeals((v) => !v)}
                   className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:bg-surface-alt"
                 >
-                  <span>Past Appeals ({appeals.length})</span>
+                  <span className="flex items-center gap-2">
+                    <MessageSquare size={15} />
+                    Past Appeals ({closedAppeals.length})
+                  </span>
                   {showPastAppeals ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
+
                 {showPastAppeals && (
-                  <div className="divide-y divide-border">
-                    {appeals.map((appeal) => (
-                      <div key={appeal.id} className="px-4 py-3 text-left space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            appeal.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                            appeal.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {appeal.status}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(appeal.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{appeal.message}</p>
-                        {appeal.adminResponse && (
-                          <div className="text-xs bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg text-blue-700 dark:text-blue-300">
-                            <span className="font-medium">Admin: </span>{appeal.adminResponse}
-                          </div>
+                  <div className="divide-y divide-border px-4 py-3 space-y-4">
+                    {closedAppeals.map((appeal) => (
+                      <div key={appeal.id} className="pt-3 first:pt-0">
+                        {expandedAppealId === appeal.id ? (
+                          <AppealThreadInline
+                            appeal={appeal}
+                            onCollapse={() => setExpandedAppealId(null)}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setExpandedAppealId(appeal.id)}
+                            className="w-full text-left space-y-2 hover:opacity-80 transition-opacity"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                appeal.status === 'ACCEPTED'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {appeal.status}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(appeal.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{appeal.message}</p>
+                            <p className="text-xs text-primary font-medium">View thread →</p>
+                          </button>
                         )}
                       </div>
                     ))}

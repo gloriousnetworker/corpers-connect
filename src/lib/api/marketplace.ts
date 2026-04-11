@@ -1,6 +1,6 @@
 import api from './client';
 import type { ApiResponse, PaginatedData } from '@/types/api';
-import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage, SellerProfile, SellerAppeal, ListingComment, MarketplaceConversationInfo } from '@/types/models';
+import type { MarketplaceListing, SellerApplication, ListingReview, ListingReviewsPage, SellerProfile, SellerAppeal, AppealMessage, ListingComment, MarketplaceConversationInfo } from '@/types/models';
 import type { ListingType, ListingCategory, ListingStatus } from '@/types/enums';
 
 // ── Filters ───────────────────────────────────────────────────────────────
@@ -290,5 +290,13 @@ export async function submitSellerAppeal(message: string): Promise<SellerAppeal>
 
 export async function getMyAppeals(): Promise<SellerAppeal[]> {
   const { data } = await api.get<ApiResponse<SellerAppeal[]>>('/marketplace/my-seller-profile/appeals');
+  return data.data;
+}
+
+export async function replyToAppeal(appealId: string, content: string): Promise<AppealMessage> {
+  const { data } = await api.post<ApiResponse<AppealMessage>>(
+    `/marketplace/my-seller-profile/appeals/${appealId}/reply`,
+    { content }
+  );
   return data.data;
 }
