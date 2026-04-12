@@ -42,7 +42,8 @@ function relativeTime(iso: string): string {
 function AttachmentChip({
   url, name, isAdmin,
 }: { url: string; name: string | null; isAdmin: boolean }) {
-  const isImage = /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url);
+  // Detect by Cloudinary URL path — not file extension (auto-upload IDs have no extension)
+  const isImage = url.includes('/image/upload/');
   return isImage ? (
     <a href={url} target="_blank" rel="noreferrer" className="block mt-1.5">
       <img
