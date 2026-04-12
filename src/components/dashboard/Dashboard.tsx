@@ -117,10 +117,18 @@ function DeepLinkHandler() {
  */
 export default function Dashboard() {
   const activeSection = useUIStore((s) => s.activeSection);
+  const marketplaceView = useMarketplaceStore((s) => s.view);
   const Section = SECTIONS[activeSection] ?? FeedSection;
 
-  // Messages and Reels need full-height layout — no scroll padding wrappers
-  if (activeSection === 'messages' || activeSection === 'reels') {
+  // These views require a fixed-height full-screen layout so their internal
+  // flex-col/h-full and overflow-y-auto structures work correctly.
+  const needsFullHeight =
+    activeSection === 'messages' ||
+    activeSection === 'reels' ||
+    (activeSection === 'marketplace' &&
+      (marketplaceView === 'marketplace-chat' || marketplaceView === 'marketplace-conversations'));
+
+  if (needsFullHeight) {
     return (
       <>
         <Suspense><DeepLinkHandler /></Suspense>
@@ -131,7 +139,7 @@ export default function Dashboard() {
             marginTop: 'calc(var(--top-bar-height) + env(safe-area-inset-top, 0px))',
           }}
         >
-          {activeSection === 'reels' ? <ReelsSection /> : <MessagesSection />}
+          <Section />
         </div>
       </>
     );

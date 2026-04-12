@@ -13,7 +13,7 @@ import { getExistingSocket } from '@/lib/socket';
 import { queryKeys } from '@/lib/query-keys';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useAuthStore } from '@/store/auth.store';
-import { formatRelativeTime, getInitials, getAvatarUrl, formatPrice } from '@/lib/utils';
+import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { MessageType } from '@/types/enums';
 import type { Message } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
@@ -382,7 +382,7 @@ export default function MarketplaceChatView() {
               <div className="flex items-center gap-2">
                 {mktConv.listing.price != null && (
                   <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                    {formatPrice(mktConv.listing.price)}
+                    ₦{mktConv.listing.price.toLocaleString('en-NG')}
                   </span>
                 )}
                 <span className="text-xs text-foreground-muted truncate">with {otherName}</span>
