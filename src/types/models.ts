@@ -104,7 +104,9 @@ export interface Story {
   caption?: string | null;
   expiresAt: string;
   viewCount?: number;
+  reactionsCount?: number;
   isViewed?: boolean;
+  hasReacted?: boolean;
   createdAt: string;
 }
 

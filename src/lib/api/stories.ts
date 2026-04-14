@@ -14,7 +14,8 @@ interface BackendStory {
   expiresAt: string;
   createdAt: string;
   viewed: boolean;          // backend uses `viewed`, not `isViewed`
-  _count?: { views: number };
+  hasReacted?: boolean;
+  _count?: { views: number; reactions: number };
 }
 
 interface BackendStoryGroup {
@@ -38,6 +39,8 @@ function normalizeStory(s: BackendStory): Story {
     createdAt: s.createdAt,
     isViewed: s.viewed,
     viewCount: s._count?.views ?? 0,
+    reactionsCount: s._count?.reactions ?? 0,
+    hasReacted: s.hasReacted ?? false,
   };
 }
 
@@ -86,4 +89,16 @@ export async function getUserHighlights(userId: string): Promise<Story[]> {
     `/stories/users/${userId}/highlights`,
   );
   return (data.data ?? []).map((h) => normalizeStory(h.story));
+}
+
+/** POST /stories/:storyId/react — toggle ❤️ reaction */
+export async function reactToStory(storyId: string): Promise<{ reacted: boolean }> {
+  const { data } = await api.post<ApiResponse<{ reacted: boolean }>>(`/stories/${storyId}/react`);
+  return data.data;
+}
+
+/** POST /stories/:storyId/reply — send reply as DM */
+export async function replyToStory(storyId: string, content: string): Promise<{ conversationId: string }> {
+  const { data } = await api.post<ApiResponse<{ conversationId: string }>>(`/stories/${storyId}/reply`, { content });
+  return data.data;
 }

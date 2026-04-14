@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { X, Trash2, Eye, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { X, Trash2, Eye, Heart, ChevronLeft, ChevronRight, Plus, Send } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { viewStory, deleteStory } from '@/lib/api/stories';
+import { viewStory, deleteStory, reactToStory as reactToStoryApi, replyToStory as replyToStoryApi } from '@/lib/api/stories';
 import { queryKeys } from '@/lib/query-keys';
 import { formatRelativeTime, getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -36,6 +36,8 @@ export default function StoryViewer({
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyFocused, setReplyFocused] = useState(false);
 
   // RAF-based timer refs
   const rafRef = useRef<number | null>(null);
@@ -111,6 +113,32 @@ export default function StoryViewer({
     },
     onError: () => toast.error('Failed to delete story'),
   });
+
+  // ── React to story ──────────────────────────────────────────────────────────
+  const reactMutation = useMutation({
+    mutationFn: () => reactToStoryApi(story!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
+    },
+    onError: () => toast.error('Could not react'),
+  });
+
+  // ── Reply to story (sends as DM) ──────────────────────────────────────────
+  const replyMutation = useMutation({
+    mutationFn: (content: string) => replyToStoryApi(story!.id, content),
+    onSuccess: () => {
+      setReplyText('');
+      setReplyFocused(false);
+      toast.success('Reply sent to their DMs');
+    },
+    onError: () => toast.error('Could not send reply'),
+  });
+
+  const handleSendReply = () => {
+    const text = replyText.trim();
+    if (!text || replyMutation.isPending) return;
+    replyMutation.mutate(text);
+  };
 
   // ── Cancel RAF timer ─────────────────────────────────────────────────────────
   const cancelTimer = useCallback(() => {
@@ -334,13 +362,7 @@ export default function StoryViewer({
               </p>
               <p className="text-white/70 text-xs">{formatRelativeTime(story.createdAt)}</p>
             </div>
-            {/* View count for own stories */}
-            {isOwnStory && story.viewCount !== undefined && story.viewCount > 0 && (
-              <div className="pointer-events-auto flex items-center gap-1 text-white/80 text-xs">
-                <Eye className="w-3.5 h-3.5" />
-                <span>{story.viewCount}</span>
-              </div>
-            )}
+            {/* View + reaction count moved to bottom bar */}
           </div>
 
           {/* Close + delete buttons — pointer-events-auto to capture clicks */}
@@ -383,9 +405,9 @@ export default function StoryViewer({
             )}
           </div>
 
-          {/* Caption */}
+          {/* Caption — pushed up to leave room for the reply bar */}
           {story.caption && (
-            <div className="absolute bottom-8 inset-x-4 pointer-events-none">
+            <div className={`absolute inset-x-4 pointer-events-none ${isOwnStory ? 'bottom-16' : 'bottom-20'}`}>
               <p className="text-white text-sm leading-relaxed text-center drop-shadow">{story.caption}</p>
             </div>
           )}
@@ -406,16 +428,83 @@ export default function StoryViewer({
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          {/* "Add story" CTA shown when viewing own stories group */}
-          {isOwnStory && onAddStory && (
-            <div className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={onAddStory}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold shadow-lg"
-              >
-                <Plus className="w-4 h-4" />
-                Add to story
-              </button>
+          {/* ── Bottom bar ────────────────────────────────────────────── */}
+          {isOwnStory ? (
+            /* Own story: view/reaction stats + add story button */
+            <div
+              className="absolute bottom-0 inset-x-0 px-4 pb-5 pt-3 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {(story.viewCount ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 text-white/80 text-xs">
+                      <Eye className="w-4 h-4" />
+                      <span>{story.viewCount} {(story.viewCount ?? 0) === 1 ? 'view' : 'views'}</span>
+                    </div>
+                  )}
+                  {(story.reactionsCount ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 text-white/80 text-xs">
+                      <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                      <span>{story.reactionsCount}</span>
+                    </div>
+                  )}
+                </div>
+                {onAddStory && (
+                  <button
+                    onClick={onAddStory}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold shadow-lg"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Others' stories: reply input + heart reaction */
+            <div
+              className="absolute bottom-0 inset-x-0 px-3 pb-4 pt-2 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-end gap-2">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onFocus={() => { setReplyFocused(true); setPaused(true); }}
+                    onBlur={() => { if (!replyText.trim()) { setReplyFocused(false); setPaused(false); } }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSendReply(); }}
+                    placeholder={`Reply to ${author.firstName}...`}
+                    className="w-full bg-white/15 backdrop-blur-sm border border-white/30 rounded-full pl-4 pr-10 py-2.5 text-sm text-white placeholder:text-white/50 outline-none focus:border-white/60"
+                    style={{ fontSize: '16px' }}
+                  />
+                  {replyText.trim() && (
+                    <button
+                      onClick={handleSendReply}
+                      disabled={replyMutation.isPending}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-primary text-white disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => reactMutation.mutate()}
+                  disabled={reactMutation.isPending}
+                  className="p-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 transition-transform active:scale-90 disabled:opacity-50"
+                  aria-label="React with love"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition-colors ${
+                      story.hasReacted
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-white'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
         </div>
