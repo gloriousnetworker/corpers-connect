@@ -45,11 +45,12 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   const localVideoElRef  = useRef<HTMLDivElement | null>(null);
   const remoteVideoElRef = useRef<HTMLDivElement | null>(null);
 
-  const [isJoined,      setIsJoined]      = useState(false);
-  const [isMuted,       setIsMuted]       = useState(false);
-  const [isCameraOff,   setIsCameraOff]   = useState(false);
-  const [permissionErr, setPermissionErr] = useState<string | null>(null);
-  const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+  const [isJoined,         setIsJoined]         = useState(false);
+  const [isMuted,          setIsMuted]          = useState(false);
+  const [isCameraOff,      setIsCameraOff]      = useState(false);
+  const [permissionErr,    setPermissionErr]    = useState<string | null>(null);
+  const [cameraBlocked,    setCameraBlocked]    = useState(false);
+  const [remoteHasVideo,   setRemoteHasVideo]   = useState(false);
 
   // ── join ──────────────────────────────────────────────────────────────────
 
@@ -109,20 +110,32 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
       ]);
 
       // ── Create and publish local tracks ──────────────────────────────────
+      // Always create microphone first — this must succeed.
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      localAudioRef.current = audioTrack;
+
       if (callType === 'VIDEO') {
-        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-          {},
-          { facingMode: 'user' },
-        );
-        localAudioRef.current = audioTrack;
-        localVideoRef.current = videoTrack;
-        await client.publish([audioTrack, videoTrack]);
-        if (localVideoElRef.current) {
-          videoTrack.play(localVideoElRef.current);
+        try {
+          // No facingMode constraint — works on both mobile and desktop.
+          const videoTrack = await AgoraRTC.createCameraVideoTrack();
+          localVideoRef.current = videoTrack;
+          await client.publish([audioTrack, videoTrack]);
+          if (localVideoElRef.current) {
+            videoTrack.play(localVideoElRef.current);
+          }
+        } catch (camErr: unknown) {
+          // Camera access denied or unavailable — continue with audio only.
+          const e = camErr as Error;
+          const isDenied =
+            e.name === 'NotAllowedError' ||
+            e.message?.includes('Permission denied') ||
+            e.message?.includes('NotAllowedError') ||
+            e.name === 'NotFoundError';
+          setCameraBlocked(isDenied);
+          // Publish audio track only so the call stays alive.
+          await client.publish([audioTrack]);
         }
       } else {
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        localAudioRef.current = audioTrack;
         await client.publish([audioTrack]);
       }
 
@@ -179,6 +192,7 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     setIsCameraOff(false);
     setRemoteHasVideo(false);
     setPermissionErr(null);
+    setCameraBlocked(false);
   }, []);
 
   // ── controls ──────────────────────────────────────────────────────────────
@@ -248,5 +262,6 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     isCameraOff,
     remoteHasVideo,
     permissionErr,
+    cameraBlocked,
   };
 }

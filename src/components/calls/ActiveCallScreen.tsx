@@ -38,6 +38,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
     isCameraOff,
     isJoined,
     permissionErr,
+    cameraBlocked,
     remoteHasVideo,
     setLocalVideoEl,
     setRemoteVideoEl,
@@ -67,6 +68,18 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#011a11] flex flex-col overflow-hidden">
+
+      {/* ── Camera permission banner ──────────────────────────────────────── */}
+      {isVideo && cameraBlocked && (
+        <div className="absolute top-4 left-4 right-4 z-20 bg-yellow-500/90 text-black rounded-2xl px-4 py-3 flex flex-col gap-1 shadow-lg">
+          <p className="font-semibold text-sm">Camera access needed</p>
+          <p className="text-xs leading-snug">
+            Your browser is blocking the camera. Click the camera icon in your
+            browser&apos;s address bar and choose <strong>Allow</strong>, then
+            rejoin the call.
+          </p>
+        </div>
+      )}
 
       {/* ── VIDEO: remote feed fills screen ──────────────────────────────── */}
       {isVideo && (
