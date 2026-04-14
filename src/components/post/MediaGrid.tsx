@@ -63,55 +63,14 @@ export default function MediaGrid({ urls }: MediaGridProps) {
   const activeUrl = lightboxIndex !== null ? urls[lightboxIndex] : null;
   const lightboxIsVideo = activeUrl ? isVideoUrl(activeUrl) : false;
 
-  // ── Single image: render at natural aspect, capped height ─────────────────
+  // ── Single image: render at natural aspect (clamped) ──────────────────────
   if (count === 1) {
     const url = urls[0];
     const isVideo = isVideoUrl(url);
-    const poster = isVideo ? getVideoPosterUrl(url) : undefined;
 
     return (
       <>
-        <button
-          type="button"
-          onClick={() => setLightboxIndex(0)}
-          className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
-          aria-label={isVideo ? 'Play video' : 'View image'}
-        >
-          {isVideo ? (
-            <div className="relative w-full aspect-video bg-black">
-              {poster ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={poster}
-                  alt="Video thumbnail"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <video
-                  src={url}
-                  preload="metadata"
-                  muted
-                  playsInline
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              )}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-                <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white fill-white translate-x-0.5" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={getOptimisedUrl(url, 1200)}
-              alt="Post image"
-              className="w-full h-auto max-h-[640px] object-contain"
-              loading="lazy"
-            />
-          )}
-        </button>
+        <SingleMedia url={url} isVideo={isVideo} onOpen={() => setLightboxIndex(0)} />
 
         <Lightbox
           urls={urls}
@@ -204,6 +163,73 @@ export default function MediaGrid({ urls }: MediaGridProps) {
   );
 }
 
+// ── Single image/video with natural aspect (clamped) ───────────────────────
+
+interface SingleMediaProps {
+  url: string;
+  isVideo: boolean;
+  onOpen: () => void;
+}
+
+function SingleMedia({ url, isVideo, onOpen }: SingleMediaProps) {
+  // Default aspect while the image is loading. Once loaded, we clamp the
+  // natural aspect ratio to a sensible range (3:4 portrait to 16:9 landscape)
+  // so the feed card stays readable but the image is never cropped.
+  const [aspect, setAspect] = useState<number>(4 / 3);
+  const poster = isVideo ? getVideoPosterUrl(url) : undefined;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
+      style={{ aspectRatio: aspect }}
+      aria-label={isVideo ? 'Play video' : 'View image'}
+    >
+      {isVideo ? (
+        <>
+          {poster ? (
+            <Image
+              src={poster}
+              alt="Video thumbnail"
+              fill
+              className="object-cover"
+              sizes="(max-width: 680px) 100vw, 680px"
+            />
+          ) : (
+            <video
+              src={url}
+              preload="metadata"
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Play className="w-6 h-6 text-white fill-white translate-x-0.5" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <Image
+          src={getOptimisedUrl(url, 1200)}
+          alt="Post image"
+          fill
+          className="object-contain"
+          sizes="(max-width: 680px) 100vw, 680px"
+          onLoadingComplete={(img) => {
+            const natural = img.naturalWidth / img.naturalHeight;
+            // Clamp: portrait max 3:4 (0.75), landscape max 16:9 (1.78)
+            const clamped = Math.max(0.75, Math.min(1.78, natural));
+            setAspect(clamped);
+          }}
+        />
+      )}
+    </button>
+  );
+}
+
 // ── Full-screen carousel lightbox ───────────────────────────────────────────
 
 interface LightboxProps {
@@ -282,12 +308,15 @@ function Lightbox({ urls, index, onClose, onPrev, onNext, isVideo }: LightboxPro
             className="max-w-full max-h-full rounded-xl"
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             key={url}
             src={getOptimisedUrl(url, 1600)}
             alt={`Image ${index + 1}`}
-            className="max-w-full max-h-full object-contain rounded-xl"
+            width={1600}
+            height={1600}
+            sizes="(max-width: 768px) 100vw, 1200px"
+            className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
+            priority
           />
         )}
       </div>
