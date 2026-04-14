@@ -55,14 +55,14 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Attempt refresh on 401 when we have an active access token or the user
-    // was previously authenticated. The httpOnly cc_refresh_token cookie is
-    // sent automatically — no localStorage token reading needed.
+    // Attempt refresh on 401 as long as we haven't already retried and this
+    // isn't the refresh endpoint itself. We do NOT gate on _accessToken !== null
+    // because after a page reload _accessToken is always null (in-memory only),
+    // yet the httpOnly cc_refresh_token cookie is still valid.
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      originalRequest.url !== '/auth/refresh' &&
-      _accessToken !== null
+      originalRequest.url !== '/auth/refresh'
     ) {
       originalRequest._retry = true;
 

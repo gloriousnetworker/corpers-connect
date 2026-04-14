@@ -28,13 +28,9 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user, accessToken) => {
         // Store access token in memory only — never in localStorage.
-        // The refresh token now lives in an httpOnly cookie set by the backend,
-        // so there is nothing to persist on the client for token rotation.
+        // The refresh token lives in an httpOnly cookie set by the backend.
+        // The cc_session flag cookie is also set server-side (immune to iOS ITP cap).
         setAccessToken(accessToken);
-        // Set session cookie for Next.js middleware route guard
-        if (typeof document !== 'undefined') {
-          document.cookie = `${STORAGE_KEYS.SESSION_FLAG}=1; path=/; max-age=2592000; SameSite=Lax`;
-        }
         set({ user, isAuthenticated: true, isLoading: false });
       },
 
