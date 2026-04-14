@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, AlertCircle } from 'lucide-react';
 
 interface VoiceNotePlayerProps {
   mediaUrl: string;
@@ -19,27 +19,29 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [loadError, setLoadError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
-    // crossOrigin needed for Cloudinary URLs to work with audio context
-    audio.crossOrigin = 'anonymous';
+    // DO NOT set crossOrigin — it triggers CORS preflight and desktop browsers
+    // block playback when Cloudinary doesn't return proper CORS headers.
+    // Simple audio playback works without it (no Web Audio API needed).
     audio.src = mediaUrl;
     audioRef.current = audio;
+    setLoadError(false);
 
     const onMeta = () => {
       if (isFinite(audio.duration)) setDuration(audio.duration);
     };
     const onTime = () => setCurrentTime(audio.currentTime);
     const onEnd = () => { setIsPlaying(false); setCurrentTime(0); };
-    // Some audio won't fire loadedmetadata — use durationchange as fallback
     const onDurChange = () => {
       if (isFinite(audio.duration) && audio.duration > 0) setDuration(audio.duration);
     };
-    const onError = () => setDuration(0);
+    const onError = () => { setDuration(0); setLoadError(true); };
 
     audio.addEventListener('loadedmetadata', onMeta);
     audio.addEventListener('durationchange', onDurChange);
@@ -65,16 +67,18 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       audio.pause();
       setIsPlaying(false);
     } else {
-      // Attempt play — if it fails (autoplay policy, format issue), reset state
+      setLoadError(false);
       audio.play()
         .then(() => setIsPlaying(true))
         .catch(() => {
-          setIsPlaying(false);
-          // Try reloading the audio element — some browsers need a fresh load
+          // Try reloading — some browsers need a fresh load after error
           audio.load();
           audio.play()
             .then(() => setIsPlaying(true))
-            .catch(() => {});
+            .catch(() => {
+              setIsPlaying(false);
+              setLoadError(true);
+            });
         });
     }
   }, [isPlaying]);
@@ -100,11 +104,15 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       <button
         onClick={togglePlay}
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-90 ${
-          isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-primary/10 hover:bg-primary/20'
+          loadError
+            ? 'bg-red-100 dark:bg-red-900/30'
+            : isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-primary/10 hover:bg-primary/20'
         }`}
-        aria-label={isPlaying ? 'Pause' : 'Play'}
+        aria-label={loadError ? 'Retry audio' : isPlaying ? 'Pause' : 'Play'}
       >
-        {isPlaying
+        {loadError
+          ? <AlertCircle className="w-4 h-4 text-red-500" />
+          : isPlaying
           ? <Pause className={`w-4 h-4 ${iconColor}`} />
           : <Play className={`w-4 h-4 ${iconColor} translate-x-px`} />
         }

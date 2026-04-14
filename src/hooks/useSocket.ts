@@ -37,6 +37,9 @@ export function useSocket() {
     const socket = getSocket(token);
     // Eagerly init the calls socket so it's ready before the first incoming call
     getCallsSocket(token);
+    // Preload the Agora SDK in the background so the first call doesn't
+    // have a 2-3s cold import delay when joining a channel.
+    import('agora-rtc-sdk-ng').catch(() => {});
 
     // ── Incoming new message ──────────────────────────────────────────────────
     socket.on('message:new', (rawMessage: Record<string, unknown>) => {
