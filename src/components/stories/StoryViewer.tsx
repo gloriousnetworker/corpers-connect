@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { X, Trash2, Eye, Heart, ChevronLeft, ChevronRight, Plus, Send } from 'lucide-react';
+import { X, Trash2, Eye, Heart, ChevronLeft, ChevronRight, Plus, Send, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { viewStory, deleteStory, reactToStory as reactToStoryApi, replyToStory as replyToStoryApi } from '@/lib/api/stories';
@@ -38,6 +38,8 @@ export default function StoryViewer({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replyFocused, setReplyFocused] = useState(false);
+  const [localReacted, setLocalReacted] = useState<Record<string, boolean>>({});
+  const [heartAnim, setHeartAnim] = useState(false);
 
   // RAF-based timer refs
   const rafRef = useRef<number | null>(null);
@@ -47,6 +49,7 @@ export default function StoryViewer({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const nextVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewedRef = useRef<Set<string>>(new Set());
+  const replyInputRef = useRef<HTMLInputElement>(null);
 
   // Stable ref to goToNextStory to avoid stale closures inside RAF
   const goToNextStoryRef = useRef<() => void>(() => {});
@@ -59,6 +62,9 @@ export default function StoryViewer({
   const story: Story | undefined = stories[storyIdx];
   const isOwnStory = group?.author.id === currentUserId;
   const isVideo = !!(story?.mediaType?.startsWith('video') || story?.mediaUrl?.match(/\.(mp4|webm|mov|ogg)$/i));
+
+  // Reaction state: local optimistic overrides server state
+  const hasReacted = story ? (localReacted[story.id] ?? story.hasReacted ?? false) : false;
 
   // Next story for preloading
   const nextStory: Story | undefined =
@@ -117,10 +123,22 @@ export default function StoryViewer({
   // ── React to story ──────────────────────────────────────────────────────────
   const reactMutation = useMutation({
     mutationFn: () => reactToStoryApi(story!.id),
+    onMutate: () => {
+      // Optimistic: toggle immediately
+      const newState = !hasReacted;
+      setLocalReacted((prev) => ({ ...prev, [story!.id]: newState }));
+      // Heart animation
+      setHeartAnim(true);
+      setTimeout(() => setHeartAnim(false), 600);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
     },
-    onError: () => toast.error('Could not react'),
+    onError: () => {
+      // Revert optimistic update
+      setLocalReacted((prev) => ({ ...prev, [story!.id]: !hasReacted }));
+      toast.error('Could not react');
+    },
   });
 
   // ── Reply to story (sends as DM) ──────────────────────────────────────────
@@ -129,6 +147,8 @@ export default function StoryViewer({
     onSuccess: () => {
       setReplyText('');
       setReplyFocused(false);
+      setPaused(false);
+      replyInputRef.current?.blur();
       toast.success('Reply sent to their DMs');
     },
     onError: () => toast.error('Could not send reply'),
@@ -157,6 +177,10 @@ export default function StoryViewer({
     setGroupIdx(newGroupIdx);
     setStoryIdx(newStoryIdx);
     setDeleteConfirm(false);
+    // Reset reply state on navigation
+    setReplyText('');
+    setReplyFocused(false);
+    replyInputRef.current?.blur();
   }, [cancelTimer]);
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -243,20 +267,28 @@ export default function StoryViewer({
   // ── Keyboard navigation ───────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Don't navigate when typing a reply
+      if (replyFocused) return;
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') goToNextStory();
       if (e.key === 'ArrowLeft') goToPrevStory();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, goToNextStory, goToPrevStory]);
+  }, [onClose, goToNextStory, goToPrevStory, replyFocused]);
 
   if (!group || !story) return null;
 
   const author = group.author;
   const initials = getInitials(author.firstName, author.lastName);
 
+  // ── Pause / resume (pointer AND touch for mobile) ──────────────────────────
+  const handleHoldStart = () => { if (!replyFocused) setPaused(true); };
+  const handleHoldEnd = () => { if (!replyFocused) setPaused(false); };
+
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Ignore taps when reply input is focused — user is typing
+    if (replyFocused) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) {
@@ -277,13 +309,14 @@ export default function StoryViewer({
         {/* Story media */}
         <div
           className="relative w-full h-full max-w-[480px] mx-auto"
-          onPointerDown={() => setPaused(true)}
-          onPointerUp={() => setPaused(false)}
-          onPointerLeave={() => setPaused(false)}
+          onPointerDown={handleHoldStart}
+          onPointerUp={handleHoldEnd}
+          onPointerLeave={handleHoldEnd}
+          onTouchStart={handleHoldStart}
+          onTouchEnd={handleHoldEnd}
           onClick={handleTap}
         >
           {isVideo ? (
-            // key forces remount on story change — no stale frame flash
             <video
               key={story.id}
               ref={videoRef}
@@ -299,7 +332,6 @@ export default function StoryViewer({
               }}
             />
           ) : (
-            // key forces remount on story change — no stale image flash
             <div key={story.id} className="relative w-full h-full">
               <Image
                 src={getOptimisedUrl(story.mediaUrl)}
@@ -313,7 +345,7 @@ export default function StoryViewer({
             </div>
           )}
 
-          {/* Preloader for next story video — use metadata only, not full download */}
+          {/* Preloader for next story video */}
           {nextStory && nextIsVideo && (
             <video
               key={`preload-${nextStory.id}`}
@@ -326,13 +358,21 @@ export default function StoryViewer({
             />
           )}
 
+          {/* Floating heart animation on react */}
+          {heartAnim && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <Heart
+                className="w-20 h-20 text-red-500 fill-red-500 animate-bounce"
+                style={{ animation: 'heartFloat 0.6s ease-out forwards' }}
+              />
+            </div>
+          )}
+
           {/* Gradient overlay — top */}
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
-          {/* Gradient overlay — bottom */}
-          {story.caption && (
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-          )}
+          {/* Gradient overlay — bottom (always shown to support bottom bar readability) */}
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
           {/* Progress bars */}
           <div className="absolute top-3 inset-x-0 pointer-events-none">
@@ -345,7 +385,6 @@ export default function StoryViewer({
 
           {/* Header bar */}
           <div className="absolute top-6 inset-x-0 flex items-center gap-3 px-3 pointer-events-none">
-            {/* Avatar */}
             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white bg-surface-alt flex-shrink-0">
               {author.profilePicture ? (
                 <Image src={getAvatarUrl(author.profilePicture, 72)} alt={initials} width={36} height={36} className="object-cover w-full h-full" />
@@ -355,17 +394,15 @@ export default function StoryViewer({
                 </div>
               )}
             </div>
-            {/* Name + time */}
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold text-sm leading-tight truncate">
                 {author.firstName} {author.lastName}
               </p>
               <p className="text-white/70 text-xs">{formatRelativeTime(story.createdAt)}</p>
             </div>
-            {/* View + reaction count moved to bottom bar */}
           </div>
 
-          {/* Close + delete buttons — pointer-events-auto to capture clicks */}
+          {/* Close + delete buttons */}
           <div className="absolute top-6 right-3 flex items-center gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             {isOwnStory && !deleteConfirm && (
               <button
@@ -405,10 +442,10 @@ export default function StoryViewer({
             )}
           </div>
 
-          {/* Caption — pushed up to leave room for the reply bar */}
+          {/* Caption */}
           {story.caption && (
-            <div className={`absolute inset-x-4 pointer-events-none ${isOwnStory ? 'bottom-16' : 'bottom-20'}`}>
-              <p className="text-white text-sm leading-relaxed text-center drop-shadow">{story.caption}</p>
+            <div className={`absolute inset-x-4 pointer-events-none ${isOwnStory ? 'bottom-16' : 'bottom-[72px]'}`}>
+              <p className="text-white text-sm leading-relaxed text-center drop-shadow-lg">{story.caption}</p>
             </div>
           )}
 
@@ -430,7 +467,6 @@ export default function StoryViewer({
 
           {/* ── Bottom bar ────────────────────────────────────────────── */}
           {isOwnStory ? (
-            /* Own story: view/reaction stats + add story button */
             <div
               className="absolute bottom-0 inset-x-0 px-4 pb-5 pt-3 pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
@@ -462,44 +498,64 @@ export default function StoryViewer({
               </div>
             </div>
           ) : (
-            /* Others' stories: reply input + heart reaction */
             <div
               className="absolute bottom-0 inset-x-0 px-3 pb-4 pt-2 pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              <div className="flex items-end gap-2">
-                <div className="flex-1 relative">
+              <div className="flex items-center gap-2">
+                {/* Reply input */}
+                <div className="flex-1 flex items-center bg-white/15 backdrop-blur-sm border border-white/30 rounded-full overflow-hidden focus-within:border-white/60">
                   <input
+                    ref={replyInputRef}
                     type="text"
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onFocus={() => { setReplyFocused(true); setPaused(true); }}
-                    onBlur={() => { if (!replyText.trim()) { setReplyFocused(false); setPaused(false); } }}
+                    onBlur={() => {
+                      // Small delay so send button click registers before blur
+                      setTimeout(() => {
+                        if (!replyText.trim()) {
+                          setReplyFocused(false);
+                          setPaused(false);
+                        }
+                      }, 150);
+                    }}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSendReply(); }}
                     placeholder={`Reply to ${author.firstName}...`}
-                    className="w-full bg-white/15 backdrop-blur-sm border border-white/30 rounded-full pl-4 pr-10 py-2.5 text-sm text-white placeholder:text-white/50 outline-none focus:border-white/60"
+                    className="flex-1 bg-transparent pl-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none"
                     style={{ fontSize: '16px' }}
                   />
                   {replyText.trim() && (
                     <button
                       onClick={handleSendReply}
                       disabled={replyMutation.isPending}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-primary text-white disabled:opacity-50"
+                      className="flex-shrink-0 p-2 mr-1 rounded-full bg-primary text-white disabled:opacity-50"
                     >
-                      <Send className="w-4 h-4" />
+                      {replyMutation.isPending
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Send className="w-4 h-4" />
+                      }
                     </button>
                   )}
                 </div>
+
+                {/* Heart reaction button */}
                 <button
                   onClick={() => reactMutation.mutate()}
                   disabled={reactMutation.isPending}
-                  className="p-2.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 transition-transform active:scale-90 disabled:opacity-50"
+                  className={`flex-shrink-0 p-2.5 rounded-full backdrop-blur-sm border transition-all active:scale-90 disabled:opacity-50 ${
+                    hasReacted
+                      ? 'bg-red-500/20 border-red-400/50'
+                      : 'bg-white/15 border-white/30'
+                  }`}
                   aria-label="React with love"
                 >
                   <Heart
-                    className={`w-5 h-5 transition-colors ${
-                      story.hasReacted
-                        ? 'fill-red-500 text-red-500'
+                    className={`w-5 h-5 transition-all duration-200 ${
+                      hasReacted
+                        ? 'fill-red-500 text-red-500 scale-110'
                         : 'text-white'
                     }`}
                   />
@@ -509,6 +565,15 @@ export default function StoryViewer({
           )}
         </div>
       </div>
+
+      {/* Heart float animation keyframes */}
+      <style jsx global>{`
+        @keyframes heartFloat {
+          0%   { opacity: 1; transform: scale(0.5); }
+          50%  { opacity: 1; transform: scale(1.3); }
+          100% { opacity: 0; transform: scale(1) translateY(-60px); }
+        }
+      `}</style>
     </ClientPortal>
   );
 }

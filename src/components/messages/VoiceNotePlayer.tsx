@@ -23,22 +23,38 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
   const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const audio = new Audio(mediaUrl);
+    const audio = new Audio();
+    audio.preload = 'metadata';
+    // crossOrigin needed for Cloudinary URLs to work with audio context
+    audio.crossOrigin = 'anonymous';
+    audio.src = mediaUrl;
     audioRef.current = audio;
 
-    audio.addEventListener('loadedmetadata', () => setDuration(audio.duration));
-    audio.addEventListener('timeupdate', () => setCurrentTime(audio.currentTime));
-    audio.addEventListener('ended', () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    });
+    const onMeta = () => {
+      if (isFinite(audio.duration)) setDuration(audio.duration);
+    };
+    const onTime = () => setCurrentTime(audio.currentTime);
+    const onEnd = () => { setIsPlaying(false); setCurrentTime(0); };
+    // Some audio won't fire loadedmetadata — use durationchange as fallback
+    const onDurChange = () => {
+      if (isFinite(audio.duration) && audio.duration > 0) setDuration(audio.duration);
+    };
+    const onError = () => setDuration(0);
+
+    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('durationchange', onDurChange);
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('ended', onEnd);
+    audio.addEventListener('error', onError);
 
     return () => {
       audio.pause();
+      audio.removeEventListener('loadedmetadata', onMeta);
+      audio.removeEventListener('durationchange', onDurChange);
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('ended', onEnd);
+      audio.removeEventListener('error', onError);
       audio.src = '';
-      audio.removeEventListener('loadedmetadata', () => {});
-      audio.removeEventListener('timeupdate', () => {});
-      audio.removeEventListener('ended', () => {});
     };
   }, [mediaUrl]);
 
@@ -49,8 +65,17 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play().catch(() => {});
-      setIsPlaying(true);
+      // Attempt play — if it fails (autoplay policy, format issue), reset state
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          setIsPlaying(false);
+          // Try reloading the audio element — some browsers need a fresh load
+          audio.load();
+          audio.play()
+            .then(() => setIsPlaying(true))
+            .catch(() => {});
+        });
     }
   }, [isPlaying]);
 
