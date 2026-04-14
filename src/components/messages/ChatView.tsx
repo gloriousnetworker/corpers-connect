@@ -25,8 +25,6 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
 import { useCallsStore } from '@/store/calls.store';
-import { useAgora } from '@/hooks/useAgora';
-import { refreshCallToken } from '@/lib/api/calls';
 import { getExistingSocket, getExistingCallsSocket } from '@/lib/socket';
 import { getInitials, formatRelativeTime, getAvatarUrl } from '@/lib/utils';
 import { CallType, ConversationType, MessageType } from '@/types/enums';
@@ -101,17 +99,8 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
   // ── Calls ──────────────────────────────────────────────────────────────────
   const setOutboundCall = useCallsStore((s) => s.setOutboundCall);
-  const setActiveCall   = useCallsStore((s) => s.setActiveCall);
   const activeCall      = useCallsStore((s) => s.activeCall);
   const outboundCall    = useCallsStore((s) => s.outboundCall);
-
-  const { join: joinAgora } = useAgora({
-    onTokenWillExpire: async () => {
-      if (!activeCall) return '';
-      const res = await refreshCallToken(activeCall.callId);
-      return res.token;
-    },
-  });
 
   const initiateCall = useCallback(async (type: CallType) => {
     if (!user || !dmPartner) return;
@@ -123,14 +112,11 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     socket.emit(
       'call:initiate',
       { receiverId: dmPartner.id, type },
-      async (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
+      (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
         if (!res.success || !res.data) return;
         const { callId, channelName, token, appId } = res.data;
 
-        // Join Agora as caller (uid = 1) immediately
-        await joinAgora(appId, channelName, token, 1, type);
-
-        setActiveCall(null); // ensure clean
+        // Show outbound overlay — Agora join happens in ActiveCallScreen after receiver accepts
         setOutboundCall({
           callId,
           type,
@@ -141,7 +127,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         });
       },
     );
-  }, [user, dmPartner, activeCall, outboundCall, joinAgora, setOutboundCall, setActiveCall]);
+  }, [user, dmPartner, activeCall, outboundCall, setOutboundCall]);
 
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Play, Pause, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause } from 'lucide-react';
 
 interface VoiceNotePlayerProps {
   mediaUrl: string;
@@ -15,17 +15,26 @@ function formatDuration(secs: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/**
- * Uses a real DOM <audio> element instead of new Audio() for better
- * cross-browser compatibility. The element is hidden but present in the
- * DOM, which gives browsers the best chance of loading and playing audio.
- */
 export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loadError, setLoadError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(mediaUrl);
+    audioRef.current = audio;
+    audio.addEventListener('loadedmetadata', () => setDuration(audio.duration));
+    audio.addEventListener('timeupdate', () => setCurrentTime(audio.currentTime));
+    audio.addEventListener('ended', () => { setIsPlaying(false); setCurrentTime(0); });
+    return () => {
+      audio.pause();
+      audio.src = '';
+      audio.removeEventListener('loadedmetadata', () => {});
+      audio.removeEventListener('timeupdate', () => {});
+      audio.removeEventListener('ended', () => {});
+    };
+  }, [mediaUrl]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -34,13 +43,8 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       audio.pause();
       setIsPlaying(false);
     } else {
-      setLoadError(false);
-      audio.play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {
-          setIsPlaying(false);
-          setLoadError(true);
-        });
+      audio.play().catch(() => {});
+      setIsPlaying(true);
     }
   }, [isPlaying]);
 
@@ -62,38 +66,14 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
 
   return (
     <div className="flex items-center gap-2 w-48 py-0.5">
-      {/* Hidden <audio> element — DOM-rendered for best browser compat */}
-      <audio
-        ref={audioRef}
-        src={mediaUrl}
-        preload="metadata"
-        crossOrigin="anonymous"
-        onLoadedMetadata={(e) => {
-          const d = e.currentTarget.duration;
-          if (isFinite(d)) setDuration(d);
-        }}
-        onDurationChange={(e) => {
-          const d = e.currentTarget.duration;
-          if (isFinite(d) && d > 0) setDuration(d);
-        }}
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
-        onError={() => { setDuration(0); setLoadError(true); }}
-        className="hidden"
-      />
-
       <button
         onClick={togglePlay}
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-90 ${
-          loadError
-            ? 'bg-red-100 dark:bg-red-900/30'
-            : isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-primary/10 hover:bg-primary/20'
+          isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-primary/10 hover:bg-primary/20'
         }`}
-        aria-label={loadError ? 'Retry audio' : isPlaying ? 'Pause' : 'Play'}
+        aria-label={isPlaying ? 'Pause' : 'Play'}
       >
-        {loadError
-          ? <AlertCircle className="w-4 h-4 text-red-500" />
-          : isPlaying
+        {isPlaying
           ? <Pause className={`w-4 h-4 ${iconColor}`} />
           : <Play className={`w-4 h-4 ${iconColor} translate-x-px`} />
         }

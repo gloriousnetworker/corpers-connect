@@ -13,8 +13,6 @@ import Image from 'next/image';
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { getExistingCallsSocket } from '@/lib/socket';
 import { useCallsStore, type ActiveCallData } from '@/store/calls.store';
-import { useAgora } from '@/hooks/useAgora';
-import { refreshCallToken } from '@/lib/api/calls';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import type { IncomingCallData } from '@/store/calls.store';
 
@@ -27,13 +25,6 @@ interface IncomingCallOverlayProps {
 export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) {
   const setIncoming = useCallsStore((s) => s.setIncomingCall);
   const setActive   = useCallsStore((s) => s.setActiveCall);
-
-  const { join } = useAgora({
-    onTokenWillExpire: async () => {
-      const res = await refreshCallToken(call.callId);
-      return res.token;
-    },
-  });
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,7 +39,7 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
     dismiss();
   }, [call.callId, dismiss]);
 
-  const handleAccept = useCallback(async () => {
+  const handleAccept = useCallback(() => {
     const socket = getExistingCallsSocket();
     if (!socket) return;
 
@@ -57,13 +48,11 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
     socket.emit(
       'call:accept',
       { callId: call.callId },
-      async (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
+      (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
         if (!res.success || !res.data) return;
         const { callId, channelName, token, appId } = res.data;
 
-        // Join Agora as receiver (uid = 2)
-        await join(appId, channelName, token, 2, call.type);
-
+        // Set active — Agora join happens inside ActiveCallScreen
         const active: ActiveCallData = {
           callId,
           channelName,
@@ -77,7 +66,7 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
         setActive(active);
       },
     );
-  }, [call, dismiss, join, setActive]);
+  }, [call, dismiss, setActive]);
 
   // Auto-timeout
   useEffect(() => {
