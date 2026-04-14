@@ -10,7 +10,7 @@
  * other party is notified via call:ended (handled in useCallSocket).
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { getExistingCallsSocket } from '@/lib/socket';
 import { useCallsStore } from '@/store/calls.store';
@@ -28,12 +28,16 @@ interface ActiveCallScreenProps {
 export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
   const clearCalls = useCallsStore((s) => s.clearCalls);
 
+  const [cameraEnabling, setCameraEnabling] = useState(false);
+  const [cameraHardBlocked, setCameraHardBlocked] = useState(false);
+
   const {
     join,
     leave,
     toggleMute,
     toggleCamera,
     switchCamera,
+    enableCamera,
     isMuted,
     isCameraOff,
     isJoined,
@@ -55,6 +59,14 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally run once
 
+  const handleEnableCamera = useCallback(async () => {
+    setCameraEnabling(true);
+    setCameraHardBlocked(false);
+    const result = await enableCamera();
+    if (result === 'denied') setCameraHardBlocked(true);
+    setCameraEnabling(false);
+  }, [enableCamera]);
+
   const handleEnd = async () => {
     const socket = getExistingCallsSocket();
     socket?.emit('call:end', { callId: call.callId });
@@ -71,13 +83,31 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
 
       {/* ── Camera permission banner ──────────────────────────────────────── */}
       {isVideo && cameraBlocked && (
-        <div className="absolute top-4 left-4 right-4 z-20 bg-yellow-500/90 text-black rounded-2xl px-4 py-3 flex flex-col gap-1 shadow-lg">
-          <p className="font-semibold text-sm">Camera access needed</p>
-          <p className="text-xs leading-snug">
-            Your browser is blocking the camera. Click the camera icon in your
-            browser&apos;s address bar and choose <strong>Allow</strong>, then
-            rejoin the call.
-          </p>
+        <div className="absolute top-4 left-4 right-4 z-20 bg-black/80 border border-yellow-400/60 text-white rounded-2xl px-4 py-4 flex flex-col gap-3 shadow-xl">
+          <div>
+            <p className="font-semibold text-sm text-yellow-300">Camera access needed</p>
+            {cameraHardBlocked ? (
+              <p className="text-xs text-white/80 mt-1 leading-snug">
+                Camera access is blocked. In your browser, go to{' '}
+                <strong>Settings → Privacy &amp; Security → Site Settings → Camera</strong>{' '}
+                and allow <em>this site</em>, then refresh the page.
+              </p>
+            ) : (
+              <p className="text-xs text-white/80 mt-1 leading-snug">
+                Your browser needs permission to use the camera. Tap the button below
+                and click <strong>Allow</strong> when prompted.
+              </p>
+            )}
+          </div>
+          {!cameraHardBlocked && (
+            <button
+              onClick={handleEnableCamera}
+              disabled={cameraEnabling}
+              className="self-start bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 disabled:opacity-60 text-black font-semibold text-sm px-4 py-2 rounded-xl transition-colors"
+            >
+              {cameraEnabling ? 'Requesting…' : 'Enable Camera'}
+            </button>
+          )}
         </div>
       )}
 

@@ -223,6 +223,33 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     } catch { /* device switching not supported */ }
   }, []);
 
+  /**
+   * Request camera access mid-call (for when permission was initially denied).
+   * Creates a new camera track, publishes it, and plays it locally.
+   * Returns 'granted' | 'denied' | 'no-client'.
+   */
+  const enableCamera = useCallback(async (): Promise<'granted' | 'denied' | 'no-client'> => {
+    if (!clientRef.current) return 'no-client';
+    try {
+      // Trigger the browser permission prompt via getUserMedia first so the
+      // user sees the native dialog — then stop those tracks immediately.
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach((t) => t.stop());
+
+      const AgoraRTC = await loadAgora();
+      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+      localVideoRef.current = videoTrack;
+      await clientRef.current.publish([videoTrack]);
+      if (localVideoElRef.current) {
+        videoTrack.play(localVideoElRef.current);
+      }
+      setCameraBlocked(false);
+      return 'granted';
+    } catch {
+      return 'denied';
+    }
+  }, []);
+
   const renewToken = useCallback(async (token: string) => {
     if (clientRef.current) {
       await clientRef.current.renewToken(token);
@@ -263,5 +290,6 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     remoteHasVideo,
     permissionErr,
     cameraBlocked,
+    enableCamera,
   };
 }
