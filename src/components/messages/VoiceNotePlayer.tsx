@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Play, Pause, AlertCircle } from 'lucide-react';
 
 interface VoiceNotePlayerProps {
@@ -15,50 +15,17 @@ function formatDuration(secs: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Uses a real DOM <audio> element instead of new Audio() for better
+ * cross-browser compatibility. The element is hidden but present in the
+ * DOM, which gives browsers the best chance of loading and playing audio.
+ */
 export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const audio = new Audio();
-    audio.preload = 'metadata';
-    // DO NOT set crossOrigin — it triggers CORS preflight and desktop browsers
-    // block playback when Cloudinary doesn't return proper CORS headers.
-    // Simple audio playback works without it (no Web Audio API needed).
-    audio.src = mediaUrl;
-    audioRef.current = audio;
-    setLoadError(false);
-
-    const onMeta = () => {
-      if (isFinite(audio.duration)) setDuration(audio.duration);
-    };
-    const onTime = () => setCurrentTime(audio.currentTime);
-    const onEnd = () => { setIsPlaying(false); setCurrentTime(0); };
-    const onDurChange = () => {
-      if (isFinite(audio.duration) && audio.duration > 0) setDuration(audio.duration);
-    };
-    const onError = () => { setDuration(0); setLoadError(true); };
-
-    audio.addEventListener('loadedmetadata', onMeta);
-    audio.addEventListener('durationchange', onDurChange);
-    audio.addEventListener('timeupdate', onTime);
-    audio.addEventListener('ended', onEnd);
-    audio.addEventListener('error', onError);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener('loadedmetadata', onMeta);
-      audio.removeEventListener('durationchange', onDurChange);
-      audio.removeEventListener('timeupdate', onTime);
-      audio.removeEventListener('ended', onEnd);
-      audio.removeEventListener('error', onError);
-      audio.src = '';
-    };
-  }, [mediaUrl]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -71,14 +38,8 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       audio.play()
         .then(() => setIsPlaying(true))
         .catch(() => {
-          // Try reloading — some browsers need a fresh load after error
-          audio.load();
-          audio.play()
-            .then(() => setIsPlaying(true))
-            .catch(() => {
-              setIsPlaying(false);
-              setLoadError(true);
-            });
+          setIsPlaying(false);
+          setLoadError(true);
         });
     }
   }, [isPlaying]);
@@ -101,6 +62,26 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
 
   return (
     <div className="flex items-center gap-2 w-48 py-0.5">
+      {/* Hidden <audio> element — DOM-rendered for best browser compat */}
+      <audio
+        ref={audioRef}
+        src={mediaUrl}
+        preload="metadata"
+        crossOrigin="anonymous"
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (isFinite(d)) setDuration(d);
+        }}
+        onDurationChange={(e) => {
+          const d = e.currentTarget.duration;
+          if (isFinite(d) && d > 0) setDuration(d);
+        }}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
+        onError={() => { setDuration(0); setLoadError(true); }}
+        className="hidden"
+      />
+
       <button
         onClick={togglePlay}
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-90 ${
@@ -119,9 +100,7 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
       </button>
 
       <div className="flex flex-col flex-1 gap-1.5">
-        {/* Progress track */}
         <div
-          ref={progressRef}
           onClick={handleProgressClick}
           className={`relative h-1.5 rounded-full cursor-pointer ${trackBg}`}
         >
@@ -130,7 +109,6 @@ export default function VoiceNotePlayer({ mediaUrl, isOwn }: VoiceNotePlayerProp
             style={{ width: `${progress}%` }}
           />
         </div>
-        {/* Time */}
         <span className={`text-[10px] tabular-nums ${timeColor}`}>
           {isPlaying ? formatDuration(currentTime) : formatDuration(duration)}
         </span>
