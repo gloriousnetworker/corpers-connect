@@ -1,6 +1,9 @@
+// All HTTP API calls go through the Next.js reverse-proxy (/api/proxy/*).
+// This makes them same-origin, so browser cookie policies (SameSite, ITP)
+// never block the httpOnly auth cookies.  WS_URL is the only direct Railway
+// connection — Socket.IO cannot go through an HTTP proxy.
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://corpers-connect-server-production.up.railway.app';
+  process.env.NEXT_PUBLIC_API_URL || '/api/proxy';
 
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL ||
