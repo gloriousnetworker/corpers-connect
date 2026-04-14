@@ -8,6 +8,7 @@ import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
 import MediaGrid from './MediaGrid';
+import PostCarousel from './PostCarousel';
 import ReactionBar from './ReactionBar';
 import CommentSheet from './CommentSheet';
 import InlineComments from './InlineComments';
@@ -48,6 +49,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
   const [commentOpen, setCommentOpen] = useState(autoOpenComments);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
 
   if (deleted) return null;
@@ -132,7 +134,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
 
         {/* Media */}
         {post.mediaUrls.length > 0 && (
-          <MediaGrid urls={post.mediaUrls} />
+          <MediaGrid urls={post.mediaUrls} onOpenCarousel={(i) => setCarouselIndex(i)} />
         )}
 
         {/* Reactions summary */}
@@ -190,6 +192,17 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
         open={reportOpen}
         onClose={() => setReportOpen(false)}
       />
+
+      {/* Full-screen carousel with reactions */}
+      {carouselIndex !== null && (
+        <PostCarousel
+          post={post}
+          initialIndex={carouselIndex}
+          onClose={() => setCarouselIndex(null)}
+          onCommentClick={() => setCommentOpen(true)}
+          onOptimisticUpdate={handleOptimisticUpdate}
+        />
+      )}
     </>
   );
 }
