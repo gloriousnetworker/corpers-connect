@@ -100,8 +100,13 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
         }
       });
 
-      // ── Join channel ─────────────────────────────────────────────────────
-      await client.join(appId, channelName, token, uid);
+      // ── Join channel (20 s timeout so UI never hangs forever) ───────────
+      await Promise.race([
+        client.join(appId, channelName, token, uid),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Connection timed out')), 20_000)
+        ),
+      ]);
 
       // ── Create and publish local tracks ──────────────────────────────────
       if (callType === 'VIDEO') {

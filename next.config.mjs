@@ -45,8 +45,8 @@ const nextConfig = {
       // Cloudinary (user avatars / listing images), Google user profile pics
       "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://lh3.googleusercontent.com",
 
-      // XHR/fetch/WebSocket: same origin, Railway API (http + ws), Firebase services
-      `connect-src 'self' ${apiUrl} wss://${new URL(RAILWAY_URL).host} https://*.googleapis.com https://fcmregistrations.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com`,
+      // XHR/fetch/WebSocket: same origin, Railway API (http + ws), Firebase, Agora RTC
+      `connect-src 'self' ${apiUrl} wss://${new URL(RAILWAY_URL).host} https://*.googleapis.com https://fcmregistrations.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com`,
 
       // Frames: no embedding allowed (clickjacking protection)
       "frame-src 'none'",
