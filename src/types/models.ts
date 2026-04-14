@@ -160,6 +160,8 @@ export interface Message {
   mediaUrl?: string | null;
   replyToId?: string | null;
   replyTo?: Message | null;
+  /** ID of the story this message is a reply to (if applicable) */
+  storyId?: string | null;
   isEdited: boolean;
   isDeleted: boolean;
   isPinned: boolean;

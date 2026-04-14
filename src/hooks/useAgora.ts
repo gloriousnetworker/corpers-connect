@@ -20,6 +20,7 @@ type IAgoraRTCClient       = import('agora-rtc-sdk-ng').IAgoraRTCClient;
 type IMicrophoneAudioTrack = import('agora-rtc-sdk-ng').IMicrophoneAudioTrack;
 type ILocalVideoTrack      = import('agora-rtc-sdk-ng').ILocalVideoTrack;
 type IRemoteVideoTrack     = import('agora-rtc-sdk-ng').IRemoteVideoTrack;
+type IRemoteAudioTrack     = import('agora-rtc-sdk-ng').IRemoteAudioTrack;
 
 // Loader — call once; result is cached by the module system
 async function loadAgora() {
@@ -40,17 +41,26 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   const localAudioRef     = useRef<IMicrophoneAudioTrack | null>(null);
   const localVideoRef     = useRef<ILocalVideoTrack | null>(null);
   const remoteVideoRef    = useRef<IRemoteVideoTrack | null>(null);
+  const remoteAudioRef    = useRef<IRemoteAudioTrack | null>(null);
 
   // DOM container refs for video playback
   const localVideoElRef  = useRef<HTMLDivElement | null>(null);
   const remoteVideoElRef = useRef<HTMLDivElement | null>(null);
 
-  const [isJoined,         setIsJoined]         = useState(false);
-  const [isMuted,          setIsMuted]          = useState(false);
-  const [isCameraOff,      setIsCameraOff]      = useState(false);
-  const [permissionErr,    setPermissionErr]    = useState<string | null>(null);
-  const [cameraBlocked,    setCameraBlocked]    = useState(false);
-  const [remoteHasVideo,   setRemoteHasVideo]   = useState(false);
+  // Recording refs
+  const mediaRecorderRef    = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef   = useRef<Blob[]>([]);
+  const audioContextRef     = useRef<AudioContext | null>(null);
+  const recordingTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [isJoined,           setIsJoined]           = useState(false);
+  const [isMuted,            setIsMuted]            = useState(false);
+  const [isCameraOff,        setIsCameraOff]        = useState(false);
+  const [permissionErr,      setPermissionErr]      = useState<string | null>(null);
+  const [cameraBlocked,      setCameraBlocked]      = useState(false);
+  const [remoteHasVideo,     setRemoteHasVideo]     = useState(false);
+  const [isRecording,        setIsRecording]        = useState(false);
+  const [recordingDuration,  setRecordingDuration]  = useState(0);
 
   // ── join ──────────────────────────────────────────────────────────────────
 
@@ -73,6 +83,7 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
       client.on('user-published', async (remoteUser, mediaType) => {
         await client.subscribe(remoteUser, mediaType);
         if (mediaType === 'audio') {
+          remoteAudioRef.current = remoteUser.audioTrack ?? null;
           remoteUser.audioTrack?.play();
         }
         if (mediaType === 'video' && remoteUser.videoTrack) {
@@ -118,9 +129,9 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
         try {
           // Use getUserMedia + createCustomVideoTrack — the most compatible path
           // across all browsers and platforms (desktop Chrome, mobile Safari, etc.).
-          // createCameraVideoTrack can silently fail on some laptops/OS combos.
+          // Do NOT specify facingMode — desktop browsers don't support it and throw OverconstrainedError.
           const videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
           });
           const videoTrack = AgoraRTC.createCustomVideoTrack({
             mediaStreamTrack: videoStream.getVideoTracks()[0],
@@ -172,6 +183,20 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   // ── leave ─────────────────────────────────────────────────────────────────
 
   const leave = useCallback(async () => {
+    // Stop recording if active
+    if (mediaRecorderRef.current) {
+      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+      mediaRecorderRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch { /* ignore */ }
+      audioContextRef.current = null;
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
     localAudioRef.current?.stop();
     localAudioRef.current?.close();
     localAudioRef.current = null;
@@ -181,6 +206,7 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     localVideoRef.current = null;
 
     remoteVideoRef.current = null;
+    remoteAudioRef.current = null;
 
     if (clientRef.current) {
       try { await clientRef.current.leave(); } catch { /* ignore */ }
@@ -193,6 +219,8 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     setRemoteHasVideo(false);
     setPermissionErr(null);
     setCameraBlocked(false);
+    setIsRecording(false);
+    setRecordingDuration(0);
   }, []);
 
   // ── controls ──────────────────────────────────────────────────────────────
@@ -259,6 +287,73 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     }
   }, []);
 
+  // ── Recording ─────────────────────────────────────────────────────────────
+
+  const startRecording = useCallback(async () => {
+    if (isRecording || !localAudioRef.current) return;
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      audioContextRef.current = ctx;
+      const dest = ctx.createMediaStreamDestination();
+
+      // Local mic
+      const localTrack = localAudioRef.current.getMediaStreamTrack();
+      ctx.createMediaStreamSource(new MediaStream([localTrack])).connect(dest);
+
+      // Remote audio (if available)
+      if (remoteAudioRef.current) {
+        const remoteTrack = remoteAudioRef.current.getMediaStreamTrack();
+        ctx.createMediaStreamSource(new MediaStream([remoteTrack])).connect(dest);
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/ogg';
+
+      const recorder = new MediaRecorder(dest.stream, { mimeType });
+      recordedChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `call-recording-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => setRecordingDuration((d) => d + 1), 1000);
+    } catch { /* recording not supported */ }
+  }, [isRecording]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+      mediaRecorderRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch { /* ignore */ }
+      audioContextRef.current = null;
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+  }, []);
+
   // ── video container setters (called from ref callbacks in JSX) ────────────
 
   const setLocalVideoEl = useCallback((el: HTMLDivElement | null) => {
@@ -287,6 +382,8 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     renewToken,
     setLocalVideoEl,
     setRemoteVideoEl,
+    startRecording,
+    stopRecording,
     isJoined,
     isMuted,
     isCameraOff,
@@ -294,5 +391,7 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
     permissionErr,
     cameraBlocked,
     enableCamera,
+    isRecording,
+    recordingDuration,
   };
 }

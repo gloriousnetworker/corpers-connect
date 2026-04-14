@@ -22,7 +22,8 @@ interface PostCarouselProps {
   post: Post;
   initialIndex: number;
   onClose: () => void;
-  onCommentClick: () => void;
+  /** Called with the current image index so comments can be scoped per-image */
+  onCommentClick: (mediaIndex: number) => void;
   onOptimisticUpdate: (update: Partial<Post>) => void;
 }
 
@@ -235,7 +236,7 @@ export default function PostCarousel({
 
         {/* Comment */}
         <button
-          onClick={() => { onClose(); setTimeout(onCommentClick, 100); }}
+          onClick={() => { onClose(); setTimeout(() => onCommentClick(index), 100); }}
           className="flex flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-white/70 hover:bg-white/10 text-sm font-medium"
         >
           <MessageCircle className="w-4 h-4" />

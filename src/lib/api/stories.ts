@@ -102,3 +102,9 @@ export async function replyToStory(storyId: string, content: string): Promise<{ 
   const { data } = await api.post<ApiResponse<{ conversationId: string }>>(`/stories/${storyId}/reply`, { content });
   return data.data;
 }
+
+/** GET /stories/:storyId — fetch a single story by ID */
+export async function getStoryById(storyId: string): Promise<Story> {
+  const { data } = await api.get<ApiResponse<BackendStory>>(`/stories/${storyId}`);
+  return normalizeStory(data.data);
+}

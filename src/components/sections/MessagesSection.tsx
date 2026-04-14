@@ -317,22 +317,44 @@ function ListHeader({
       <h2 className="text-base font-bold text-foreground">Messages</h2>
       <div className="flex items-center gap-1">
         {/* Favorites button — shows stacked avatar previews */}
-        <FavoritesButton onClick={onOpenFavorites} />
+        <div className="flex flex-col items-center gap-0.5 group relative">
+          <FavoritesButton onClick={onOpenFavorites} />
+          <span className="text-[9px] text-foreground-muted leading-none">Favourites</span>
+          {/* Desktop tooltip */}
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+            Favourites
+          </span>
+        </div>
 
-        <button
-          onClick={onNewGroup}
-          className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
-          aria-label="New group"
-        >
-          <Users className="w-4 h-4 text-foreground-secondary" />
-        </button>
-        <button
-          onClick={onNew}
-          className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
-          aria-label="New conversation"
-        >
-          <Edit3 className="w-4 h-4 text-foreground-secondary" />
-        </button>
+        <div className="flex flex-col items-center gap-0.5 group relative">
+          <button
+            onClick={onNewGroup}
+            className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+            aria-label="New group"
+          >
+            <Users className="w-4 h-4 text-foreground-secondary" />
+          </button>
+          <span className="text-[9px] text-foreground-muted leading-none">New Group</span>
+          {/* Desktop tooltip */}
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+            New Group
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-0.5 group relative">
+          <button
+            onClick={onNew}
+            className="p-2 rounded-xl hover:bg-surface-alt transition-colors"
+            aria-label="New conversation"
+          >
+            <Edit3 className="w-4 h-4 text-foreground-secondary" />
+          </button>
+          <span className="text-[9px] text-foreground-muted leading-none">New Chat</span>
+          {/* Desktop tooltip */}
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+            New Chat
+          </span>
+        </div>
       </div>
     </div>
   );

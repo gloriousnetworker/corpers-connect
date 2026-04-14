@@ -29,6 +29,8 @@ interface CommentSheetProps {
   onClose: () => void;
   onCommentAdded?: () => void;
   onCommentDeleted?: () => void;
+  /** When set, shows/adds comments for this specific image index only */
+  mediaIndex?: number;
 }
 
 export default function CommentSheet({
@@ -38,6 +40,7 @@ export default function CommentSheet({
   onClose,
   onCommentAdded,
   onCommentDeleted,
+  mediaIndex,
 }: CommentSheetProps) {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
@@ -49,9 +52,9 @@ export default function CommentSheet({
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: queryKeys.postComments(postId),
+      queryKey: [...queryKeys.postComments(postId), mediaIndex ?? 'post'],
       queryFn: ({ pageParam }) =>
-        getComments(postId, { cursor: pageParam as string | undefined }),
+        getComments(postId, { cursor: pageParam as string | undefined, mediaIndex }),
       initialPageParam: undefined as string | undefined,
       getNextPageParam: (last) => (last.hasMore ? last.nextCursor ?? undefined : undefined),
       enabled: open,
@@ -61,7 +64,7 @@ export default function CommentSheet({
 
   const addMutation = useMutation({
     mutationFn: (payload: { content: string; parentId?: string }) =>
-      addComment(postId, payload),
+      addComment(postId, { ...payload, mediaIndex }),
     onSuccess: () => {
       setText('');
       setReplyTo(null);
@@ -126,7 +129,9 @@ export default function CommentSheet({
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <h3 className="font-semibold text-foreground">
-                {formatCount(commentsCount ?? 0)} {(commentsCount ?? 0) === 1 ? 'Comment' : 'Comments'}
+                {mediaIndex !== undefined
+                  ? `Photo ${mediaIndex + 1} Comments`
+                  : `${formatCount(commentsCount ?? 0)} ${(commentsCount ?? 0) === 1 ? 'Comment' : 'Comments'}`}
               </h3>
               <button
                 onClick={onClose}

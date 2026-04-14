@@ -170,8 +170,13 @@ export default function MediaGrid({ urls, onOpenCarousel }: MediaGridProps) {
         className=""
         overlay={
           extra > 0 ? (
-            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">+{extra}</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/80 flex flex-col items-center justify-center gap-0.5 backdrop-blur-[1px]">
+              <span className="text-white text-2xl font-extrabold tracking-tight leading-none drop-shadow">
+                +{extra}
+              </span>
+              <span className="text-white/80 text-[10px] font-medium uppercase tracking-wider">
+                more
+              </span>
             </div>
           ) : undefined
         }

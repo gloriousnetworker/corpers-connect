@@ -38,12 +38,16 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
     toggleCamera,
     switchCamera,
     enableCamera,
+    startRecording,
+    stopRecording,
     isMuted,
     isCameraOff,
     isJoined,
     permissionErr,
     cameraBlocked,
     remoteHasVideo,
+    isRecording,
+    recordingDuration,
     setLocalVideoEl,
     setRemoteVideoEl,
   } = useAgora({
@@ -124,8 +128,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
           {/* Remote video (full screen) */}
           <div
             ref={setRemoteVideoEl}
-            className="absolute inset-0 bg-black"
-            style={{ objectFit: 'cover' }}
+            className="absolute inset-0 bg-black [&_video]:absolute [&_video]:inset-0 [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
           >
             {!remoteHasVideo && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -150,7 +153,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
           {/* Local video PiP (top-right) */}
           <div
             ref={setLocalVideoEl}
-            className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/30 bg-black z-10"
+            className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/30 bg-black z-10 [&_video]:absolute [&_video]:inset-0 [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
           />
         </>
       )}
@@ -205,6 +208,10 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
           onSwitchCamera={isVideo ? switchCamera : undefined}
           onEnd={handleEnd}
           endLabel={call.isGroup ? 'Leave' : undefined}
+          isRecording={isRecording}
+          recordingDuration={recordingDuration}
+          onStartRecording={!isVideo ? startRecording : undefined}
+          onStopRecording={!isVideo ? stopRecording : undefined}
         />
       </div>
     </div>

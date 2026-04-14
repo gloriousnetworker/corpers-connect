@@ -36,6 +36,8 @@ interface MessageBubbleProps {
   onPin?: (message: Message) => void;
   onLock?: (message: Message) => void;
   currentUserId?: string;
+  /** Called when user taps the story preview in a story-reply message */
+  onOpenStory?: (storyId: string) => void;
 }
 
 export default function MessageBubble({
@@ -53,6 +55,7 @@ export default function MessageBubble({
   onPin,
   onLock,
   currentUserId,
+  onOpenStory,
 }: MessageBubbleProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -205,24 +208,44 @@ export default function MessageBubble({
     }
 
     if (message.type === MessageType.IMAGE && message.mediaUrl) {
+      const isStoryReply = !!message.storyId;
       return (
         <div>
-          <button
-            onClick={() => setPreviewUrl(message.mediaUrl!)}
-            className="relative w-52 h-52 block group"
-            aria-label="View full size"
-          >
-            <Image
-              src={getOptimisedUrl(message.mediaUrl, 420)}
-              alt="Image message"
-              fill
-              className="object-cover"
-              sizes="208px"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
-            </div>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => {
+                if (isStoryReply && onOpenStory && message.storyId) {
+                  onOpenStory(message.storyId);
+                } else {
+                  setPreviewUrl(message.mediaUrl!);
+                }
+              }}
+              className="relative w-52 h-52 block group"
+              aria-label={isStoryReply ? 'View story' : 'View full size'}
+            >
+              <Image
+                src={getOptimisedUrl(message.mediaUrl, 420)}
+                alt="Image message"
+                fill
+                className="object-cover"
+                sizes="208px"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                {isStoryReply ? (
+                  <span className="text-white/90 text-xs font-semibold bg-black/40 px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    View story
+                  </span>
+                ) : (
+                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                )}
+              </div>
+            </button>
+            {isStoryReply && (
+              <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none">
+                <span className="text-[9px] text-white/90 font-medium uppercase tracking-wide">Story</span>
+              </div>
+            )}
+          </div>
           {message.content && (
             <p className="px-3 py-2 text-sm leading-relaxed">{message.content}</p>
           )}

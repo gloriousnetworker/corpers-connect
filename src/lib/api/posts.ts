@@ -72,18 +72,18 @@ export async function getPostReactions(
 
 export async function getComments(
   postId: string,
-  params: { cursor?: string; limit?: number } = {}
+  params: { cursor?: string; limit?: number; mediaIndex?: number } = {}
 ): Promise<PaginatedData<Comment>> {
   const { data } = await api.get<ApiResponse<PaginatedData<Comment>>>(
     `/posts/${postId}/comments`,
-    { params: { cursor: params.cursor, limit: params.limit ?? 20 } }
+    { params: { cursor: params.cursor, limit: params.limit ?? 20, mediaIndex: params.mediaIndex } }
   );
   return data.data;
 }
 
 export async function addComment(
   postId: string,
-  payload: { content: string; parentId?: string }
+  payload: { content: string; parentId?: string; mediaIndex?: number }
 ): Promise<Comment> {
   const { data } = await api.post<ApiResponse<Comment>>(
     `/posts/${postId}/comments`,

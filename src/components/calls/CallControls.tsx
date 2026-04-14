@@ -1,17 +1,27 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, RotateCcw, PhoneOff, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, RotateCcw, PhoneOff, Volume2, VolumeX, Circle, StopCircle } from 'lucide-react';
 
 interface CallControlsProps {
-  callType:      'VOICE' | 'VIDEO';
-  isMuted:       boolean;
-  isCameraOff:   boolean;
-  onToggleMute:  () => void;
+  callType:        'VOICE' | 'VIDEO';
+  isMuted:         boolean;
+  isCameraOff:     boolean;
+  onToggleMute:    () => void;
   onToggleCamera?: () => void;
   onSwitchCamera?: () => void;
-  onEnd:         () => void;
-  endLabel?:     string;
+  onEnd:           () => void;
+  endLabel?:       string;
+  isRecording?:    boolean;
+  recordingDuration?: number;
+  onStartRecording?: () => void;
+  onStopRecording?:  () => void;
+}
+
+function formatDuration(secs: number) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
 }
 
 export default function CallControls({
@@ -23,6 +33,10 @@ export default function CallControls({
   onSwitchCamera,
   onEnd,
   endLabel,
+  isRecording = false,
+  recordingDuration = 0,
+  onStartRecording,
+  onStopRecording,
 }: CallControlsProps) {
   const [speakerOff, setSpeakerOff] = useState(false);
 
@@ -36,6 +50,16 @@ export default function CallControls({
   }, [speakerOff]);
 
   return (
+    <div className="flex flex-col items-center gap-3">
+      {/* Recording indicator */}
+      {isRecording && (
+        <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/40 px-3 py-1 rounded-full">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-white text-xs font-semibold tabular-nums">
+            REC {formatDuration(recordingDuration)}
+          </span>
+        </div>
+      )}
     <div className="flex items-center justify-center gap-5">
       {/* Mute / Unmute mic */}
       <button
@@ -89,6 +113,21 @@ export default function CallControls({
         </button>
       )}
 
+      {/* Record button (VOICE only — video recording is a separate feature) */}
+      {callType === 'VOICE' && (onStartRecording || onStopRecording) && (
+        <button
+          onClick={isRecording ? onStopRecording : onStartRecording}
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
+            isRecording
+              ? 'bg-red-500/90 text-white animate-pulse'
+              : 'bg-white/20 text-white hover:bg-white/30'
+          }`}
+          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+        >
+          {isRecording ? <StopCircle className="w-6 h-6" /> : <Circle className="w-5 h-5 fill-current" />}
+        </button>
+      )}
+
       {/* End / Leave call */}
       <div className="flex flex-col items-center gap-1">
         <button
@@ -102,6 +141,7 @@ export default function CallControls({
           <span className="text-white/70 text-xs">{endLabel}</span>
         )}
       </div>
+    </div>
     </div>
   );
 }

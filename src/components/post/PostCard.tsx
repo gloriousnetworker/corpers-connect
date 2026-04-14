@@ -47,6 +47,7 @@ const VisibilityIcon = ({ visibility }: { visibility: PostVisibility }) => {
 export default function PostCard({ post: initialPost, onEdit, autoOpenComments = false }: PostCardProps) {
   const [post, setPost] = useState<Post>(initialPost);
   const [commentOpen, setCommentOpen] = useState(autoOpenComments);
+  const [commentMediaIndex, setCommentMediaIndex] = useState<number | undefined>(undefined);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
@@ -180,9 +181,10 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
           postId={post.id}
           commentsCount={post.commentsCount}
           open={commentOpen}
-          onClose={() => setCommentOpen(false)}
+          onClose={() => { setCommentOpen(false); setCommentMediaIndex(undefined); }}
           onCommentAdded={() => setPost((p) => ({ ...p, commentsCount: (p.commentsCount || 0) + 1 }))}
           onCommentDeleted={() => setPost((p) => ({ ...p, commentsCount: Math.max(0, (p.commentsCount || 0) - 1) }))}
+          mediaIndex={commentMediaIndex}
         />
       )}
 
@@ -199,7 +201,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
           post={post}
           initialIndex={carouselIndex}
           onClose={() => setCarouselIndex(null)}
-          onCommentClick={() => setCommentOpen(true)}
+          onCommentClick={(idx) => { setCommentMediaIndex(idx); setCommentOpen(true); }}
           onOptimisticUpdate={handleOptimisticUpdate}
         />
       )}
