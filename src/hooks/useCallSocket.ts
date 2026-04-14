@@ -123,11 +123,11 @@ export function useCallSocket() {
       setActive({
         callId:      ob.callId,
         channelName: ob.channelName,
-        token:       ob.token,    // caller's token (uid=1)
+        token:       ob.token,
         appId:       ob.appId,
         type:        ob.type,
         partner:     ob.partner,
-        uid:         1,
+        uid:         ob.uid ?? 1,
         startedAt:   Date.now(),
       });
       setOutbound(null);

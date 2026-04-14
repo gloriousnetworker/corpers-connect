@@ -104,7 +104,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
   const initiateCall = useCallback(async (type: CallType) => {
     if (!user || !dmPartner) return;
-    if (activeCall || outboundCall) return; // already in a call
+    if (activeCall || outboundCall) return;
 
     const socket = getExistingCallsSocket();
     if (!socket) return;
@@ -115,19 +115,40 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       (res: { success: boolean; data?: { callId: string; channelName: string; token: string; appId: string }; error?: string }) => {
         if (!res.success || !res.data) return;
         const { callId, channelName, token, appId } = res.data;
-
-        // Show outbound overlay — Agora join happens in ActiveCallScreen after receiver accepts
-        setOutboundCall({
-          callId,
-          type,
-          partner:     dmPartner,
-          channelName,
-          token,
-          appId,
-        });
+        setOutboundCall({ callId, type, partner: dmPartner, channelName, token, appId });
       },
     );
   }, [user, dmPartner, activeCall, outboundCall, setOutboundCall]);
+
+  const initiateGroupCall = useCallback(async (type: CallType) => {
+    if (!user || !isGroup) return;
+    if (activeCall || outboundCall) return;
+
+    const socket = getExistingCallsSocket();
+    if (!socket) return;
+
+    socket.emit(
+      'call:initiate-group',
+      { conversationId: conversation.id, type },
+      (res: { success: boolean; data?: { callId: string; channelName: string; token: string; uid: number; appId: string }; error?: string }) => {
+        if (!res.success || !res.data) {
+          toast.error('Could not start group call');
+          return;
+        }
+        const { callId, channelName, token, uid, appId } = res.data;
+        // For group calls the caller is also a participant — use the returned uid
+        setOutboundCall({
+          callId,
+          type,
+          partner: { id: conversation.id, firstName: conversation.name ?? 'Group', lastName: '', profilePicture: conversation.picture } as import('@/types/models').User,
+          channelName,
+          token,
+          appId,
+          uid,
+        } as import('@/store/calls.store').OutboundCallData);
+      },
+    );
+  }, [user, isGroup, conversation, activeCall, outboundCall, setOutboundCall]);
 
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -651,7 +672,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         )}
 
         {/* Call buttons — DM only */}
-        {!isGroup && (
+        {!isGroup ? (
           <>
             <button
               onClick={() => initiateCall(CallType.VOICE)}
@@ -666,6 +687,25 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
               disabled={!!(activeCall || outboundCall)}
               className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-40"
               aria-label="Video call"
+            >
+              <Video className="w-4.5 h-4.5 text-foreground-secondary" />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => initiateGroupCall(CallType.VOICE)}
+              disabled={!!(activeCall || outboundCall)}
+              className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-40"
+              aria-label="Group voice call"
+            >
+              <Phone className="w-4.5 h-4.5 text-foreground-secondary" />
+            </button>
+            <button
+              onClick={() => initiateGroupCall(CallType.VIDEO)}
+              disabled={!!(activeCall || outboundCall)}
+              className="p-2.5 rounded-xl hover:bg-surface-alt active:bg-surface-alt transition-colors flex-shrink-0 disabled:opacity-40"
+              aria-label="Group video call"
             >
               <Video className="w-4.5 h-4.5 text-foreground-secondary" />
             </button>

@@ -16,10 +16,10 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 // --- Agora type aliases (avoid top-level SDK import) -------------------------
-type IAgoraRTCClient      = import('agora-rtc-sdk-ng').IAgoraRTCClient;
+type IAgoraRTCClient       = import('agora-rtc-sdk-ng').IAgoraRTCClient;
 type IMicrophoneAudioTrack = import('agora-rtc-sdk-ng').IMicrophoneAudioTrack;
-type ICameraVideoTrack    = import('agora-rtc-sdk-ng').ICameraVideoTrack;
-type IRemoteVideoTrack    = import('agora-rtc-sdk-ng').IRemoteVideoTrack;
+type ILocalVideoTrack      = import('agora-rtc-sdk-ng').ILocalVideoTrack;
+type IRemoteVideoTrack     = import('agora-rtc-sdk-ng').IRemoteVideoTrack;
 
 // Loader — call once; result is cached by the module system
 async function loadAgora() {
@@ -38,7 +38,7 @@ export interface UseAgoraOptions {
 export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   const clientRef         = useRef<IAgoraRTCClient | null>(null);
   const localAudioRef     = useRef<IMicrophoneAudioTrack | null>(null);
-  const localVideoRef     = useRef<ICameraVideoTrack | null>(null);
+  const localVideoRef     = useRef<ILocalVideoTrack | null>(null);
   const remoteVideoRef    = useRef<IRemoteVideoTrack | null>(null);
 
   // DOM container refs for video playback
@@ -116,23 +116,23 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
 
       if (callType === 'VIDEO') {
         try {
-          // No facingMode constraint — works on both mobile and desktop.
-          const videoTrack = await AgoraRTC.createCameraVideoTrack();
+          // Use getUserMedia + createCustomVideoTrack — the most compatible path
+          // across all browsers and platforms (desktop Chrome, mobile Safari, etc.).
+          // createCameraVideoTrack can silently fail on some laptops/OS combos.
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+          });
+          const videoTrack = AgoraRTC.createCustomVideoTrack({
+            mediaStreamTrack: videoStream.getVideoTracks()[0],
+          });
           localVideoRef.current = videoTrack;
           await client.publish([audioTrack, videoTrack]);
           if (localVideoElRef.current) {
             videoTrack.play(localVideoElRef.current);
           }
-        } catch (camErr: unknown) {
-          // Camera access denied or unavailable — continue with audio only.
-          const e = camErr as Error;
-          const isDenied =
-            e.name === 'NotAllowedError' ||
-            e.message?.includes('Permission denied') ||
-            e.message?.includes('NotAllowedError') ||
-            e.name === 'NotFoundError';
-          setCameraBlocked(isDenied);
-          // Publish audio track only so the call stays alive.
+        } catch {
+          // Camera unavailable/denied — continue call with audio only.
+          setCameraBlocked(true);
           await client.publish([audioTrack]);
         }
       } else {
@@ -214,14 +214,13 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   const switchCamera = useCallback(async () => {
     if (!localVideoRef.current) return;
     try {
-      const AgoraRTC = await loadAgora();
-      const devices = await AgoraRTC.getCameras();
-      if (devices.length < 2) return;
-      const currentLabel = localVideoRef.current.getTrackLabel();
-      const next = devices.find((d) => d.label !== currentLabel) ?? devices[0];
-      await localVideoRef.current.setDevice(next.deviceId);
-    } catch { /* device switching not supported */ }
-  }, []);
+      // Swap the underlying MediaStreamTrack using getUserMedia with rear camera
+      const facing = isCameraOff ? 'user' : 'environment';
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
+      const newTrack = stream.getVideoTracks()[0];
+      await (localVideoRef.current as { replaceTrack?: (t: MediaStreamTrack) => Promise<void> }).replaceTrack?.(newTrack);
+    } catch { /* device switching not supported on this device */ }
+  }, [isCameraOff]);
 
   /**
    * Request camera access mid-call (for when permission was initially denied).
@@ -231,13 +230,16 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
   const enableCamera = useCallback(async (): Promise<'granted' | 'denied' | 'no-client'> => {
     if (!clientRef.current) return 'no-client';
     try {
-      // Trigger the browser permission prompt via getUserMedia first so the
-      // user sees the native dialog — then stop those tracks immediately.
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach((t) => t.stop());
-
       const AgoraRTC = await loadAgora();
-      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+      // getUserMedia triggers the browser Allow/Block dialog and immediately
+      // provides the stream — we hand the track directly to Agora so there
+      // is no "release + re-acquire" race that can fail on some laptops.
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      const videoTrack = AgoraRTC.createCustomVideoTrack({
+        mediaStreamTrack: videoStream.getVideoTracks()[0],
+      });
       localVideoRef.current = videoTrack;
       await clientRef.current.publish([videoTrack]);
       if (localVideoElRef.current) {

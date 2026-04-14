@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { X, Search, Loader2, Users, Check, ChevronRight } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createConversation, searchUsers } from '@/lib/api/conversations';
+import { createConversation } from '@/lib/api/conversations';
+import { getFollowers } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/store/auth.store';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
@@ -13,7 +14,15 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import ClientPortal from '@/components/ui/ClientPortal';
 import type { Conversation } from '@/types/models';
 
-type SearchUser = Awaited<ReturnType<typeof searchUsers>>[number];
+type Connection = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string | null;
+  isVerified: boolean;
+  servingState: string;
+  isFollowing?: boolean;
+};
 
 interface GroupCreationModalProps {
   open: boolean;
@@ -31,37 +40,37 @@ export default function GroupCreationModal({
 
   const [step, setStep] = useState<'select' | 'name'>('select');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState<SearchUser[]>([]);
+  const [selected, setSelected] = useState<Connection[]>([]);
   const [groupName, setGroupName] = useState('');
   const [groupDesc, setGroupDesc] = useState('');
 
   useBodyScrollLock(open);
 
-  const handleSearch = useCallback(async (q: string) => {
-    setQuery(q);
-    if (q.trim().length < 2) { setResults([]); return; }
-    setSearching(true);
-    try {
-      const data = await searchUsers(q.trim());
-      setResults(
-        data.filter(
-          (u) =>
-            u.id !== user?.id &&
-            (u.isFollowing ?? false) &&
-            (u.followsYou ?? false) &&
-            !selected.some((s) => s.id === u.id)
-        )
-      );
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [user?.id, selected]);
+  // Load all mutual connections immediately on open (same as DM modal)
+  const { data: connectionsPage, isLoading: loadingConnections } = useQuery({
+    queryKey: ['mutual-connections', user?.id],
+    queryFn: async () => {
+      const page = await getFollowers(user!.id, undefined, 100);
+      return (page.items as Connection[]).filter((u) => u.isFollowing === true);
+    },
+    enabled: open && !!user,
+    staleTime: 60_000,
+  });
 
-  const toggleSelect = (u: SearchUser) => {
+  const allConnections = connectionsPage ?? [];
+
+  // Filter by search query
+  const displayResults = useMemo(() => {
+    if (!query.trim()) return allConnections.filter((u) => !selected.some((s) => s.id === u.id));
+    const q = query.toLowerCase();
+    return allConnections.filter(
+      (u) =>
+        !selected.some((s) => s.id === u.id) &&
+        `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
+    );
+  }, [allConnections, query, selected]);
+
+  const toggleSelect = (u: Connection) => {
     setSelected((prev) =>
       prev.some((s) => s.id === u.id)
         ? prev.filter((s) => s.id !== u.id)
@@ -89,7 +98,6 @@ export default function GroupCreationModal({
   const handleClose = () => {
     setStep('select');
     setQuery('');
-    setResults([]);
     setSelected([]);
     setGroupName('');
     setGroupDesc('');
@@ -146,64 +154,71 @@ export default function GroupCreationModal({
                 </div>
               )}
 
-              {/* Search */}
+              {/* Search filter */}
               <div className="px-4 py-3 border-b border-border flex-shrink-0">
                 <div className="flex items-center gap-2 bg-surface-alt rounded-xl px-3 py-2.5">
                   <Search className="w-4 h-4 text-foreground-muted flex-shrink-0" />
                   <input
                     type="search"
                     value={query}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Search mutual followers…"
-                    autoFocus
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Filter connections…"
                     className="flex-1 bg-transparent text-sm outline-none placeholder:text-foreground-muted text-foreground"
                     style={{ fontSize: '16px' }}
                   />
-                  {searching && <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />}
                 </div>
               </div>
 
-              {/* Results */}
+              {/* Connections list */}
               <div className="flex-1 overflow-y-auto">
-                {query.trim().length < 2 ? (
+                {loadingConnections ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                ) : allConnections.length === 0 ? (
                   <div className="text-center py-10 px-4">
                     <Users className="w-10 h-10 text-foreground-muted mx-auto mb-2" />
-                    <p className="text-sm text-foreground-muted">Search for people to add</p>
-                    <p className="text-xs text-foreground-muted/70 mt-1">Only mutual followers can be added</p>
+                    <p className="text-sm text-foreground-muted">No connections yet</p>
+                    <p className="text-xs text-foreground-muted/70 mt-1">Follow someone and wait for them to follow back</p>
                   </div>
-                ) : results.length === 0 && !searching ? (
-                  <div className="text-center py-10 px-4">
-                    <p className="text-sm text-foreground-muted">No results for &ldquo;{query}&rdquo;</p>
+                ) : displayResults.length === 0 ? (
+                  <div className="text-center py-10 px-4 text-sm text-foreground-muted">
+                    {query.trim() ? `No connections match "${query}"` : 'All your connections are already selected'}
                   </div>
                 ) : (
-                  <div className="divide-y divide-border/50">
-                    {results.map((u) => {
-                      const isSelected = selected.some((s) => s.id === u.id);
-                      const initials = getInitials(u.firstName, u.lastName);
-                      return (
-                        <button
-                          key={u.id}
-                          onClick={() => toggleSelect(u)}
-                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-alt transition-colors"
-                        >
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            {u.profilePicture ? (
-                              <Image src={getAvatarUrl(u.profilePicture, 80)} alt={initials} width={40} height={40} className="object-cover" />
-                            ) : (
-                              <span className="font-bold text-primary text-sm uppercase">{initials}</span>
-                            )}
-                          </div>
-                          <div className="text-left flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{u.firstName} {u.lastName}</p>
-                            <p className="text-xs text-foreground-muted">{u.servingState}</p>
-                          </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-border'}`}>
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    {!query.trim() && (
+                      <p className="px-4 pt-3 pb-1 text-xs font-semibold text-foreground-muted uppercase tracking-wide">
+                        Your Connections ({allConnections.length})
+                      </p>
+                    )}
+                    <div className="divide-y divide-border/50">
+                      {displayResults.map((u) => {
+                        const initials = getInitials(u.firstName, u.lastName);
+                        return (
+                          <button
+                            key={u.id}
+                            onClick={() => toggleSelect(u)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-alt transition-colors"
+                          >
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              {u.profilePicture ? (
+                                <Image src={getAvatarUrl(u.profilePicture, 80)} alt={initials} width={40} height={40} className="object-cover" />
+                              ) : (
+                                <span className="font-bold text-primary text-sm uppercase">{initials}</span>
+                              )}
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{u.firstName} {u.lastName}</p>
+                              <p className="text-xs text-foreground-muted">{u.servingState}</p>
+                            </div>
+                            <div className="w-5 h-5 rounded-full border-2 border-border flex items-center justify-center flex-shrink-0">
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
 

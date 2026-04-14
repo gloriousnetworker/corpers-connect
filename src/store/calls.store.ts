@@ -13,6 +13,11 @@ export interface IncomingCallData {
   channelName: string;
   token: string;
   appId: string;
+  /** UID assigned by the server for this participant in the Agora channel */
+  uid?: number;
+  /** True when this is a group call (no call:accept handshake needed) */
+  isGroup?: boolean;
+  groupName?: string;
 }
 
 /**
@@ -25,6 +30,8 @@ export interface OutboundCallData {
   channelName: string;
   token: string;
   appId: string;
+  /** UID for group calls where caller gets uid > 1; defaults to 1 for 1:1 calls */
+  uid?: number;
 }
 
 /**

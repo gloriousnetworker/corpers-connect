@@ -40,10 +40,26 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
   }, [call.callId, dismiss]);
 
   const handleAccept = useCallback(() => {
+    dismiss();
+
+    if (call.isGroup) {
+      // Group call — no server handshake needed, join directly with provided token
+      const active: ActiveCallData = {
+        callId:      call.callId,
+        channelName: call.channelName,
+        token:       call.token,
+        appId:       call.appId,
+        type:        call.type,
+        partner:     call.caller,
+        uid:         call.uid ?? 2,
+        startedAt:   Date.now(),
+      };
+      setActive(active);
+      return;
+    }
+
     const socket = getExistingCallsSocket();
     if (!socket) return;
-
-    dismiss();
 
     socket.emit(
       'call:accept',
@@ -89,7 +105,11 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
         {/* Call type label */}
         <div className="flex items-center gap-1.5 text-green-300 text-sm font-medium">
           {isVideo ? <Video className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-          <span>Incoming {isVideo ? 'video' : 'voice'} call</span>
+          <span>
+            {call.isGroup
+              ? `Group ${isVideo ? 'video' : 'voice'} call${call.groupName ? ` · ${call.groupName}` : ''}`
+              : `Incoming ${isVideo ? 'video' : 'voice'} call`}
+          </span>
         </div>
 
         {/* Caller avatar — pulsing ring */}
