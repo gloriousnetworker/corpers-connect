@@ -11,6 +11,7 @@ interface CallControlsProps {
   onToggleCamera?: () => void;
   onSwitchCamera?: () => void;
   onEnd:         () => void;
+  endLabel?:     string;
 }
 
 export default function CallControls({
@@ -21,6 +22,7 @@ export default function CallControls({
   onToggleCamera,
   onSwitchCamera,
   onEnd,
+  endLabel,
 }: CallControlsProps) {
   const [speakerOff, setSpeakerOff] = useState(false);
 
@@ -87,14 +89,19 @@ export default function CallControls({
         </button>
       )}
 
-      {/* End call */}
-      <button
-        onClick={onEnd}
-        className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:bg-red-700 transition-colors shadow-lg"
-        aria-label="End call"
-      >
-        <PhoneOff className="w-7 h-7" />
-      </button>
+      {/* End / Leave call */}
+      <div className="flex flex-col items-center gap-1">
+        <button
+          onClick={onEnd}
+          className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:bg-red-700 transition-colors shadow-lg"
+          aria-label={endLabel ?? 'End call'}
+        >
+          <PhoneOff className="w-7 h-7" />
+        </button>
+        {endLabel && (
+          <span className="text-white/70 text-xs">{endLabel}</span>
+        )}
+      </div>
     </div>
   );
 }

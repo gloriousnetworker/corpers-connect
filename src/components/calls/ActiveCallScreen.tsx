@@ -68,10 +68,17 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
   }, [enableCamera]);
 
   const handleEnd = async () => {
-    const socket = getExistingCallsSocket();
-    socket?.emit('call:end', { callId: call.callId });
-    await leave();
-    clearCalls();
+    if (call.isGroup) {
+      // Group call — just disconnect locally; the channel stays alive for others
+      await leave();
+      clearCalls();
+    } else {
+      // 1:1 call — notify the other party so their screen closes too
+      const socket = getExistingCallsSocket();
+      socket?.emit('call:end', { callId: call.callId });
+      await leave();
+      clearCalls();
+    }
   };
 
   const partnerName = `${call.partner.firstName} ${call.partner.lastName}`;
@@ -197,6 +204,7 @@ export default function ActiveCallScreen({ call }: ActiveCallScreenProps) {
           onToggleCamera={isVideo ? toggleCamera : undefined}
           onSwitchCamera={isVideo ? switchCamera : undefined}
           onEnd={handleEnd}
+          endLabel={call.isGroup ? 'Leave' : undefined}
         />
       </div>
     </div>

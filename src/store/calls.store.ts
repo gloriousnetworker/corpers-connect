@@ -47,6 +47,8 @@ export interface ActiveCallData {
   /** 1 = caller, 2 = receiver — must match the UID used in the Agora token */
   uid: number;
   startedAt: number; // Date.now()
+  /** True for group calls — ending only disconnects you, not the whole call */
+  isGroup?: boolean;
 }
 
 interface CallsState {

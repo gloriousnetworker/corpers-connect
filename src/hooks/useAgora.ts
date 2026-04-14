@@ -218,7 +218,8 @@ export function useAgora({ onTokenWillExpire }: UseAgoraOptions = {}) {
       const facing = isCameraOff ? 'user' : 'environment';
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
       const newTrack = stream.getVideoTracks()[0];
-      await (localVideoRef.current as { replaceTrack?: (t: MediaStreamTrack) => Promise<void> }).replaceTrack?.(newTrack);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (localVideoRef.current as unknown as any).replaceTrack?.(newTrack);
     } catch { /* device switching not supported on this device */ }
   }, [isCameraOff]);
 

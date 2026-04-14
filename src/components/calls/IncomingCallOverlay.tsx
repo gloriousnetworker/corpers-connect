@@ -44,7 +44,7 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
 
     if (call.isGroup) {
       // Group call — no server handshake needed, join directly with provided token
-      const active: ActiveCallData = {
+      setActive({
         callId:      call.callId,
         channelName: call.channelName,
         token:       call.token,
@@ -53,8 +53,8 @@ export default function IncomingCallOverlay({ call }: IncomingCallOverlayProps) 
         partner:     call.caller,
         uid:         call.uid ?? 2,
         startedAt:   Date.now(),
-      };
-      setActive(active);
+        isGroup:     true,
+      });
       return;
     }
 
