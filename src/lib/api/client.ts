@@ -29,6 +29,44 @@ export function getAccessToken(): string | null {
   return _accessToken;
 }
 
+/**
+ * Shared, serialised refresh.  Both AuthProvider and the 401 interceptor call
+ * this — the _refreshing / _refreshQueue mechanism ensures only ONE network
+ * request is ever in-flight at a time.  Concurrent callers queue and receive
+ * the same new token, preventing the "double-rotation" race condition where
+ * two simultaneous refreshes rotate the session, causing the second caller to
+ * get a 401 (session already gone) and trigger a spurious logout.
+ */
+export async function refreshSession(): Promise<string> {
+  if (_refreshing) {
+    return new Promise<string>((resolve, reject) => {
+      _refreshQueue.push({ resolve, reject });
+    });
+  }
+
+  _refreshing = true;
+
+  try {
+    const { data } = await axios.post<{ success: true; data: RefreshResponse }>(
+      `${API_URL}/api/v1/auth/refresh`,
+      {},
+      { timeout: 10_000, withCredentials: true },
+    );
+    const token = data.data.accessToken;
+    setAccessToken(token);
+    _refreshQueue.forEach(({ resolve }) => resolve(token));
+    _refreshQueue = [];
+    return token;
+  } catch (err) {
+    _refreshQueue.forEach(({ reject }) => reject(err));
+    _refreshQueue = [];
+    setAccessToken(null);
+    throw err;
+  } finally {
+    _refreshing = false;
+  }
+}
+
 // ── Request interceptor: attach Bearer token ───────────────────────────────
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -66,50 +104,17 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      // If a refresh is already in progress, queue this request
-      if (_refreshing) {
-        return new Promise((resolve, reject) => {
-          _refreshQueue.push({
-            resolve: (token: string) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              resolve(api(originalRequest));
-            },
-            reject,
-          });
-        });
-      }
-
-      _refreshing = true;
-
       try {
-        // Cookie is sent automatically — no body needed.
-        const { data } = await axios.post<{ success: true; data: RefreshResponse }>(
-          `${API_URL}/api/v1/auth/refresh`,
-          {},
-          { timeout: 10_000, withCredentials: true }
-        );
-
-        const newAccessToken = data.data.accessToken;
-
-        setAccessToken(newAccessToken);
-
-        // Flush queue
-        _refreshQueue.forEach(({ resolve }) => resolve(newAccessToken));
-        _refreshQueue = [];
-
-        // Retry original request
+        // Use the shared serialised refresh — if AuthProvider is already
+        // refreshing this will queue here instead of firing a second request.
+        const newAccessToken = await refreshSession();
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed — clear session and redirect to login
-        _refreshQueue.forEach(({ reject }) => reject(refreshError));
-        _refreshQueue = [];
-        setAccessToken(null);
-        safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN); // clean up any legacy token
+        safeLocalStorage().remove(STORAGE_KEYS.REFRESH_TOKEN);
         safeLocalStorage().remove(STORAGE_KEYS.USER);
         safeLocalStorage().remove(STORAGE_KEYS.SESSION_FLAG);
-
-        // Clear session cookie so middleware doesn't serve stale protected pages
         if (typeof document !== 'undefined') {
           document.cookie = 'cc_session=; path=/; max-age=0; SameSite=Lax';
         }
@@ -117,8 +122,6 @@ api.interceptors.response.use(
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);
-      } finally {
-        _refreshing = false;
       }
     }
 

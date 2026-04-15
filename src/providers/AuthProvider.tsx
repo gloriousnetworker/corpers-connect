@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { setAccessToken, getAccessToken, ApiRequestError } from '@/lib/api/client';
-import { refreshTokens } from '@/lib/api/auth';
+import { refreshSession, getAccessToken, ApiRequestError } from '@/lib/api/client';
 import { getMe } from '@/lib/api/users';
 import { ACCESS_TOKEN_EXPIRY_MINUTES } from '@/lib/constants';
 
@@ -32,8 +31,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const silentRefresh = useCallback(async () => {
     try {
-      const tokens = await refreshTokens();
-      setAccessToken(tokens.accessToken);
+      await refreshSession();
     } catch (err) {
       // Only force-logout on explicit auth rejection (401/403 = token expired/revoked).
       // Network errors or server errors are transient — the 401 interceptor in client.ts
@@ -68,12 +66,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     async function restoreSession() {
       try {
-        // Cookie is sent automatically — no token to read from localStorage.
-        const tokens = await refreshTokens();
-        setAccessToken(tokens.accessToken);
+        // Use the shared serialised refresh — guaranteed to not race with the
+        // 401 interceptor even if API calls fire before this completes.
+        const accessToken = await refreshSession();
 
         const user = await getMe();
-        setAuth(user, tokens.accessToken);
+        setAuth(user, accessToken);
 
         // Start proactive refresh timer now that we have a valid session
         startRefreshTimer();

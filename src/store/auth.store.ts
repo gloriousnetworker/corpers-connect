@@ -81,12 +81,11 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-      onRehydrateStorage: () => (state) => {
-        // Mark loading as done after rehydration
-        if (state) {
-          state.isLoading = false;
-        }
-      },
+      // Do NOT set isLoading=false here.  isLoading stays true (the initial
+      // value) until AuthProvider.restoreSession() completes and calls setAuth
+      // or setLoading(false).  This prevents the race condition where dashboard
+      // queries fire with no Bearer token while AuthProvider is still running
+      // the refresh call to restore the in-memory access token.
     }
   )
 );
