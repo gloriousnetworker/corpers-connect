@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video, Search, BookOpen, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video, Search, ChevronDown } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -29,7 +29,7 @@ import { useCallsStore } from '@/store/calls.store';
 import { getExistingSocket, getExistingCallsSocket } from '@/lib/socket';
 import { getInitials, formatRelativeTime, getAvatarUrl } from '@/lib/utils';
 import { CallType, ConversationType, MessageType } from '@/types/enums';
-import type { Conversation, Message, Story } from '@/types/models';
+import type { Conversation, Message, Story, StoryGroup } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -39,6 +39,7 @@ import TypingIndicator from './TypingIndicator';
 import GroupInfoSheet from './GroupInfoSheet';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import ChatBackground from './ChatBackground';
+import StoryViewer from '@/components/stories/StoryViewer';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -1093,71 +1094,22 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           </div>
         </>
       )}
-      {/* ── Story viewer modal (story-reply tap) ───────────────────────────── */}
-      {viewingStory && (
-        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
-          {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-black/80 flex-shrink-0">
-            <button
-              onClick={() => setViewingStory(null)}
-              className="p-2 rounded-full text-white hover:bg-white/10"
-              aria-label="Close story"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {viewingStory.author.profilePicture ? (
-                <Image
-                  src={viewingStory.author.profilePicture}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-primary uppercase">
-                    {viewingStory.author.firstName?.[0]}
-                  </span>
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-white text-sm font-semibold truncate">
-                  {viewingStory.author.firstName} {viewingStory.author.lastName}&apos;s Story
-                </p>
-                {viewingStory.caption && (
-                  <p className="text-white/60 text-xs truncate">{viewingStory.caption}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-1 text-white/50">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span className="text-xs">{viewingStory.viewCount ?? 0}</span>
-            </div>
-          </div>
-          {/* Story media */}
-          <div className="flex-1 relative flex items-center justify-center bg-black">
-            {viewingStory.mediaType?.startsWith('video') ? (
-              <video
-                src={viewingStory.mediaUrl}
-                autoPlay
-                playsInline
-                controls
-                className="max-w-full max-h-full"
-              />
-            ) : (
-              <Image
-                src={viewingStory.mediaUrl}
-                alt="Story"
-                width={1080}
-                height={1920}
-                className="max-w-full max-h-full object-contain"
-                priority
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Story viewer (story-reply tap) — uses the real StoryViewer ─────── */}
+      {viewingStory && (() => {
+        const storyGroup: StoryGroup = {
+          author: viewingStory.author,
+          stories: [viewingStory],
+          hasUnviewed: false,
+        };
+        return (
+          <StoryViewer
+            groups={[storyGroup]}
+            initialGroupIndex={0}
+            currentUserId={user?.id ?? ''}
+            onClose={() => setViewingStory(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
