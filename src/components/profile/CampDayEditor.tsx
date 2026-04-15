@@ -8,9 +8,10 @@ import { toast } from 'sonner';
 import { upsertCampDay, deleteCampDay } from '@/lib/api/camp-experience';
 import { uploadToCloudinary } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
-import { getOptimisedUrl, getAvatarUrl, getInitials } from '@/lib/utils';
+import { getOptimisedUrl } from '@/lib/utils';
 import type { CampDayEntry, CampMood, CampDayVisibility } from '@/types/models';
 import TagUsersPicker from './TagUsersPicker';
+import TaggedUserChip from './TaggedUserChip';
 
 interface CampDayEditorProps {
   dayNumber: number;
@@ -288,36 +289,18 @@ export default function CampDayEditor({
             {taggedUsers.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {taggedUsers.map((u) => (
-                  <div
+                  <TaggedUserChip
                     key={u.id}
-                    className="flex items-center gap-1.5 pr-2 pl-1 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
-                  >
-                    {u.profilePicture ? (
-                      <Image
-                        src={getAvatarUrl(u.profilePicture, 40)}
-                        alt=""
-                        width={18}
-                        height={18}
-                        className="w-4.5 h-4.5 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-4.5 h-4.5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold uppercase">
-                        {getInitials(u.firstName, u.lastName)}
-                      </div>
-                    )}
-                    <span>{u.firstName}</span>
-                    {!readOnly && (
-                      <button
-                        onClick={() => {
-                          setTaggedUsers((prev) => prev.filter((x) => x.id !== u.id));
-                          setTaggedUserIds((prev) => prev.filter((id) => id !== u.id));
-                        }}
-                        className="text-primary/70 hover:text-primary"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
+                    user={u}
+                    onRemove={
+                      readOnly
+                        ? undefined
+                        : () => {
+                            setTaggedUsers((prev) => prev.filter((x) => x.id !== u.id));
+                            setTaggedUserIds((prev) => prev.filter((id) => id !== u.id));
+                          }
+                    }
+                  />
                 ))}
               </div>
             ) : (

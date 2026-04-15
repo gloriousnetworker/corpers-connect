@@ -24,6 +24,7 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import EmojiPickerPopover from '@/components/ui/EmojiPickerPopover';
 import { useEmojiInsertion } from '@/hooks/useEmojiInsertion';
 import TagUsersPicker from '@/components/profile/TagUsersPicker';
+import TaggedUserChip from '@/components/profile/TaggedUserChip';
 
 interface CreatePostModalProps {
   editPost?: Post;
@@ -279,35 +280,14 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
 
               {/* Tagged friends chips */}
               {taggedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="text-[11px] font-semibold text-foreground-muted mr-1 py-1">With:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-foreground-muted mr-1">With:</span>
                   {taggedUsers.map((u) => (
-                    <div
+                    <TaggedUserChip
                       key={u.id}
-                      className="flex items-center gap-1.5 pr-2 pl-1 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
-                    >
-                      {u.profilePicture ? (
-                        <Image
-                          src={getAvatarUrl(u.profilePicture, 40)}
-                          alt=""
-                          width={18}
-                          height={18}
-                          className="w-4.5 h-4.5 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-4.5 h-4.5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold uppercase">
-                          {getInitials(u.firstName, u.lastName)}
-                        </div>
-                      )}
-                      <span>{u.firstName}</span>
-                      <button
-                        onClick={() => setTaggedUsers((prev) => prev.filter((x) => x.id !== u.id))}
-                        className="text-primary/70 hover:text-primary"
-                        aria-label={`Remove ${u.firstName}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+                      user={u}
+                      onRemove={() => setTaggedUsers((prev) => prev.filter((x) => x.id !== u.id))}
+                    />
                   ))}
                 </div>
               )}
