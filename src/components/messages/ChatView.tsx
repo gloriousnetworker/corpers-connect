@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video, Search, BookOpen } from 'lucide-react';
+import { ArrowLeft, Users, Info, X, ShieldCheck, Pin, Phone, Video, Search, BookOpen, ChevronDown } from 'lucide-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -165,6 +165,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [viewingStory, setViewingStory] = useState<Story | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const prevScrollHeight = useRef(0);
@@ -263,7 +264,9 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const handleScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
-    isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+    isAtBottomRef.current = atBottom;
+    setShowScrollBtn(!atBottom);
     if (el.scrollTop < 80 && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
@@ -914,6 +917,17 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
         <div ref={bottomRef} />
         </div>
+
+        {/* Scroll-to-bottom button — appears when user scrolls up */}
+        {showScrollBtn && (
+          <button
+            onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full bg-surface shadow-lg border border-border flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Scroll to latest message"
+          >
+            <ChevronDown className="w-5 h-5 text-foreground-secondary" />
+          </button>
+        )}
       </div>
       )} {/* end search ternary */}
 

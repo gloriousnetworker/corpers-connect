@@ -13,7 +13,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatRelativeTime, getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
+import { getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
 import type { Message } from '@/types/models';
 import { MessageType } from '@/types/enums';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -416,7 +416,7 @@ export default function MessageBubble({
           {/* Timestamp + status */}
           <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className="text-[10px] text-foreground-muted">
-              {formatRelativeTime(message.createdAt)}
+              {new Date(message.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </span>
             {renderStatus()}
           </div>
