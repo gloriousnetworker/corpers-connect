@@ -31,6 +31,7 @@ interface RawMessage {
   id: string;
   conversationId: string;
   senderId: string;
+  storyId?: string | null;
   sender: RawUser;
   content?: string | null;
   type: string;
@@ -99,6 +100,7 @@ export function normalizeMessage(m: RawMessage): Message {
     content: m.content,
     type: (m.type as MessageType) ?? MessageType.TEXT,
     mediaUrl: m.mediaUrl,
+    storyId: m.storyId,
     replyToId: m.replyToId,
     replyTo: m.replyTo ? normalizeMessage(m.replyTo as RawMessage) : null,
     isEdited: m.isEdited,

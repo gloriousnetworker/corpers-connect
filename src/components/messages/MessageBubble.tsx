@@ -11,6 +11,8 @@ import {
   RefreshCw,
   ZoomIn,
   Lock,
+  Camera,
+  Video,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInitials, getAvatarUrl, getOptimisedUrl } from '@/lib/utils';
@@ -65,7 +67,9 @@ export default function MessageBubble({
   const isDeletedButLockedIn = message.isDeleted && isLockedIn;
   const isPending = message._pending;
   const isFailed = message._failed;
-  const isMedia = !isDeleted && !isDeletedButLockedIn && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
+  // Story replies use their own layout — exclude them from regular media handling
+  const isStoryReply = !isDeleted && !isDeletedButLockedIn && !!message.storyId;
+  const isMedia = !isDeleted && !isDeletedButLockedIn && !isStoryReply && (message.type === MessageType.IMAGE || message.type === MessageType.VIDEO) && !!message.mediaUrl;
 
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
@@ -203,25 +207,67 @@ export default function MessageBubble({
       );
     }
 
+    // ── Story reply card ────────────────────────────────────────────────────────
+    if (isStoryReply) {
+      const hasStoryImage = message.type === MessageType.IMAGE && !!message.mediaUrl;
+      return (
+        <div>
+          {/* Tappable story thumbnail */}
+          <button
+            onClick={() => onOpenStory?.(message.storyId!)}
+            className="w-full block relative overflow-hidden focus:outline-none"
+            aria-label="View story"
+          >
+            {hasStoryImage ? (
+              <div className="relative w-full h-28">
+                <Image
+                  src={getOptimisedUrl(message.mediaUrl!, 320)}
+                  alt="Story"
+                  fill
+                  className="object-cover"
+                  sizes="240px"
+                />
+                {/* Scrim so the badge is always readable */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
+              </div>
+            ) : (
+              /* Video story — no thumbnail, show placeholder */
+              <div className="w-full h-[72px] flex items-center justify-center gap-2 bg-black/25">
+                <Video className="w-5 h-5 text-white/70" />
+                <span className="text-xs font-medium text-white/70">Video story</span>
+              </div>
+            )}
+            {/* "Story" badge */}
+            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5 pointer-events-none">
+              <Camera className="w-2.5 h-2.5 text-white/90" />
+              <span className="text-[9px] text-white/90 font-semibold uppercase tracking-wide">Story</span>
+            </div>
+            {/* "Tap to view" hint */}
+            <div className="absolute bottom-2 right-2 text-[9px] text-white/70 pointer-events-none">Tap to view</div>
+          </button>
+
+          {/* Reply text */}
+          {message.content && (
+            <p className="px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          )}
+        </div>
+      );
+    }
+
     if (message.type === MessageType.AUDIO && message.mediaUrl) {
       return <VoiceNotePlayer mediaUrl={message.mediaUrl} isOwn={isOwn} />;
     }
 
     if (message.type === MessageType.IMAGE && message.mediaUrl) {
-      const isStoryReply = !!message.storyId;
       return (
         <div>
           <div className="relative">
             <button
-              onClick={() => {
-                if (isStoryReply && onOpenStory && message.storyId) {
-                  onOpenStory(message.storyId);
-                } else {
-                  setPreviewUrl(message.mediaUrl!);
-                }
-              }}
+              onClick={() => setPreviewUrl(message.mediaUrl!)}
               className="relative w-52 h-52 block group"
-              aria-label={isStoryReply ? 'View story' : 'View full size'}
+              aria-label="View full size"
             >
               <Image
                 src={getOptimisedUrl(message.mediaUrl, 420)}
@@ -231,20 +277,9 @@ export default function MessageBubble({
                 sizes="208px"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                {isStoryReply ? (
-                  <span className="text-white/90 text-xs font-semibold bg-black/40 px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                    View story
-                  </span>
-                ) : (
-                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
-                )}
+                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
               </div>
             </button>
-            {isStoryReply && (
-              <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none">
-                <span className="text-[9px] text-white/90 font-medium uppercase tracking-wide">Story</span>
-              </div>
-            )}
           </div>
           {message.content && (
             <p className="px-3 py-2 text-sm leading-relaxed">{message.content}</p>
@@ -384,7 +419,7 @@ export default function MessageBubble({
 
           {/* Bubble */}
           <div
-            className={`${bubbleBase} ${isMedia ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-none`}
+            className={`${bubbleBase} ${(isMedia || isStoryReply) ? 'p-0 overflow-hidden' : 'px-3 py-2'} shadow-sm cursor-pointer select-none`}
           >
             {renderContent()}
 
