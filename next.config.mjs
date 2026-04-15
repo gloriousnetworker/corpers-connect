@@ -29,11 +29,12 @@ const nextConfig = {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? RAILWAY_URL;
 
     const csp = [
-      // Only load scripts from the same origin. Next.js requires 'unsafe-eval'
-      // in development (fast refresh) and 'unsafe-inline' for its runtime
-      // chunk loading. In production only 'self' + nonces would be ideal, but
-      // Next.js App Router does not yet support nonce-based CSP out of the box.
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      // 'self' covers all Next.js chunks.
+      // 'unsafe-eval' + 'unsafe-inline' required by Next.js App Router runtime.
+      // https://www.gstatic.com — Firebase SDK compat scripts loaded via
+      // importScripts() inside the firebase-messaging-sw.js service worker.
+      // Without this, the SW silently fails and push notifications don't work.
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com",
 
       // Styles from same origin + Google Fonts stylesheet
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",

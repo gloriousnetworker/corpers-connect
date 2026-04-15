@@ -107,26 +107,41 @@ const defaultPasswordReset: PasswordResetState = {
   maskedEmail: '',
 };
 
+// Push a browser history entry so the device back button navigates within
+// the app rather than jumping straight to /login.
+function pushAppHistory(state: Record<string, unknown>) {
+  if (typeof window !== 'undefined') {
+    window.history.pushState(state, '');
+  }
+}
+
 export const useUIStore = create<UIState>((set) => ({
   activeSection: 'feed',
-  setActiveSection: (section) => set({ activeSection: section }),
+  setActiveSection: (section) => {
+    pushAppHistory({ section });
+    set({ activeSection: section });
+  },
 
   viewingUserId: null,
   previousSection: 'feed',
-  setViewingUser: (id, from) =>
+  setViewingUser: (id, from) => {
+    pushAppHistory({ section: 'userProfile', viewingUserId: id });
     set((state) => ({
       viewingUserId: id,
       previousSection: from ?? state.activeSection as ActiveSection,
       activeSection: 'userProfile',
-    })),
+    }));
+  },
 
   viewingPostId: null,
-  setViewingPost: (id, from) =>
+  setViewingPost: (id, from) => {
+    pushAppHistory({ section: 'postDetail', viewingPostId: id });
     set((state) => ({
       viewingPostId: id,
       previousSection: from ?? state.activeSection as ActiveSection,
       activeSection: 'postDetail',
-    })),
+    }));
+  },
 
   createPostOpen: false,
   setCreatePostOpen: (open) => set({ createPostOpen: open }),

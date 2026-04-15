@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/ui.store';
 import { useMessagesStore } from '@/store/messages.store';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { getConversation } from '@/lib/api/conversations';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import FeedSection from '@/components/sections/FeedSection';
 import DiscoverSection from '@/components/sections/DiscoverSection';
 import ReelsSection from '@/components/sections/ReelsSection';
@@ -116,6 +117,9 @@ function DeepLinkHandler() {
  * URL stays at "/" forever. Section is driven by Zustand activeSection state.
  */
 export default function Dashboard() {
+  // Intercept device back button — navigates through app sections instead of /login.
+  useBackNavigation();
+
   const activeSection = useUIStore((s) => s.activeSection);
   const marketplaceView = useMarketplaceStore((s) => s.view);
   const Section = SECTIONS[activeSection] ?? FeedSection;
