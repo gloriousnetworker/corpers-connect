@@ -8,6 +8,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'plus.unsplash.com' },
     ],
     // Explicit sizes so Next.js generates a tight srcset covering common mobile
     // screens (390–430px) and desktop feed widths (680px).
