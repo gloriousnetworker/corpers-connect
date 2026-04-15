@@ -9,12 +9,14 @@ import { normalizePost } from './feed';
 export interface CreatePostPayload {
   content?: string;
   mediaUrls?: string[];
+  taggedUserIds?: string[];
   visibility?: PostVisibility;
   postType?: PostType;
 }
 
 export interface UpdatePostPayload {
   content?: string;
+  taggedUserIds?: string[];
   visibility?: PostVisibility;
 }
 

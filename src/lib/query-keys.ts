@@ -75,4 +75,8 @@ export const queryKeys = {
   // Calls
   callHistory: () => ['calls'] as const,
   call: (id: string) => ['call', id] as const,
+
+  // Camp Experience
+  myCamp: () => ['camp', 'me'] as const,
+  userCamp: (userId: string) => ['camp', userId] as const,
 };

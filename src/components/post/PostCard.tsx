@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Globe, Users, Lock, MapPin } from 'lucide-react';
+import { Globe, Users, Lock, MapPin, Tag } from 'lucide-react';
 import { useUIStore } from '@/store/ui.store';
 import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
 import { PostVisibility } from '@/types/enums';
@@ -131,6 +131,29 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
             {post.content}
           </p>
+        )}
+
+        {/* Tagged friends — clickable chips that open each user's profile */}
+        {post.taggedUsers && post.taggedUsers.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap text-xs text-foreground-secondary">
+            <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+            <span className="text-foreground-muted">with</span>
+            {post.taggedUsers.slice(0, 3).map((u, i) => (
+              <button
+                key={u.id}
+                onClick={() => setViewingUser(u.id, 'feed')}
+                className="font-semibold text-primary hover:underline"
+              >
+                {u.firstName} {u.lastName}
+                {i < Math.min(post.taggedUsers!.length, 3) - 1 && ','}
+              </button>
+            ))}
+            {post.taggedUsers.length > 3 && (
+              <span className="text-foreground-muted">
+                and {post.taggedUsers.length - 3} more
+              </span>
+            )}
+          </div>
         )}
 
         {/* Media */}

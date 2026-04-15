@@ -15,6 +15,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePostGrid from '@/components/profile/ProfilePostGrid';
 import FollowButton from '@/components/profile/FollowButton';
 import FollowersModal from '@/components/profile/FollowersModal';
+import CampExperienceSection from '@/components/profile/CampExperienceSection';
 import type { Post } from '@/types/models';
 
 export default function UserProfileSection() {
@@ -30,6 +31,7 @@ export default function UserProfileSection() {
   const [followersOpen, setFollowersOpen] = useState(false);
   const [followersInitialTab, setFollowersInitialTab] = useState<'followers' | 'following'>('followers');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileTab, setProfileTab] = useState<'posts' | 'camp'>('posts');
 
   const { data: user, isLoading, isError } = useQuery({
     queryKey: queryKeys.user(viewingUserId ?? ''),
@@ -202,28 +204,45 @@ export default function UserProfileSection() {
         />
       </div>
 
-      {/* Posts tab header */}
+      {/* Tab header — Posts + Camp */}
       <div className="sticky top-[var(--top-bar-height,56px)] z-20 bg-surface border-b border-border">
         <div className="flex">
-          <div className="flex-1 py-3 text-sm font-semibold text-center text-primary border-b-2 border-primary">
+          <button
+            onClick={() => setProfileTab('posts')}
+            className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors ${
+              profileTab === 'posts' ? 'text-primary border-primary' : 'text-foreground-muted border-transparent'
+            }`}
+          >
             Posts
-          </div>
+          </button>
+          <button
+            onClick={() => setProfileTab('camp')}
+            className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors ${
+              profileTab === 'camp' ? 'text-primary border-primary' : 'text-foreground-muted border-transparent'
+            }`}
+          >
+            Camp
+          </button>
         </div>
       </div>
 
-      {/* Posts grid */}
+      {/* Tab content */}
       <div className="bg-surface">
-        <ProfilePostGrid
-          userId={user.id}
-          mode="posts"
-          onPostClick={(post: Post) => {
-            useUIStore.setState({
-              viewingPostId: post.id,
-              previousSection: 'userProfile',
-              activeSection: 'postDetail',
-            });
-          }}
-        />
+        {profileTab === 'posts' ? (
+          <ProfilePostGrid
+            userId={user.id}
+            mode="posts"
+            onPostClick={(post: Post) => {
+              useUIStore.setState({
+                viewingPostId: post.id,
+                previousSection: 'userProfile',
+                activeSection: 'postDetail',
+              });
+            }}
+          />
+        ) : (
+          <CampExperienceSection userId={user.id} isOwn={user.id === currentUser?.id} />
+        )}
       </div>
 
       {followersOpen && (

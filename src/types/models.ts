@@ -53,12 +53,22 @@ export interface User {
   updatedAt: string;
 }
 
+export interface TaggedUserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string | null;
+  isVerified: boolean;
+}
+
 export interface Post {
   id: string;
   authorId: string;
   author: User;
   content?: string | null;
   mediaUrls: string[];
+  taggedUserIds?: string[];
+  taggedUsers?: TaggedUserSummary[];
   visibility: PostVisibility;
   postType: PostType;
   repostOfId?: string | null;
@@ -72,6 +82,46 @@ export interface Post {
   isBookmarked?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CampMood =
+  | 'HAPPY'
+  | 'TIRED'
+  | 'EXCITED'
+  | 'HOMESICK'
+  | 'GRATEFUL'
+  | 'FUNNY'
+  | 'PROUD'
+  | 'STRESSED'
+  | 'BORED'
+  | 'INSPIRED';
+
+export type CampDayVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
+
+export interface CampDayEntry {
+  id: string;
+  userId: string;
+  dayNumber: number;
+  title?: string | null;
+  story?: string | null;
+  mood?: CampMood | null;
+  mediaUrls: string[];
+  taggedUserIds: string[];
+  taggedUsers?: TaggedUserSummary[];
+  isHighlight: boolean;
+  visibility: CampDayVisibility;
+  campName?: string | null;
+  campState?: string | null;
+  entryDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampExperienceResponse {
+  days: (CampDayEntry | null)[];
+  completedCount: number;
+  isOwn: boolean;
+  canView: boolean;
 }
 
 export interface CommentReaction {

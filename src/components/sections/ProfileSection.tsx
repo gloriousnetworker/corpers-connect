@@ -13,10 +13,11 @@ import ProfilePostGrid from '@/components/profile/ProfilePostGrid';
 import ProfileHighlights from '@/components/profile/ProfileHighlights';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import FollowersModal from '@/components/profile/FollowersModal';
+import CampExperienceSection from '@/components/profile/CampExperienceSection';
 import { useUIStore } from '@/store/ui.store';
 import type { Post } from '@/types/models';
 
-type Tab = 'posts' | 'reels' | 'highlights' | 'bookmarks';
+type Tab = 'posts' | 'reels' | 'camp' | 'highlights' | 'bookmarks';
 
 export default function ProfileSection() {
   const authUser = useAuthStore((s) => s.user);
@@ -78,18 +79,18 @@ export default function ProfileSection() {
       </div>
 
       {/* Tab bar */}
-      <div className="sticky top-[var(--top-bar-height,56px)] z-20 bg-surface border-b border-border flex">
-        {(['posts', 'reels', 'highlights', 'bookmarks'] as Tab[]).map((t) => (
+      <div className="sticky top-[var(--top-bar-height,56px)] z-20 bg-surface border-b border-border flex overflow-x-auto no-scrollbar">
+        {(['posts', 'reels', 'camp', 'highlights', 'bookmarks'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors border-b-2 ${
+            className={`flex-1 min-w-[20%] py-3 text-xs font-semibold capitalize transition-colors border-b-2 whitespace-nowrap ${
               tab === t
                 ? 'border-primary text-primary'
                 : 'border-transparent text-foreground-muted hover:text-foreground'
             }`}
           >
-            {t === 'bookmarks' ? 'Saved' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'bookmarks' ? 'Saved' : t === 'camp' ? 'Camp' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -98,6 +99,8 @@ export default function ProfileSection() {
       <div className="bg-surface">
         {tab === 'highlights' ? (
           <ProfileHighlights user={user} />
+        ) : tab === 'camp' ? (
+          <CampExperienceSection userId={user.id} isOwn />
         ) : (
           <ProfilePostGrid
             userId={user.id}

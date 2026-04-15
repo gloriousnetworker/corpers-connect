@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Globe, Users, Lock, MapPin } from 'lucide-react';
+import { X, Image as ImageIcon, Globe, Users, Lock, MapPin, Tag } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -18,11 +18,12 @@ import {
   ACCEPTED_VIDEO_TYPES,
 } from '@/lib/constants';
 import { PostVisibility } from '@/types/enums';
-import type { Post } from '@/types/models';
+import type { Post, TaggedUserSummary } from '@/types/models';
 import ClientPortal from '@/components/ui/ClientPortal';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import EmojiPickerPopover from '@/components/ui/EmojiPickerPopover';
 import { useEmojiInsertion } from '@/hooks/useEmojiInsertion';
+import TagUsersPicker from '@/components/profile/TagUsersPicker';
 
 interface CreatePostModalProps {
   editPost?: Post;
@@ -34,6 +35,7 @@ interface PostVars {
   existingUrls: string[];
   content: string;
   visibility: PostVisibility;
+  taggedUserIds: string[];
   isEdit: boolean;
   editPostId?: string;
 }
@@ -62,6 +64,10 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>(
     editPost?.mediaUrls ?? []
   );
+  const [taggedUsers, setTaggedUsers] = useState<TaggedUserSummary[]>(
+    editPost?.taggedUsers ?? [],
+  );
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -78,6 +84,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
     setMediaFiles([]);
     setMediaPreviews([]);
     setExistingMediaUrls(editPost?.mediaUrls ?? []);
+    setTaggedUsers(editPost?.taggedUsers ?? []);
     if (fileInputRef.current) fileInputRef.current.value = '';
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaPreviews, editPost]);
@@ -91,7 +98,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   }, [editPost, onClose, setCreatePostOpen]);
 
   const mutation = useMutation({
-    mutationFn: async ({ files, existingUrls, content, visibility, isEdit, editPostId }: PostVars) => {
+    mutationFn: async ({ files, existingUrls, content, visibility, taggedUserIds, isEdit, editPostId }: PostVars) => {
       let uploadedUrls: string[] = [];
       if (files.length > 0) {
         try {
@@ -102,11 +109,12 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
       }
       const allMediaUrls = [...existingUrls, ...uploadedUrls];
       if (isEdit && editPostId) {
-        return updatePost(editPostId, { content: content || undefined, visibility });
+        return updatePost(editPostId, { content: content || undefined, visibility, taggedUserIds });
       }
       return createPost({
         content: content || undefined,
         mediaUrls: allMediaUrls,
+        taggedUserIds,
         visibility,
       });
     },
@@ -162,6 +170,7 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
       existingUrls: existingMediaUrls,
       content: content.trim(),
       visibility,
+      taggedUserIds: taggedUsers.map((u) => u.id),
       isEdit: !!editPost,
       editPostId: editPost?.id,
     };
@@ -268,6 +277,41 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                 autoFocus
               />
 
+              {/* Tagged friends chips */}
+              {taggedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[11px] font-semibold text-foreground-muted mr-1 py-1">With:</span>
+                  {taggedUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      className="flex items-center gap-1.5 pr-2 pl-1 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                    >
+                      {u.profilePicture ? (
+                        <Image
+                          src={getAvatarUrl(u.profilePicture, 40)}
+                          alt=""
+                          width={18}
+                          height={18}
+                          className="w-4.5 h-4.5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-4.5 h-4.5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold uppercase">
+                          {getInitials(u.firstName, u.lastName)}
+                        </div>
+                      )}
+                      <span>{u.firstName}</span>
+                      <button
+                        onClick={() => setTaggedUsers((prev) => prev.filter((x) => x.id !== u.id))}
+                        className="text-primary/70 hover:text-primary"
+                        aria-label={`Remove ${u.firstName}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Media previews */}
               {(existingMediaUrls.length > 0 || mediaPreviews.length > 0) && (
                 <div className="grid grid-cols-3 gap-2">
@@ -326,6 +370,14 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
                   onChange={handleFileChange}
                 />
                 <EmojiPickerPopover onEmojiSelect={insertEmoji} placement="above" />
+                <button
+                  onClick={() => setTagPickerOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-surface-alt transition-colors text-sm font-medium text-foreground-secondary"
+                  aria-label="Tag friends"
+                >
+                  <Tag className="w-4 h-4 text-primary" />
+                  <span>Tag{taggedUsers.length > 0 ? ` (${taggedUsers.length})` : ''}</span>
+                </button>
               </div>
 
               <div className="flex items-center gap-3">
@@ -354,6 +406,17 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
         </motion.div>
       )}
     </AnimatePresence>
+    {tagPickerOpen && (
+      <TagUsersPicker
+        selectedIds={taggedUsers.map((u) => u.id)}
+        selectedUsers={taggedUsers}
+        onConfirm={(_ids, users) => {
+          setTaggedUsers(users);
+          setTagPickerOpen(false);
+        }}
+        onClose={() => setTagPickerOpen(false)}
+      />
+    )}
     </ClientPortal>
   );
 }
