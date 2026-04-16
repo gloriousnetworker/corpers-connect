@@ -11,6 +11,7 @@ import {
   User,
   PlusSquare,
   ShoppingBag,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { section: 'feed',          icon: Home,          label: 'Home'          },
   { section: 'discover',      icon: Compass,       label: 'Discover'      },
+  { section: 'library',       icon: BookOpen,      label: 'Library'       },
   { section: 'marketplace',   icon: ShoppingBag,   label: 'Mami Market'   },
   { section: 'opportunities', icon: Briefcase,     label: 'Opportunities' },
   { section: 'subscriptions', icon: Crown,         label: 'Corper Plus'   },
