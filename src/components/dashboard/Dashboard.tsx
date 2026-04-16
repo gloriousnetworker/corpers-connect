@@ -20,6 +20,7 @@ import OpportunitiesSection from '@/components/opportunities/OpportunitiesSectio
 import SubscriptionsSection from '@/components/subscriptions/SubscriptionsSection';
 import PostDetailSection from '@/components/sections/PostDetailSection';
 import SettingsSection from '@/components/sections/SettingsSection';
+import LibrarySection from '@/components/sections/LibrarySection';
 import type { ActiveSection } from '@/store/ui.store';
 import type { ComponentType } from 'react';
 
@@ -36,6 +37,7 @@ const SECTIONS: Record<ActiveSection, ComponentType> = {
   subscriptions: SubscriptionsSection,
   postDetail:    PostDetailSection,
   settings:      SettingsSection,
+  library:       LibrarySection,
 };
 
 /**

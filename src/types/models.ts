@@ -124,6 +124,118 @@ export interface CampExperienceResponse {
   canView: boolean;
 }
 
+// ── Library (e-books) ──────────────────────────────────────────────────────────
+
+export type BookGenre =
+  | 'FICTION'
+  | 'NON_FICTION'
+  | 'RELIGIOUS'
+  | 'SELF_HELP'
+  | 'BUSINESS'
+  | 'BIOGRAPHY'
+  | 'POETRY'
+  | 'ACADEMIC'
+  | 'CHILDREN'
+  | 'HEALTH'
+  | 'TECHNOLOGY'
+  | 'HISTORY'
+  | 'OTHER';
+
+export type BookStatus = 'DRAFT' | 'PUBLISHED' | 'UNLISTED';
+
+export interface BookAuthor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string | null;
+  level: string;
+  isVerified: boolean;
+}
+
+export interface Book {
+  id: string;
+  authorId: string;
+  author?: BookAuthor;
+  title: string;
+  subtitle?: string | null;
+  description: string;
+  aboutTheAuthor?: string | null;
+  coverImageUrl: string;
+  backCoverImageUrl?: string | null;
+  /** Only returned to owner/buyer; undefined otherwise */
+  pdfUrl?: string;
+  pageCount?: number | null;
+  language: string;
+  genre: BookGenre;
+  tags: string[];
+  priceKobo: number;
+  previewPages: number;
+  status: BookStatus;
+  totalSales: number;
+  avgRating: number;
+  reviewCount: number;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  isOwned: boolean;
+}
+
+export interface BookReview {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string | null;
+  };
+  bookId: string;
+  rating: number;
+  content?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookProgress {
+  id: string;
+  userId: string;
+  bookId: string;
+  lastPage: number;
+  highlights: string[];
+  lastReadAt: string;
+  createdAt: string;
+}
+
+export type WalletTxType = 'CREDIT_SALE' | 'DEBIT_PAYOUT' | 'DEBIT_REFUND' | 'CREDIT_BONUS';
+
+export interface WalletTransaction {
+  id: string;
+  walletId: string;
+  type: WalletTxType;
+  amountKobo: number;
+  description?: string | null;
+  reference?: string | null;
+  createdAt: string;
+}
+
+export interface Wallet {
+  id: string;
+  balanceKobo: number;
+  lifetimeEarningsKobo: number;
+  bankName?: string | null;
+  bankCode?: string | null;
+  accountNumber?: string | null;
+  accountName?: string | null;
+  hasBank: boolean;
+  transactions: WalletTransaction[];
+}
+
+export interface BookReadAccess {
+  url: string;
+  fullAccess: boolean;
+  previewPages: number | null;
+}
+
 export interface CommentReaction {
   id: string;
   userId: string;

@@ -79,4 +79,17 @@ export const queryKeys = {
   // Camp Experience
   myCamp: () => ['camp', 'me'] as const,
   userCamp: (userId: string) => ['camp', userId] as const,
+
+  // Library (books)
+  books: (params: Record<string, unknown>) => ['books', params] as const,
+  book: (id: string) => ['book', id] as const,
+  bookRead: (id: string) => ['book', id, 'read'] as const,
+  bookReviews: (id: string) => ['book', id, 'reviews'] as const,
+  bookProgress: (id: string) => ['book', id, 'progress'] as const,
+  myLibrary: () => ['my-library'] as const,
+  myPublished: () => ['my-published'] as const,
+
+  // Wallet
+  wallet: () => ['wallet', 'me'] as const,
+  walletTransactions: () => ['wallet', 'transactions'] as const,
 };

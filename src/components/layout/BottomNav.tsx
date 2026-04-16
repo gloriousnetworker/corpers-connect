@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Compass, ShoppingBag, Briefcase, MessageCircle, User, type LucideIcon } from 'lucide-react';
+import { Home, Compass, ShoppingBag, BookOpen, Briefcase, MessageCircle, User, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
 
@@ -13,9 +13,10 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { section: 'feed',        icon: Home,          label: 'Home'    },
   { section: 'discover',    icon: Compass,       label: 'Discover'},
-  { section: 'marketplace',   icon: ShoppingBag,   label: 'Market'  },
-  { section: 'opportunities', icon: Briefcase,     label: 'Jobs'    },
-  { section: 'messages',      icon: MessageCircle, label: 'Messages'},
+  { section: 'library',     icon: BookOpen,      label: 'Library' },
+  { section: 'marketplace', icon: ShoppingBag,   label: 'Market'  },
+  { section: 'opportunities', icon: Briefcase,   label: 'Jobs'    },
+  { section: 'messages',    icon: MessageCircle, label: 'Messages'},
   { section: 'profile',     icon: User,          label: 'Profile' },
 ];
 
@@ -27,7 +28,7 @@ export default function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Main navigation"
     >
-      <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-2">
+      <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-1">
         {NAV_ITEMS.map(({ section, icon: Icon, label }) => {
           const active = activeSection === section;
           const showBadge = section === 'messages' && unreadMessages > 0;
@@ -36,7 +37,7 @@ export default function BottomNav() {
             <button
               key={section}
               onClick={() => setActiveSection(section)}
-              className="flex flex-col items-center justify-center gap-0.5 p-2 min-w-[48px] touch-manipulation"
+              className="flex flex-col items-center justify-center gap-0.5 p-1.5 min-w-[40px] touch-manipulation"
               aria-label={label}
               aria-current={active ? 'page' : undefined}
             >
