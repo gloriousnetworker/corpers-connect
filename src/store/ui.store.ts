@@ -67,6 +67,10 @@ interface UIState {
   unreadMessages: number;
   setUnreadMessages: (count: number) => void;
   incrementUnreadMessages: () => void;
+
+  // Hashtag deep-link: set to navigate Discover to a hashtag feed
+  pendingHashtag: string | null;
+  setHashtag: (tag: string | null) => void;
 }
 
 const REGISTRATION_KEY = 'cc_reg';
@@ -192,4 +196,7 @@ export const useUIStore = create<UIState>((set) => ({
   setUnreadMessages: (count) => set({ unreadMessages: count }),
   incrementUnreadMessages: () =>
     set((state) => ({ unreadMessages: state.unreadMessages + 1 })),
+
+  pendingHashtag: null,
+  setHashtag: (tag) => set({ pendingHashtag: tag }),
 }));

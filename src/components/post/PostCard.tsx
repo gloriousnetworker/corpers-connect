@@ -13,6 +13,7 @@ import ReactionBar from './ReactionBar';
 import CommentSheet from './CommentSheet';
 import InlineComments from './InlineComments';
 import PostMenu from './PostMenu';
+import HashtagText from './HashtagText';
 import ReportModal from './ReportModal';
 import type { CreatePostPayload } from '@/lib/api/posts';
 
@@ -128,9 +129,10 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
 
         {/* Content */}
         {post.content && (
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
-            {post.content}
-          </p>
+          <HashtagText
+            content={post.content}
+            className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words"
+          />
         )}
 
         {/* Tagged friends — clickable chips that open each user's profile */}

@@ -167,6 +167,35 @@ export async function reportPost(
   await api.post(`/posts/${postId}/report`, payload);
 }
 
+// ── Trending + Hashtags ───────────────────────────────────────────────────────
+
+export interface TrendingHashtag {
+  id: string;
+  tag: string;
+  postCount: number;
+}
+
+export async function getTrendingPosts(): Promise<Post[]> {
+  const { data } = await api.get<ApiResponse<Post[]>>('/posts/trending');
+  return data.data.map(normalizePost);
+}
+
+export async function getTrendingHashtags(): Promise<TrendingHashtag[]> {
+  const { data } = await api.get<ApiResponse<TrendingHashtag[]>>('/posts/trending-hashtags');
+  return data.data;
+}
+
+export async function getHashtagPosts(
+  tag: string,
+  cursor?: string,
+): Promise<{ items: Post[]; nextCursor: string | null; tag: string; postCount: number }> {
+  const { data } = await api.get<ApiResponse<{ items: Post[]; nextCursor: string | null; tag: string; postCount: number }>>(
+    `/posts/hashtag/${encodeURIComponent(tag)}`,
+    { params: { cursor } },
+  );
+  return { ...data.data, items: data.data.items.map(normalizePost) };
+}
+
 // ── Media Upload (via backend — avoids needing a Cloudinary unsigned preset) ──
 
 export async function uploadToCloudinary(file: File): Promise<string> {

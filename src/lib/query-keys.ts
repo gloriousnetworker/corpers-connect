@@ -92,4 +92,9 @@ export const queryKeys = {
   // Wallet
   wallet: () => ['wallet', 'me'] as const,
   walletTransactions: () => ['wallet', 'transactions'] as const,
+
+  // Trending + Hashtags
+  trendingPosts: () => ['posts', 'trending'] as const,
+  trendingHashtags: () => ['hashtags', 'trending'] as const,
+  hashtagPosts: (tag: string) => ['posts', 'hashtag', tag] as const,
 };
