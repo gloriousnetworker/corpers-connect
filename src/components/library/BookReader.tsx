@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { X, ChevronLeft, ChevronRight, Loader2, Lock, ShoppingCart } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Loader2, Lock, ShoppingCart, BookX } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBook, getReadUrl, saveProgress, getProgress, initiateBookPurchase } from '@/lib/api/books';
 import { queryKeys } from '@/lib/query-keys';
@@ -24,6 +24,7 @@ export default function BookReader({ bookId }: BookReaderProps) {
   const goBack = useLibraryStore((s) => s.goBack);
 
   const [pdfReady, setPdfReady] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [width, setWidth] = useState<number>(720);
@@ -158,13 +159,32 @@ export default function BookReader({ bookId }: BookReaderProps) {
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-white" />
           </div>
+        ) : pdfError ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+              <BookX className="w-8 h-8 text-white/60" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-base">PDF not available yet</h3>
+              <p className="text-white/60 text-sm mt-1 leading-relaxed">
+                The author hasn't uploaded the full PDF for this book yet.
+                Check back later or contact support if you've already purchased it.
+              </p>
+            </div>
+            <button
+              onClick={goBack}
+              className="mt-2 px-5 py-2.5 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/20 transition"
+            >
+              Go back
+            </button>
+          </div>
         ) : (
           <>
             {PdfDocument && (
               <PdfDocument
                 file={access.url}
                 onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={(err: Error) => toast.error('Could not load PDF: ' + err.message)}
+                onLoadError={() => setPdfError(true)}
                 loading={
                   <div className="py-10 flex items-center justify-center">
                     <Loader2 className="w-6 h-6 animate-spin text-white" />
