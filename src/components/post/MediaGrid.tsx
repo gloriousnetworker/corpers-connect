@@ -62,11 +62,11 @@ function Tile({ url, index, onClick, className = '', overlay }: TileProps) {
         </>
       ) : (
         <Image
-          src={getOptimisedUrl(url, 680)}
+          src={getOptimisedUrl(url, 1200)}
           alt={`Post image ${index + 1}`}
           fill
           className="object-cover"
-          sizes="(max-width: 680px) 50vw, 340px"
+          sizes="(max-width: 680px) 50vw, 680px"
           loading="lazy"
         />
       )}
@@ -143,7 +143,7 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
         </>
       ) : (
         <Image
-          src={getOptimisedUrl(url, 1200)}
+          src={getOptimisedUrl(url, 1600)}
           alt="Post image"
           fill
           className="object-contain"

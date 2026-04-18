@@ -203,7 +203,7 @@ export default function PostCarousel({
         ) : (
           <Image
             key={url}
-            src={getOptimisedUrl(url, 1600)}
+            src={getOptimisedUrl(url)}
             alt={`Image ${index + 1}`}
             width={1600}
             height={1600}

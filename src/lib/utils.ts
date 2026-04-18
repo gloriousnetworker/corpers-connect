@@ -119,7 +119,7 @@ export function getOptimisedUrl(url: string, width?: number): string {
   // Avoid double-inserting transforms
   if (url.includes('/upload/f_auto') || url.includes('/upload/q_auto')) return url;
   const widthTransform = width ? `,w_${width}` : '';
-  return url.replace('/upload/', `/upload/f_auto,q_auto:good${widthTransform}/`);
+  return url.replace('/upload/', `/upload/f_auto,q_auto:best${widthTransform}/`);
 }
 
 /**
@@ -132,7 +132,7 @@ export function getAvatarUrl(url: string | null | undefined, size = 80): string 
   if (!url) return '';
   if (!url.includes('res.cloudinary.com')) return url;
   if (url.includes('/upload/f_auto') || url.includes('/upload/q_auto')) return url;
-  return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,f_auto,q_auto:good/`);
+  return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,f_auto,q_auto:best/`);
 }
 
 export function buildCloudinaryUrl(
