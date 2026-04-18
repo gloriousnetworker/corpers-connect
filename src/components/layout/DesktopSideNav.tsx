@@ -4,6 +4,7 @@ import Image from 'next/image';
 import {
   Home,
   Compass,
+  Film,
   Bell,
   Briefcase,
   Crown,
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { section: 'feed',          icon: Home,          label: 'Home'          },
   { section: 'discover',      icon: Compass,       label: 'Discover'      },
+  { section: 'reels',         icon: Film,          label: 'Reels'         },
   { section: 'library',       icon: BookOpen,      label: 'Library'       },
   { section: 'marketplace',   icon: ShoppingBag,   label: 'Mami Market'   },
   { section: 'opportunities', icon: Briefcase,     label: 'Opportunities' },
