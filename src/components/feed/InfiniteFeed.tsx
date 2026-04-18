@@ -11,6 +11,7 @@ import PostCard from '@/components/post/PostCard';
 import PostCardSkeleton from '@/components/post/PostCardSkeleton';
 import CreatePostModal from '@/components/post/CreatePostModal';
 import type { Post } from '@/types/models';
+import { PostType } from '@/types/enums';
 
 const PULL_THRESHOLD = 64; // px to trigger refresh
 
@@ -58,7 +59,9 @@ export default function InfiniteFeed() {
     retryDelay: 1000,
   });
 
-  const posts = data?.pages.flatMap((p) => p.items) ?? [];
+  const posts = (data?.pages.flatMap((p) => p.items) ?? []).filter(
+    (p) => p.postType !== PostType.REEL
+  );
 
   // Detect new posts via background refetch
   useEffect(() => {
@@ -204,7 +207,7 @@ export default function InfiniteFeed() {
           </div>
         )}
 
-        <div>
+        <div className="space-y-4">
           {posts.map((post) => (
             <PostCard
               key={post.id}

@@ -18,7 +18,7 @@ export default function FeedSection() {
   const initials = user ? getInitials(user.firstName, user.lastName) : 'C';
 
   return (
-    <div className="max-w-[680px] mx-auto px-4 space-y-4">
+    <div className="max-w-[680px] mx-auto space-y-4">
       {/* Stories tray */}
       <div className="bg-surface rounded-2xl border border-border shadow-card p-4">
         <StoryTray />

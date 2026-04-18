@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Film, Play } from 'lucide-react';
+import { Film } from 'lucide-react';
 import Image from 'next/image';
 import { useUIStore } from '@/store/ui.store';
 import { getReels } from '@/lib/api/reels';
@@ -36,7 +36,7 @@ export default function ReelsTray() {
   return (
     <div className="bg-surface rounded-2xl border border-border shadow-card py-3">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 mb-2">
+      <div className="flex items-center justify-between px-4 mb-3">
         <div className="flex items-center gap-1.5">
           <Film className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Reels</span>
@@ -49,8 +49,8 @@ export default function ReelsTray() {
         </button>
       </div>
 
-      {/* Horizontal reel thumbnails */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+      {/* Horizontal reel thumbnails — tall like Facebook Stories */}
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-2 scrollbar-none">
         {reels.map((reel) => {
           const mediaUrl = reel.mediaUrls?.[0];
           const isVideo = mediaUrl ? isVideoUrl(mediaUrl) : false;
@@ -61,50 +61,57 @@ export default function ReelsTray() {
             <button
               key={reel.id}
               onClick={() => setActiveSection('reels')}
-              className="flex-shrink-0 relative w-[72px] rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
-              style={{ aspectRatio: '9/16' }}
+              className="flex-shrink-0 relative rounded-2xl overflow-hidden bg-surface-alt focus:outline-none group"
+              style={{ width: 108, height: 192 }}
               aria-label={`View reel by ${reel.author.firstName}`}
             >
-              {/* Thumbnail */}
-              {poster ? (
-                <Image src={poster} alt="" fill className="object-cover" sizes="72px" />
-              ) : mediaUrl ? (
-                <video
-                  src={mediaUrl}
-                  preload="none"
-                  muted
-                  playsInline
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+              {/* Autoplay video preview */}
+              {mediaUrl ? (
+                isVideo ? (
+                  <video
+                    src={mediaUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    poster={poster}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image src={mediaUrl} alt="" fill className="object-cover" sizes="108px" />
+                )
               ) : (
                 <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                  <Film className="w-5 h-5 text-primary" />
+                  <Film className="w-6 h-6 text-primary" />
                 </div>
               )}
 
               {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-              {/* Play icon */}
-              <div className="absolute top-2 right-2">
-                <Play className="w-3 h-3 text-white fill-white drop-shadow" />
-              </div>
-
-              {/* Author avatar */}
-              <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2">
-                <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-white bg-primary/10 flex items-center justify-center">
+              {/* Author avatar at top */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary bg-primary/10 flex items-center justify-center">
                   {reel.author.profilePicture ? (
                     <Image
-                      src={getAvatarUrl(reel.author.profilePicture, 56)}
+                      src={getAvatarUrl(reel.author.profilePicture, 64)}
                       alt={initials}
-                      width={28}
-                      height={28}
+                      width={32}
+                      height={32}
                       className="object-cover w-full h-full"
                     />
                   ) : (
-                    <span className="text-[8px] font-bold text-primary uppercase">{initials}</span>
+                    <span className="text-[9px] font-bold text-primary uppercase">{initials}</span>
                   )}
                 </div>
+              </div>
+
+              {/* Author name at bottom */}
+              <div className="absolute bottom-2 left-1 right-1 text-center">
+                <span className="text-white text-[10px] font-semibold leading-tight line-clamp-1 drop-shadow">
+                  {reel.author.firstName}
+                </span>
               </div>
             </button>
           );

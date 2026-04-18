@@ -67,7 +67,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
 
   return (
     <>
-      <article className="py-3 px-4 border-b border-border space-y-3">
+      <article className="bg-surface rounded-2xl border border-border shadow-card p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <button
