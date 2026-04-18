@@ -9,6 +9,7 @@ import InfiniteFeed from '@/components/feed/InfiniteFeed';
 import dynamic from 'next/dynamic';
 const CreatePostModal = dynamic(() => import('@/components/post/CreatePostModal'), { ssr: false });
 import StoryTray from '@/components/stories/StoryTray';
+import ReelsTray from '@/components/reels/ReelsTray';
 
 export default function FeedSection() {
   const user = useAuthStore((s) => s.user);
@@ -71,6 +72,9 @@ export default function FeedSection() {
           </button>
         </div>
       </div>
+
+      {/* Reels tray */}
+      <ReelsTray />
 
       {/* Live feed */}
       <InfiniteFeed />

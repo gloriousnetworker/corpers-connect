@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Play } from 'lucide-react';
 import { getOptimisedUrl } from '@/lib/utils';
 
@@ -80,7 +80,38 @@ function Tile({ url, index, onClick, className = '', overlay }: TileProps) {
 function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
   const isVideo = isVideoUrl(url);
   const [aspect, setAspect] = useState<number>(4 / 3);
-  const poster = isVideo ? getVideoPosterUrl(url) : undefined;
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Autoplay video when 60%+ visible
+  useEffect(() => {
+    if (!isVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.play().catch(() => {});
+          setPlaying(true);
+        } else {
+          el.pause();
+          setPlaying(false);
+        }
+      },
+      { threshold: 0.6 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isVideo]);
+
+  // Set video aspect ratio from metadata
+  const handleVideoMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const vid = e.currentTarget;
+    if (vid.videoWidth && vid.videoHeight) {
+      const natural = vid.videoWidth / vid.videoHeight;
+      setAspect(Math.max(0.5, Math.min(1.78, natural)));
+    }
+  };
 
   return (
     <button
@@ -88,20 +119,27 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
       onClick={onClick}
       className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
       style={{ aspectRatio: aspect }}
-      aria-label={isVideo ? 'Play video' : 'View image'}
+      aria-label={isVideo ? 'View video' : 'View image'}
     >
       {isVideo ? (
         <>
-          {poster ? (
-            <Image src={poster} alt="Video thumbnail" fill className="object-cover" sizes="(max-width: 680px) 100vw, 680px" />
-          ) : (
-            <video src={url} preload="metadata" muted playsInline className="absolute inset-0 w-full h-full object-cover" />
-          )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Play className="w-6 h-6 text-white fill-white translate-x-0.5" />
+          <video
+            ref={videoRef}
+            src={url}
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 w-full h-full object-cover"
+            onLoadedMetadata={handleVideoMetadata}
+          />
+          {!playing && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-6 h-6 text-white fill-white translate-x-0.5" />
+              </div>
             </div>
-          </div>
+          )}
         </>
       ) : (
         <Image

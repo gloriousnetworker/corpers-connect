@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Film, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import { getReels } from '@/lib/api/reels';
+import { reactToPost, removeReaction } from '@/lib/api/posts';
 import { queryKeys } from '@/lib/query-keys';
-import { getInitials, getAvatarUrl } from '@/lib/utils';
+import { getInitials, getAvatarUrl, formatCount } from '@/lib/utils';
 import type { Post } from '@/types/models';
+import type { ReactionType } from '@/types/enums';
 
 export default function ReelsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -95,10 +97,15 @@ export default function ReelsSection() {
   }
 
   return (
+    <div className="relative flex flex-col" style={{ height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))' }}>
+      {/* Reels header */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center pt-3 pb-2 pointer-events-none">
+        <span className="text-white text-lg font-bold drop-shadow-md tracking-wide">Reels</span>
+      </div>
     <div
       ref={containerRef}
-      className="flex flex-col overflow-y-auto snap-y snap-mandatory scrollbar-none"
-      style={{ height: 'calc(100dvh - var(--top-bar-height) - var(--bottom-nav-height))' }}
+      className="flex flex-col overflow-y-auto snap-y snap-mandatory scrollbar-none flex-1"
+      style={{ height: '100%' }}
     >
       {reels.map((reel, idx) => (
         <ReelCard
@@ -120,6 +127,7 @@ export default function ReelsSection() {
         </div>
       )}
     </div>
+    </div>
   );
 }
 
@@ -136,11 +144,34 @@ interface ReelCardProps {
 import { forwardRef } from 'react';
 
 const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
-  ({ reel, isActive, muted, onMuteToggle }, ref) => {
+  ({ reel: initialReel, isActive, muted, onMuteToggle }, ref) => {
+    const [reel, setReel] = useState<Post>(initialReel);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const firstMedia = reel.mediaUrls?.[0];
     const isVideo = firstMedia?.match(/\.(mp4|webm|mov|ogg)$/i);
     const initials = getInitials(reel.author.firstName, reel.author.lastName);
+    const queryClient = useQueryClient();
+
+    const reactionMut = useMutation({
+      mutationFn: async () => {
+        if (reel.myReaction === 'LOVE') {
+          await removeReaction(reel.id);
+        } else {
+          await reactToPost(reel.id, 'LOVE' as ReactionType);
+        }
+      },
+      onMutate: () => {
+        const removing = reel.myReaction === 'LOVE';
+        setReel((prev) => ({
+          ...prev,
+          myReaction: removing ? null : ('LOVE' as ReactionType),
+          reactionsCount: removing ? Math.max(0, prev.reactionsCount - 1) : prev.reactionsCount + 1,
+        }));
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.reels() });
+      },
+    });
 
     // Auto-play/pause based on visibility
     useEffect(() => {
@@ -224,9 +255,18 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
 
         {/* Actions sidebar */}
         <div className="absolute bottom-4 right-3 flex flex-col items-center gap-5">
-          <button className="flex flex-col items-center gap-1">
-            <Heart className="w-7 h-7 text-white drop-shadow" />
-            <span className="text-white text-xs font-semibold drop-shadow">{reel.reactionsCount}</span>
+          <button
+            onClick={() => reactionMut.mutate()}
+            className="flex flex-col items-center gap-1"
+          >
+            <Heart
+              className={`w-7 h-7 drop-shadow transition-colors ${
+                reel.myReaction === 'LOVE' ? 'text-red-500 fill-red-500' : 'text-white'
+              }`}
+            />
+            <span className="text-white text-xs font-semibold drop-shadow">
+              {reel.reactionsCount > 0 ? formatCount(reel.reactionsCount) : ''}
+            </span>
           </button>
           <button className="flex flex-col items-center gap-1">
             <MessageCircle className="w-7 h-7 text-white drop-shadow" />

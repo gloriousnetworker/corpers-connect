@@ -204,7 +204,7 @@ export default function InfiniteFeed() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <div>
           {posts.map((post) => (
             <PostCard
               key={post.id}

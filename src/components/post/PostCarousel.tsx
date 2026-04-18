@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight, Play, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MessageCircle, Share2, Bookmark, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { reactToPost, removeReaction, sharePost, bookmarkPost, unbookmarkPost } from '@/lib/api/posts';
@@ -36,6 +36,9 @@ export default function PostCarousel({
 }: PostCarouselProps) {
   const [index, setIndex] = useState(initialIndex);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
   const haptic = useHaptic();
@@ -46,6 +49,12 @@ export default function PostCarousel({
   const hasMultiple = urls.length > 1;
   const author = post.author;
   const initials = getInitials(author.firstName, author.lastName);
+
+  // Reset video state when index changes
+  useEffect(() => {
+    setVideoLoading(true);
+    setVideoError(false);
+  }, [index]);
 
   // ── Navigation ──────────────────────────────────────────────────────────
   const showPrev = useCallback(() => setIndex((i) => (i - 1 + urls.length) % urls.length), [urls.length]);
@@ -155,9 +164,42 @@ export default function PostCarousel({
       </div>
 
       {/* ── Image area ───────────────────────────────────────────────── */}
-      <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
         {isVideo ? (
-          <video key={url} src={url} controls autoPlay playsInline preload="metadata" className="max-w-full max-h-full" />
+          <>
+            <video
+              key={url}
+              ref={videoRef}
+              src={url}
+              controls
+              autoPlay
+              playsInline
+              preload="auto"
+              className="w-full h-full object-contain"
+              onCanPlay={() => { setVideoLoading(false); setVideoError(false); }}
+              onWaiting={() => setVideoLoading(true)}
+              onPlaying={() => setVideoLoading(false)}
+              onError={() => { setVideoError(true); setVideoLoading(false); }}
+            />
+            {videoLoading && !videoError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
+                <Loader2 className="w-10 h-10 text-white animate-spin" />
+              </div>
+            )}
+            {videoError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-3">
+                <AlertCircle className="w-10 h-10 text-white/60" />
+                <p className="text-white/70 text-sm">Failed to load video</p>
+                <button
+                  onClick={() => { setVideoError(false); setVideoLoading(true); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reload
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <Image
             key={url}

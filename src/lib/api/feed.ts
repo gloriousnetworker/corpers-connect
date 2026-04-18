@@ -5,12 +5,13 @@ import type { ReactionType } from '@/types/enums';
 
 // Backend returns counts nested under _count and the user's reaction as a
 // reactions array. Flatten them to match the frontend Post type.
-interface RawPost extends Omit<Post, 'reactionsCount' | 'commentsCount' | 'myReaction'> {
+interface RawPost extends Omit<Post, 'reactionsCount' | 'commentsCount' | 'myReaction' | 'topReactionTypes'> {
   _count?: { reactions?: number; comments?: number };
   reactions?: Array<{ reactionType: ReactionType }>;
   reactionsCount?: number;
   commentsCount?: number;
   myReaction?: ReactionType | null;
+  topReactionTypes?: ReactionType[];
 }
 
 export function normalizePost(raw: RawPost): Post {
@@ -20,6 +21,7 @@ export function normalizePost(raw: RawPost): Post {
     commentsCount: raw.commentsCount ?? raw._count?.comments ?? 0,
     sharesCount: raw.sharesCount ?? 0,
     myReaction: raw.myReaction ?? raw.reactions?.[0]?.reactionType ?? null,
+    topReactionTypes: raw.topReactionTypes ?? [],
   } as Post;
 }
 

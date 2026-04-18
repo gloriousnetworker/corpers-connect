@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Compass, Film, ShoppingBag, BookOpen, Briefcase, MessageCircle, User, type LucideIcon } from 'lucide-react';
+import { Home, Compass, Film, ShoppingBag, BookOpen, MessageCircle, User, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
 
@@ -11,14 +11,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { section: 'feed',          icon: Home,          label: 'Home'    },
-  { section: 'discover',      icon: Compass,       label: 'Discover'},
-  { section: 'reels',         icon: Film,          label: 'Reels'   },
-  { section: 'library',       icon: BookOpen,      label: 'Library' },
-  { section: 'marketplace',   icon: ShoppingBag,   label: 'Market'  },
-  { section: 'opportunities', icon: Briefcase,     label: 'Jobs'    },
-  { section: 'messages',      icon: MessageCircle, label: 'Messages'},
-  { section: 'profile',       icon: User,          label: 'Profile' },
+  { section: 'feed',        icon: Home,          label: 'Home'    },
+  { section: 'discover',    icon: Compass,       label: 'Discover'},
+  { section: 'reels',       icon: Film,          label: 'Reels'   },
+  { section: 'library',     icon: BookOpen,      label: 'Library' },
+  { section: 'marketplace', icon: ShoppingBag,   label: 'Market'  },
+  { section: 'messages',    icon: MessageCircle, label: 'Messages'},
+  { section: 'profile',     icon: User,          label: 'Profile' },
 ];
 
 export default function BottomNav() {

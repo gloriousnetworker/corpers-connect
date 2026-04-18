@@ -15,6 +15,8 @@ import InlineComments from './InlineComments';
 import PostMenu from './PostMenu';
 import HashtagText from './HashtagText';
 import ReportModal from './ReportModal';
+import { REACTION_EMOJI } from '@/lib/constants';
+import { formatCount } from '@/lib/utils';
 import type { CreatePostPayload } from '@/lib/api/posts';
 
 interface PostCardProps {
@@ -65,7 +67,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
 
   return (
     <>
-      <article className="bg-surface rounded-2xl border border-border shadow-card p-4 space-y-3">
+      <article className="py-3 px-4 border-b border-border space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <button
@@ -167,7 +169,14 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
         {(post.reactionsCount > 0 || post.commentsCount > 0 || (post.sharesCount || 0) > 0) && (
           <div className="flex items-center justify-between text-xs text-foreground-muted pt-1">
             {post.reactionsCount > 0 && (
-              <span>{post.reactionsCount} {post.reactionsCount === 1 ? 'reaction' : 'reactions'}</span>
+              <div className="flex items-center gap-1">
+                {(post.topReactionTypes ?? []).slice(0, 3).map((type) => (
+                  <span key={type} className="text-sm leading-none">
+                    {REACTION_EMOJI[type as keyof typeof REACTION_EMOJI]}
+                  </span>
+                ))}
+                <span className="ml-0.5">{formatCount(post.reactionsCount)}</span>
+              </div>
             )}
             <div className="flex items-center gap-3 ml-auto">
               {(post.sharesCount || 0) > 0 && (

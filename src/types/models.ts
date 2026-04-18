@@ -79,6 +79,7 @@ export interface Post {
   commentsCount: number;
   sharesCount: number;
   myReaction?: ReactionType | null;
+  topReactionTypes?: ReactionType[];
   isBookmarked?: boolean;
   createdAt: string;
   updatedAt: string;

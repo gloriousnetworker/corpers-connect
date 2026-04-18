@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings, Crown } from 'lucide-react';
+import { LogOut, Settings, Crown, Briefcase } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
 import { logout } from '@/lib/api/auth';
@@ -112,6 +112,14 @@ export default function ProfileSection() {
 
       {/* Settings & sign out */}
       <div className="mt-2 bg-surface border-t border-b border-border divide-y divide-border/60">
+        {/* Jobs / Opportunities */}
+        <button
+          onClick={() => setActiveSection('opportunities')}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-alt transition-colors text-left"
+        >
+          <Briefcase className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
+          <span className="text-sm font-medium text-foreground">Jobs &amp; Opportunities</span>
+        </button>
         {/* Corper Plus upgrade / manage */}
         <button
           onClick={() => setActiveSection('subscriptions')}
