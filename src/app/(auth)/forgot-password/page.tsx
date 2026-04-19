@@ -27,10 +27,10 @@ export default function ForgotPasswordPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: ForgotPasswordInput) => forgotPassword(data.email),
-    onSuccess: (res, vars) => {
+    mutationFn: (data: ForgotPasswordInput) => forgotPassword(data.identifier),
+    onSuccess: (res) => {
       setPasswordReset({
-        email: vars.email,
+        email: res.otpToken,
         otpToken: res.otpToken,
         maskedEmail: res.maskedEmail,
       });
@@ -54,19 +54,19 @@ export default function ForgotPasswordPage() {
       <div className="space-y-1 mb-8">
         <h1 className="text-2xl font-bold text-foreground">Forgot password</h1>
         <p className="text-sm text-foreground-muted">
-          Enter your email address and we&apos;ll send you a reset code.
+          Enter your email address or state code and we&apos;ll send a reset code to your registered email.
         </p>
       </div>
 
       <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
         <Input
-          label="Email Address"
-          type="email"
-          placeholder="your@email.com"
+          label="Email or State Code"
+          type="text"
+          placeholder="your@email.com or AB/23A/1234"
           autoComplete="email"
           autoCapitalize="none"
-          error={errors.email?.message}
-          {...register('email')}
+          error={errors.identifier?.message}
+          {...register('identifier')}
         />
 
         <Button

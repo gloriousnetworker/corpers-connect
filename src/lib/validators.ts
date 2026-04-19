@@ -48,7 +48,7 @@ export const loginSchema = z.object({
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email('Enter a valid email address'),
+  identifier: z.string().min(1, 'Enter your email address or state code'),
 });
 
 export const resetPasswordSchema = z

@@ -75,10 +75,10 @@ export async function logout(): Promise<void> {
 }
 
 // ── Password ──────────────────────────────────────────────────────────────
-export async function forgotPassword(email: string): Promise<{ otpToken: string; maskedEmail: string }> {
+export async function forgotPassword(identifier: string): Promise<{ otpToken: string; maskedEmail: string }> {
   const { data } = await api.post<ApiResponse<{ otpToken: string; maskedEmail: string }>>(
     '/auth/forgot-password',
-    { email }
+    { identifier }
   );
   return data.data;
 }
