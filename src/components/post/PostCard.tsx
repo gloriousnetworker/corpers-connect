@@ -9,6 +9,7 @@ import { PostVisibility } from '@/types/enums';
 import type { Post } from '@/types/models';
 import MediaGrid from './MediaGrid';
 import PostCarousel from './PostCarousel';
+import VideoSwiperModal from './VideoSwiperModal';
 import ReactionBar from './ReactionBar';
 import CommentSheet from './CommentSheet';
 import InlineComments from './InlineComments';
@@ -54,9 +55,23 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
   const [reportOpen, setReportOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
+  const [videoSwiperOpen, setVideoSwiperOpen] = useState(false);
   const setViewingUser = useUIStore((s) => s.setViewingUser);
 
   if (deleted) return null;
+
+  // Detect whether a tapped media item is a video — videos open the
+  // vertical swiper feed; images stay on the carousel.
+  const isVideoMedia = (idx: number): boolean => {
+    const url = post.mediaUrls[idx];
+    if (!url) return false;
+    return /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url) || url.includes('/video/upload/');
+  };
+
+  const handleMediaOpen = (idx: number) => {
+    if (isVideoMedia(idx)) setVideoSwiperOpen(true);
+    else setCarouselIndex(idx);
+  };
 
   const author = post.author;
   const initials = getInitials(author.firstName, author.lastName);
@@ -162,7 +177,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
 
         {/* Media */}
         {post.mediaUrls.length > 0 && (
-          <MediaGrid urls={post.mediaUrls} onOpenCarousel={(i) => setCarouselIndex(i)} />
+          <MediaGrid urls={post.mediaUrls} onOpenCarousel={handleMediaOpen} />
         )}
 
         {/* Reactions summary — Facebook style with stacked emoji bubbles */}
@@ -238,7 +253,7 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
         onClose={() => setReportOpen(false)}
       />
 
-      {/* Full-screen carousel with reactions */}
+      {/* Full-screen carousel with reactions (images) */}
       {carouselIndex !== null && (
         <PostCarousel
           post={post}
@@ -246,6 +261,14 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
           onClose={() => setCarouselIndex(null)}
           onCommentClick={(idx) => { setCommentMediaIndex(idx); setCommentOpen(true); }}
           onOptimisticUpdate={handleOptimisticUpdate}
+        />
+      )}
+
+      {/* Vertical video swiper (videos) — Facebook-style scroll feed */}
+      {videoSwiperOpen && (
+        <VideoSwiperModal
+          initialPost={post}
+          onClose={() => setVideoSwiperOpen(false)}
         />
       )}
     </>
