@@ -104,12 +104,13 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
     return () => observer.disconnect();
   }, [isVideo]);
 
-  // Set video aspect ratio from metadata
+  // Cap portrait videos at 1.0 (square) so they don't dominate laptop viewports.
+  // Wider videos use their natural ratio up to 16:9.
   const handleVideoMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const vid = e.currentTarget;
     if (vid.videoWidth && vid.videoHeight) {
       const natural = vid.videoWidth / vid.videoHeight;
-      setAspect(Math.max(0.5, Math.min(1.78, natural)));
+      setAspect(Math.max(1.0, Math.min(1.78, natural)));
     }
   };
 
@@ -117,8 +118,8 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
-      style={{ aspectRatio: aspect }}
+      className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none mx-auto"
+      style={{ aspectRatio: aspect, maxHeight: '70vh' }}
       aria-label={isVideo ? 'View video' : 'View image'}
     >
       {isVideo ? (
@@ -150,7 +151,9 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
           sizes="(max-width: 680px) 100vw, 680px"
           onLoadingComplete={(img) => {
             const natural = img.naturalWidth / img.naturalHeight;
-            const clamped = Math.max(0.75, Math.min(1.78, natural));
+            // Cap portrait at square (1.0) so tall images don't blow up the
+            // post height on laptop. Landscape uses natural ratio up to 16:9.
+            const clamped = Math.max(1.0, Math.min(1.78, natural));
             setAspect(clamped);
           }}
         />

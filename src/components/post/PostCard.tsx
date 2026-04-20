@@ -165,23 +165,29 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
           <MediaGrid urls={post.mediaUrls} onOpenCarousel={(i) => setCarouselIndex(i)} />
         )}
 
-        {/* Reactions summary */}
+        {/* Reactions summary — Facebook style with stacked emoji bubbles */}
         {(post.reactionsCount > 0 || post.commentsCount > 0 || (post.sharesCount || 0) > 0) && (
           <div className="flex items-center justify-between text-xs text-foreground-muted pt-1">
-            {post.reactionsCount > 0 && (
-              <div className="flex items-center gap-1">
-                {(post.topReactionTypes ?? []).slice(0, 3).map((type) => (
-                  <span key={type} className="text-sm leading-none">
-                    {REACTION_EMOJI[type as keyof typeof REACTION_EMOJI]}
-                  </span>
-                ))}
-                <span className="ml-0.5">{formatCount(post.reactionsCount)}</span>
+            {post.reactionsCount > 0 ? (
+              <div className="flex items-center">
+                <div className="flex items-center">
+                  {(post.topReactionTypes?.length
+                    ? post.topReactionTypes.slice(0, 3)
+                    : [post.myReaction ?? 'LIKE']
+                  ).map((type, i) => (
+                    <span
+                      key={type}
+                      className="w-5 h-5 rounded-full bg-white border-[1.5px] border-white shadow-sm flex items-center justify-center text-[12px]"
+                      style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 10 - i }}
+                    >
+                      {REACTION_EMOJI[type as keyof typeof REACTION_EMOJI]}
+                    </span>
+                  ))}
+                </div>
+                <span className="ml-1.5 text-foreground-muted text-sm">{formatCount(post.reactionsCount)}</span>
               </div>
-            )}
+            ) : <span />}
             <div className="flex items-center gap-3 ml-auto">
-              {(post.sharesCount || 0) > 0 && (
-                <span>{post.sharesCount} {post.sharesCount === 1 ? 'share' : 'shares'}</span>
-              )}
               {post.commentsCount > 0 && (
                 <button
                   onClick={() => setCommentOpen(true)}
@@ -189,6 +195,9 @@ export default function PostCard({ post: initialPost, onEdit, autoOpenComments =
                 >
                   {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
                 </button>
+              )}
+              {(post.sharesCount || 0) > 0 && (
+                <span>{post.sharesCount} {post.sharesCount === 1 ? 'share' : 'shares'}</span>
               )}
             </div>
           </div>

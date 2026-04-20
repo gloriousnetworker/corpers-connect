@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Film, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Film, Heart, MessageCircle, Share2, Bookmark, Volume2, VolumeX, UserPlus, Check } from 'lucide-react';
 import Image from 'next/image';
+import { toast } from 'sonner';
 import { getReels } from '@/lib/api/reels';
-import { reactToPost, removeReaction } from '@/lib/api/posts';
+import { reactToPost, removeReaction, bookmarkPost, unbookmarkPost, sharePost } from '@/lib/api/posts';
+import { followUser, unfollowUser } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
+import { useUIStore } from '@/store/ui.store';
 import { getInitials, getAvatarUrl, formatCount } from '@/lib/utils';
 import type { Post } from '@/types/models';
 import type { ReactionType } from '@/types/enums';
@@ -146,11 +149,13 @@ import { forwardRef } from 'react';
 const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
   ({ reel: initialReel, isActive, muted, onMuteToggle }, ref) => {
     const [reel, setReel] = useState<Post>(initialReel);
+    const [isFollowing, setIsFollowing] = useState<boolean>(!!initialReel.author.isFollowing);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const firstMedia = reel.mediaUrls?.[0];
     const isVideo = firstMedia?.match(/\.(mp4|webm|mov|ogg)$/i);
     const initials = getInitials(reel.author.firstName, reel.author.lastName);
     const queryClient = useQueryClient();
+    const setViewingUser = useUIStore((s) => s.setViewingUser);
 
     const reactionMut = useMutation({
       mutationFn: async () => {
@@ -173,6 +178,40 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
       },
     });
 
+    const bookmarkMut = useMutation({
+      mutationFn: () => reel.isBookmarked ? unbookmarkPost(reel.id) : bookmarkPost(reel.id),
+      onMutate: () => {
+        setReel((prev) => ({ ...prev, isBookmarked: !prev.isBookmarked }));
+      },
+    });
+
+    const followMut = useMutation({
+      mutationFn: () => isFollowing ? unfollowUser(reel.author.id) : followUser(reel.author.id),
+      onMutate: () => setIsFollowing((v) => !v),
+      onError: () => {
+        setIsFollowing((v) => !v);
+        toast.error('Failed to update follow');
+      },
+    });
+
+    const handleShare = async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Corpers Connect reel',
+            text: reel.content?.slice(0, 100) ?? 'Check out this reel',
+            url: window.location.href,
+          });
+        } else {
+          await navigator.clipboard.writeText(window.location.href);
+          toast.success('Link copied!');
+        }
+        setReel((prev) => ({ ...prev, sharesCount: (prev.sharesCount || 0) + 1 }));
+        const result = await sharePost(reel.id);
+        setReel((prev) => ({ ...prev, sharesCount: result.sharesCount }));
+      } catch { /* cancelled */ }
+    };
+
     // Auto-play/pause based on visibility
     useEffect(() => {
       const video = videoRef.current;
@@ -189,6 +228,9 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
       if (videoRef.current) videoRef.current.muted = muted;
     }, [muted]);
 
+    const liked = reel.myReaction === 'LOVE';
+    const isOwn = false; // could check against current user
+
     return (
       <div
         ref={ref}
@@ -204,8 +246,6 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
               loop
               playsInline
               muted={muted}
-              // Active reel: preload metadata so first frame shows immediately.
-              // Inactive reels: preload nothing to avoid wasting bandwidth.
               preload={isActive ? 'metadata' : 'none'}
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -226,62 +266,124 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
         )}
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
 
-        {/* Author info */}
-        <div className="absolute bottom-0 left-0 right-14 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border-2 border-white/50 flex-shrink-0">
+        {/* Author info — bottom-left, with Connect button inline */}
+        <div className="absolute bottom-0 left-0 right-20 p-4 z-10">
+          <div className="flex items-center gap-2.5 mb-2">
+            <button
+              onClick={() => setViewingUser(reel.author.id, 'reels')}
+              className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border-2 border-white flex-shrink-0"
+              aria-label="View profile"
+            >
               {reel.author.profilePicture ? (
                 <Image
-                  src={getAvatarUrl(reel.author.profilePicture, 72)}
+                  src={getAvatarUrl(reel.author.profilePicture, 80)}
                   alt={initials}
-                  width={36}
-                  height={36}
+                  width={40}
+                  height={40}
                   className="object-cover w-full h-full"
                 />
               ) : (
                 <span className="text-xs font-bold text-primary uppercase">{initials}</span>
               )}
-            </div>
-            <span className="text-white text-sm font-semibold drop-shadow">
+            </button>
+
+            <button
+              onClick={() => setViewingUser(reel.author.id, 'reels')}
+              className="text-white text-sm font-bold drop-shadow-lg hover:underline"
+            >
               {reel.author.firstName} {reel.author.lastName}
-            </span>
+            </button>
+
+            {!isOwn && (
+              <button
+                onClick={() => followMut.mutate()}
+                className={`ml-1 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+                  isFollowing
+                    ? 'bg-white/15 text-white border border-white/40'
+                    : 'bg-primary text-white hover:bg-primary/90'
+                }`}
+              >
+                {isFollowing ? (
+                  <span className="flex items-center gap-1"><Check className="w-3 h-3" /> Connected</span>
+                ) : (
+                  <span className="flex items-center gap-1"><UserPlus className="w-3 h-3" /> Connect</span>
+                )}
+              </button>
+            )}
           </div>
+
           {reel.content && (
-            <p className="text-white/90 text-sm line-clamp-2 drop-shadow">{reel.content}</p>
+            <p className="text-white text-sm line-clamp-2 drop-shadow-lg leading-snug">
+              {reel.content}
+            </p>
           )}
         </div>
 
-        {/* Actions sidebar */}
-        <div className="absolute bottom-4 right-3 flex flex-col items-center gap-5">
+        {/* Right action sidebar — Facebook style */}
+        <div className="absolute bottom-6 right-3 flex flex-col items-center gap-4 z-10">
+          {/* Like — GREEN heart */}
           <button
             onClick={() => reactionMut.mutate()}
             className="flex flex-col items-center gap-1"
+            aria-label={liked ? 'Unlike' : 'Like'}
           >
-            <Heart
-              className={`w-7 h-7 drop-shadow transition-colors ${
-                reel.myReaction === 'LOVE' ? 'text-red-500 fill-red-500' : 'text-white'
-              }`}
-            />
-            <span className="text-white text-xs font-semibold drop-shadow">
-              {reel.reactionsCount > 0 ? formatCount(reel.reactionsCount) : ''}
+            <div className="w-11 h-11 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              <Heart
+                className={`w-6 h-6 transition-colors ${
+                  liked ? 'fill-primary text-primary' : 'text-white'
+                }`}
+                strokeWidth={2.2}
+              />
+            </div>
+            <span className="text-white text-[11px] font-semibold drop-shadow">
+              {reel.reactionsCount > 0 ? formatCount(reel.reactionsCount) : 'Like'}
             </span>
           </button>
-          <button className="flex flex-col items-center gap-1">
-            <MessageCircle className="w-7 h-7 text-white drop-shadow" />
-            <span className="text-white text-xs font-semibold drop-shadow">{reel.commentsCount}</span>
+
+          {/* Comment */}
+          <button className="flex flex-col items-center gap-1" aria-label="Comments">
+            <div className="w-11 h-11 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-white" strokeWidth={2.2} />
+            </div>
+            <span className="text-white text-[11px] font-semibold drop-shadow">
+              {reel.commentsCount > 0 ? formatCount(reel.commentsCount) : 'Comment'}
+            </span>
           </button>
-          <button className="flex flex-col items-center gap-1">
-            <Share2 className="w-7 h-7 text-white drop-shadow" />
-            <span className="text-white text-xs font-semibold drop-shadow">{reel.sharesCount}</span>
+
+          {/* Share */}
+          <button onClick={handleShare} className="flex flex-col items-center gap-1" aria-label="Share">
+            <div className="w-11 h-11 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              <Share2 className="w-6 h-6 text-white" strokeWidth={2.2} />
+            </div>
+            <span className="text-white text-[11px] font-semibold drop-shadow">
+              {(reel.sharesCount || 0) > 0 ? formatCount(reel.sharesCount || 0) : 'Share'}
+            </span>
           </button>
-          <button onClick={onMuteToggle}>
-            {muted ? (
-              <VolumeX className="w-6 h-6 text-white drop-shadow" />
-            ) : (
-              <Volume2 className="w-6 h-6 text-white drop-shadow" />
-            )}
+
+          {/* Bookmark */}
+          <button onClick={() => bookmarkMut.mutate()} className="flex flex-col items-center gap-1" aria-label="Save">
+            <div className="w-11 h-11 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              <Bookmark
+                className={`w-6 h-6 ${reel.isBookmarked ? 'fill-primary text-primary' : 'text-white'}`}
+                strokeWidth={2.2}
+              />
+            </div>
+            <span className="text-white text-[11px] font-semibold drop-shadow">
+              {reel.isBookmarked ? 'Saved' : 'Save'}
+            </span>
+          </button>
+
+          {/* Mute */}
+          <button onClick={onMuteToggle} className="flex flex-col items-center gap-1" aria-label="Mute">
+            <div className="w-11 h-11 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              {muted ? (
+                <VolumeX className="w-5 h-5 text-white" strokeWidth={2.2} />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" strokeWidth={2.2} />
+              )}
+            </div>
           </button>
         </div>
       </div>
