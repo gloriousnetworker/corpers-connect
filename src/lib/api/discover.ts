@@ -10,6 +10,10 @@ export interface DiscoverUser extends Pick<User,
 > {
   isFollowing?: boolean;
   followsYou?: boolean;
+  /** True for the Corpers Connect platform accounts (HQ + per-state).
+   *  Surfaces at the end of the suggestions list so real corpers get
+   *  shown first. */
+  isOfficial?: boolean;
 }
 
 /** GET /discover/corpers — corpers in same serving state */
