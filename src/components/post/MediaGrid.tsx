@@ -104,13 +104,15 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
     return () => observer.disconnect();
   }, [isVideo]);
 
-  // Cap portrait videos at 1.0 (square) so they don't dominate laptop viewports.
-  // Wider videos use their natural ratio up to 16:9.
+  // Loose safety rail — anything narrower than 9:20 or wider than 3:1 is
+  // almost certainly broken media; everything in between uses the natural
+  // ratio so the card shrinks to fit the image exactly (no side letterboxing).
+  const clampAspect = (n: number) => Math.max(0.45, Math.min(3.0, n));
+
   const handleVideoMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const vid = e.currentTarget;
     if (vid.videoWidth && vid.videoHeight) {
-      const natural = vid.videoWidth / vid.videoHeight;
-      setAspect(Math.max(1.0, Math.min(1.78, natural)));
+      setAspect(clampAspect(vid.videoWidth / vid.videoHeight));
     }
   };
 
@@ -118,8 +120,8 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none mx-auto"
-      style={{ aspectRatio: aspect, maxHeight: '70vh' }}
+      className="relative block w-full rounded-xl overflow-hidden bg-surface-alt focus:outline-none"
+      style={{ aspectRatio: aspect }}
       aria-label={isVideo ? 'View video' : 'View image'}
     >
       {isVideo ? (
@@ -147,14 +149,10 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
           src={getOptimisedUrl(url, 1600)}
           alt="Post image"
           fill
-          className="object-contain"
+          className="object-cover"
           sizes="(max-width: 680px) 100vw, 680px"
           onLoadingComplete={(img) => {
-            const natural = img.naturalWidth / img.naturalHeight;
-            // Cap portrait at square (1.0) so tall images don't blow up the
-            // post height on laptop. Landscape uses natural ratio up to 16:9.
-            const clamped = Math.max(1.0, Math.min(1.78, natural));
-            setAspect(clamped);
+            setAspect(clampAspect(img.naturalWidth / img.naturalHeight));
           }}
         />
       )}
