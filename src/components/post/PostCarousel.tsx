@@ -88,15 +88,31 @@ export default function PostCarousel({
     onMutate: (type: ReactionType | null) => {
       const prevReaction = post.myReaction;
       const prevCount = post.reactionsCount;
+      const prevTopTypes = post.topReactionTypes ?? [];
       const isRemoving = type === null || type === post.myReaction;
+
+      let nextTopTypes = prevTopTypes;
+      if (isRemoving && prevReaction) {
+        if (prevCount - 1 <= 0) nextTopTypes = [];
+      } else if (!isRemoving && type) {
+        nextTopTypes = [type, ...prevTopTypes.filter((t) => t !== type)].slice(0, 3);
+      }
+
       onOptimisticUpdate({
         myReaction: isRemoving ? null : type,
         reactionsCount: isRemoving ? Math.max(0, prevCount - 1) : prevCount + (prevReaction ? 0 : 1),
+        topReactionTypes: nextTopTypes,
       });
-      return { prevReaction, prevCount };
+      return { prevReaction, prevCount, prevTopTypes };
     },
     onError: (_, __, ctx) => {
-      if (ctx) onOptimisticUpdate({ myReaction: ctx.prevReaction, reactionsCount: ctx.prevCount });
+      if (ctx) {
+        onOptimisticUpdate({
+          myReaction: ctx.prevReaction,
+          reactionsCount: ctx.prevCount,
+          topReactionTypes: ctx.prevTopTypes,
+        });
+      }
       toast.error('Failed to update reaction');
     },
     onSettled: invalidateFeed,

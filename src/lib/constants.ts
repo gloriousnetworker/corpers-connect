@@ -109,7 +109,7 @@ export const SUBSCRIPTION_PLANS = {
 // Reaction emoji map
 export const REACTION_EMOJI = {
   LIKE: '👍',
-  LOVE: '❤️',
+  LOVE: '💚',
   FIRE: '🔥',
   CLAP: '👏',
 } as const;

@@ -362,7 +362,7 @@ export default function StoryViewer({
           {heartAnim && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
               <Heart
-                className="w-20 h-20 text-red-500 fill-red-500 animate-bounce"
+                className="w-20 h-20 text-primary fill-primary animate-bounce"
                 style={{ animation: 'heartFloat 0.6s ease-out forwards' }}
               />
             </div>
@@ -481,7 +481,7 @@ export default function StoryViewer({
                   )}
                   {(story.reactionsCount ?? 0) > 0 && (
                     <div className="flex items-center gap-1.5 text-white/80 text-xs">
-                      <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                      <Heart className="w-4 h-4 fill-primary text-primary" />
                       <span>{story.reactionsCount}</span>
                     </div>
                   )}
@@ -547,7 +547,7 @@ export default function StoryViewer({
                   disabled={reactMutation.isPending}
                   className={`flex-shrink-0 p-2.5 rounded-full backdrop-blur-sm border transition-all active:scale-90 disabled:opacity-50 ${
                     hasReacted
-                      ? 'bg-red-500/20 border-red-400/50'
+                      ? 'bg-primary/25 border-primary/60'
                       : 'bg-white/15 border-white/30'
                   }`}
                   aria-label="React with love"
@@ -555,7 +555,7 @@ export default function StoryViewer({
                   <Heart
                     className={`w-5 h-5 transition-all duration-200 ${
                       hasReacted
-                        ? 'fill-red-500 text-red-500 scale-110'
+                        ? 'fill-primary text-primary scale-110'
                         : 'text-white'
                     }`}
                   />

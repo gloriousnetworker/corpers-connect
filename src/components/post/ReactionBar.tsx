@@ -40,19 +40,41 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
       }
     },
     onMutate: (type: ReactionType | null) => {
-      // Optimistic update
+      // Optimistic update — keeps the big emoji on the react button *and*
+      // the stacked pills at the top of the card in sync the moment the
+      // user picks. Without the topReactionTypes patch, choosing 🔥 while
+      // someone else had already dropped a 👍 would still show the old
+      // thumbs-up in the summary until the server invalidation caught up.
       const prevReaction = post.myReaction;
       const prevCount = post.reactionsCount;
+      const prevTopTypes = post.topReactionTypes ?? [];
       const isRemoving = type === null || type === post.myReaction;
+
+      let nextTopTypes = prevTopTypes;
+      if (isRemoving && prevReaction) {
+        // If my reaction was the only instance of that type in the top 3,
+        // drop it. Otherwise leave the list alone — we can't safely tell
+        // here whether other users still have it.
+        if (prevCount - 1 <= 0) nextTopTypes = [];
+      } else if (!isRemoving && type) {
+        // Put my pick at the front, dedupe, cap at 3.
+        nextTopTypes = [type, ...prevTopTypes.filter((t) => t !== type)].slice(0, 3);
+      }
+
       onOptimisticUpdate({
         myReaction: isRemoving ? null : type,
         reactionsCount: isRemoving ? Math.max(0, prevCount - 1) : prevCount + (prevReaction ? 0 : 1),
+        topReactionTypes: nextTopTypes,
       });
-      return { prevReaction, prevCount };
+      return { prevReaction, prevCount, prevTopTypes };
     },
     onError: (_, __, ctx) => {
       if (ctx) {
-        onOptimisticUpdate({ myReaction: ctx.prevReaction, reactionsCount: ctx.prevCount });
+        onOptimisticUpdate({
+          myReaction: ctx.prevReaction,
+          reactionsCount: ctx.prevCount,
+          topReactionTypes: ctx.prevTopTypes,
+        });
       }
       toast.error('Failed to update reaction');
     },

@@ -22,7 +22,7 @@ function getNotificationMeta(type: NotificationType): {
 } {
   switch (type) {
     case NotificationType.POST_LIKE:
-      return { icon: Heart, color: 'text-red-500', bg: 'bg-red-50' };
+      return { icon: Heart, color: 'text-primary', bg: 'bg-primary/10' };
     case NotificationType.POST_COMMENT:
     case NotificationType.COMMENT_REPLY:
       return { icon: MessageCircle, color: 'text-info', bg: 'bg-info/10' };

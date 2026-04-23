@@ -104,10 +104,12 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
     return () => observer.disconnect();
   }, [isVideo]);
 
-  // Loose safety rail — anything narrower than 9:20 or wider than 3:1 is
-  // almost certainly broken media; everything in between uses the natural
-  // ratio so the card shrinks to fit the image exactly (no side letterboxing).
-  const clampAspect = (n: number) => Math.max(0.45, Math.min(3.0, n));
+  // Clamp the card's aspect ratio so tall portrait media doesn't stretch the
+  // post downwards. Min 1.0 (square) keeps the card compact on laptops; max
+  // 1.78 (16:9) lets landscape breathe. Combined with object-cover below, the
+  // image always fills the card's width; portrait media is cropped top/bottom
+  // rather than left/right — the carousel shows it uncropped.
+  const clampAspect = (n: number) => Math.max(1.0, Math.min(1.78, n));
 
   const handleVideoMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const vid = e.currentTarget;
