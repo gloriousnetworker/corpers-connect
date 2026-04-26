@@ -1,4 +1,6 @@
-import api from './client';
+import axios from 'axios';
+import api, { getAccessToken } from './client';
+import { WS_URL } from '@/lib/constants';
 import type { ApiResponse, PaginatedData } from '@/types/api';
 import type { Post, Comment } from '@/types/models';
 import type { ReactionType, PostVisibility, PostType } from '@/types/enums';
@@ -196,16 +198,26 @@ export async function getHashtagPosts(
   return { ...data.data, items: data.data.items.map(normalizePost) };
 }
 
-// ── Media Upload (via backend — avoids needing a Cloudinary unsigned preset) ──
+// ── Media Upload ─────────────────────────────────────────────────────────────
+// Direct-to-Railway POST. We bypass the Next.js /api/proxy route because route
+// handlers on Vercel cap request bodies at ~4.5 MB, which made anything beyond
+// a small image/video fail with 413 before it ever reached the backend's
+// 50 MB multer limit. Auth uses the in-memory Bearer token, not cookies, so
+// the same-origin proxy trick isn't needed for this endpoint.
 
 export async function uploadToCloudinary(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('media', file);
 
-  // Use the authenticated Axios instance so the auth cookie/token is forwarded
-  const { data } = await api.post<ApiResponse<{ url: string; mediaType: string }>>(
-    '/media/upload',
+  const token = getAccessToken();
+  const { data } = await axios.post<ApiResponse<{ url: string; mediaType: string }>>(
+    `${WS_URL}/api/v1/media/upload`,
     formData,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      timeout: 0,           // large videos can take a while; no client-side timeout
+      withCredentials: false, // no cookies on this path; CORS-credentials not required
+    },
   );
 
   return data.data.url;
