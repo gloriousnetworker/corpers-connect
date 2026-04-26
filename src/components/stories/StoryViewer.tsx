@@ -40,6 +40,10 @@ export default function StoryViewer({
   const [replyFocused, setReplyFocused] = useState(false);
   const [localReacted, setLocalReacted] = useState<Record<string, boolean>>({});
   const [heartAnim, setHeartAnim] = useState(false);
+  // Hold the progress bar while the current story's media is still loading /
+  // the video is buffering, so the bar never races ahead of a black frame.
+  const [mediaReady, setMediaReady] = useState(false);
+  const [videoWaiting, setVideoWaiting] = useState(false);
 
   // RAF-based timer refs
   const rafRef = useRef<number | null>(null);
@@ -214,9 +218,17 @@ export default function StoryViewer({
     goToNextStoryRef.current = goToNextStory;
   }, [goToNextStory]);
 
-  // ── RAF-based auto-advance timer (images only) ───────────────────────────────
+  // ── Reset media-ready state whenever the current story changes ─────────────
   useEffect(() => {
-    if (!story || isVideo || paused) {
+    setMediaReady(false);
+    setVideoWaiting(false);
+  }, [story?.id]);
+
+  // ── RAF-based auto-advance timer (images only) ───────────────────────────────
+  // Gated on `mediaReady` so the progress bar never advances while the image
+  // is still downloading/decoding — the black-screen-with-running-bar bug.
+  useEffect(() => {
+    if (!story || isVideo || paused || !mediaReady) {
       cancelTimer();
       return;
     }
@@ -247,7 +259,7 @@ export default function StoryViewer({
 
     return () => cancelTimer();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, isVideo, paused]);
+  }, [story?.id, isVideo, paused, mediaReady]);
 
   // ── Save progress when pausing ───────────────────────────────────────────────
   useEffect(() => {
@@ -326,9 +338,15 @@ export default function StoryViewer({
               playsInline
               preload="auto"
               onEnded={goToNextStory}
+              onCanPlay={() => { setMediaReady(true); setVideoWaiting(false); }}
+              onPlaying={() => { setMediaReady(true); setVideoWaiting(false); }}
+              onWaiting={() => setVideoWaiting(true)}
+              onStalled={() => setVideoWaiting(true)}
               onTimeUpdate={(e) => {
                 const v = e.currentTarget;
-                if (v.duration) setProgress(v.currentTime / v.duration);
+                // Only advance the bar when the video is actually playing —
+                // buffering freezes both the frame and the progress.
+                if (v.duration && !videoWaiting) setProgress(v.currentTime / v.duration);
               }}
             />
           ) : (
@@ -341,7 +359,17 @@ export default function StoryViewer({
                 sizes="480px"
                 quality={95}
                 priority
+                onLoadingComplete={() => setMediaReady(true)}
               />
+            </div>
+          )}
+
+          {/* Loading overlay — shown until the current story is actually
+              ready to display. Keeps the bar frozen behind a soft spinner
+              instead of a black flash. */}
+          {(!mediaReady || videoWaiting) && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <Loader2 className="w-8 h-8 text-white/70 animate-spin" />
             </div>
           )}
 
