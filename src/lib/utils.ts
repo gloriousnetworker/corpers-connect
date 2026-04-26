@@ -123,6 +123,38 @@ export function getOptimisedUrl(url: string, width?: number): string {
 }
 
 /**
+ * Adds delivery transforms to a Cloudinary VIDEO URL so reel/story playback
+ * stays smooth on slow networks.
+ *  q_auto:eco — aggressive bitrate reduction with minimal visible loss.
+ *  f_auto     — serves the lightest container the browser supports (mp4/webm).
+ *  vc_auto    — picks the best video codec available (h264/vp9 etc.).
+ *  w_720,c_limit — caps width at 720 without upscaling.
+ *
+ * Non-Cloudinary URLs are returned unchanged. Idempotent — won't double-stack
+ * transforms if the URL already has them.
+ */
+export function getOptimisedVideoUrl(url: string, width = 720): string {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  if (!url.includes('/video/upload/')) return url;
+  if (/\/upload\/[^/]*q_auto/.test(url) || /\/upload\/[^/]*f_auto/.test(url)) return url;
+  const transforms = ['q_auto:eco', 'f_auto', 'vc_auto', `w_${width}`, 'c_limit'].join(',');
+  return url.replace('/video/upload/', `/video/upload/${transforms}/`);
+}
+
+/**
+ * Builds a Cloudinary first-frame poster URL for a video. Used as `<video poster>`
+ * so the user sees the still frame instantly instead of a black screen while
+ * the clip downloads. Returns '' for non-Cloudinary URLs (caller falls back).
+ */
+export function getVideoPoster(url: string): string {
+  if (!url || !url.includes('res.cloudinary.com')) return '';
+  if (!url.includes('/video/upload/')) return '';
+  return url
+    .replace('/video/upload/', '/video/upload/so_0,q_auto:good,f_jpg,w_720,c_limit/')
+    .replace(/\.(mp4|webm|mov|ogg)(\?.*)?$/i, '.jpg');
+}
+
+/**
  * Returns a properly-sized Cloudinary URL for avatars/profile pictures.
  * Serves a small square crop so full-resolution uploads aren't downloaded
  * just to render a 40px avatar.

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Film, Heart, MessageCircle, Share2, Bookmark, Volume2, VolumeX, UserPlus, Check, Plus } from 'lucide-react';
+import { Film, Heart, MessageCircle, Share2, Bookmark, Volume2, VolumeX, UserPlus, Check, Plus, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { getReels } from '@/lib/api/reels';
@@ -10,7 +10,7 @@ import { reactToPost, removeReaction, bookmarkPost, unbookmarkPost, sharePost } 
 import { followUser, unfollowUser } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
-import { getInitials, getAvatarUrl, formatCount } from '@/lib/utils';
+import { getInitials, getAvatarUrl, formatCount, getOptimisedVideoUrl, getVideoPoster } from '@/lib/utils';
 import type { Post } from '@/types/models';
 import type { ReactionType } from '@/types/enums';
 
@@ -167,9 +167,14 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
   ({ reel: initialReel, isActive, muted, onMuteToggle }, ref) => {
     const [reel, setReel] = useState<Post>(initialReel);
     const [isFollowing, setIsFollowing] = useState<boolean>(!!initialReel.author.isFollowing);
+    const [waiting, setWaiting] = useState(false);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const firstMedia = reel.mediaUrls?.[0];
-    const isVideo = firstMedia?.match(/\.(mp4|webm|mov|ogg)$/i);
+    const isVideo = firstMedia?.match(/\.(mp4|webm|mov|ogg)$/i) || firstMedia?.includes('/video/upload/');
+    // Cloudinary-optimised playback URL + first-frame poster — keeps the
+    // image visible while the clip buffers instead of showing a black screen.
+    const videoSrc = firstMedia ? getOptimisedVideoUrl(firstMedia) : undefined;
+    const poster = firstMedia ? getVideoPoster(firstMedia) : '';
     const initials = getInitials(reel.author.firstName, reel.author.lastName);
     const queryClient = useQueryClient();
     const setViewingUser = useUIStore((s) => s.setViewingUser);
@@ -257,15 +262,34 @@ const ReelCard = forwardRef<HTMLDivElement, Omit<ReelCardProps, 'ref'>>(
         {/* Media */}
         {firstMedia ? (
           isVideo ? (
-            <video
-              ref={videoRef}
-              src={firstMedia}
-              loop
-              playsInline
-              muted={muted}
-              preload={isActive ? 'metadata' : 'none'}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={videoSrc}
+                poster={poster || undefined}
+                loop
+                playsInline
+                muted={muted}
+                // Active reel preloads the bytes; the next/prev reels still
+                // pull metadata so we can decode the first frame. Far reels
+                // don't pull anything until they come into view.
+                preload={isActive ? 'auto' : 'metadata'}
+                onWaiting={() => setWaiting(true)}
+                onStalled={() => setWaiting(true)}
+                onCanPlay={() => setWaiting(false)}
+                onPlaying={() => setWaiting(false)}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Buffering indicator — only shown while the clip is actually
+                  waiting for bytes. The poster keeps the screen non-black. */}
+              {isActive && waiting && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-12 h-12 rounded-full bg-black/45 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <Image
               src={firstMedia}

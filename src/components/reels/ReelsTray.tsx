@@ -5,7 +5,7 @@ import { Film } from 'lucide-react';
 import Image from 'next/image';
 import { useUIStore } from '@/store/ui.store';
 import { getReels } from '@/lib/api/reels';
-import { getAvatarUrl, getInitials } from '@/lib/utils';
+import { getAvatarUrl, getInitials, getOptimisedVideoUrl } from '@/lib/utils';
 
 function getVideoPosterUrl(url: string): string {
   if (!url.includes('res.cloudinary.com')) return '';
@@ -65,11 +65,12 @@ export default function ReelsTray() {
               style={{ width: 108, height: 192 }}
               aria-label={`View reel by ${reel.author.firstName}`}
             >
-              {/* Autoplay video preview */}
+              {/* Autoplay video preview — Cloudinary-eco bitrate to keep
+                  bandwidth low while several thumbs play in parallel. */}
               {mediaUrl ? (
                 isVideo ? (
                   <video
-                    src={mediaUrl}
+                    src={getOptimisedVideoUrl(mediaUrl, 240)}
                     autoPlay
                     muted
                     loop
