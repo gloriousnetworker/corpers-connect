@@ -45,6 +45,8 @@ export const MAX_AVATAR_SIZE_MB = 5;
 export const MAX_LISTING_IMAGES = 10;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 export const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+// Backend mediaUpload caps at 50 MB — keep client-side aware so we fail fast.
+export const MAX_MEDIA_SIZE_MB = 50;
 
 // OTP
 export const OTP_LENGTH = 6;

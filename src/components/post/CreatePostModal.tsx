@@ -16,6 +16,7 @@ import {
   MAX_MEDIA_PER_POST,
   ACCEPTED_IMAGE_TYPES,
   ACCEPTED_VIDEO_TYPES,
+  MAX_MEDIA_SIZE_MB,
 } from '@/lib/constants';
 import { PostVisibility } from '@/types/enums';
 import type { Post, TaggedUserSummary } from '@/types/models';
@@ -103,9 +104,14 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
       let uploadedUrls: string[] = [];
       if (files.length > 0) {
         try {
-          uploadedUrls = await Promise.all(files.map(uploadToCloudinary));
-        } catch {
-          throw new Error('Media upload failed. Please try again.');
+          // Sequential upload — running large videos in parallel can choke
+          // the user's uplink and trigger spurious timeouts.
+          uploadedUrls = [];
+          for (const f of files) uploadedUrls.push(await uploadToCloudinary(f));
+        } catch (e) {
+          // Bubble the real error so the user sees what went wrong (size,
+          // network, mime, etc.) instead of a generic "upload failed".
+          throw new Error(e instanceof Error ? e.message : 'Media upload failed. Please try again.');
         }
       }
       const allMediaUrls = [...existingUrls, ...uploadedUrls];
@@ -132,7 +138,18 @@ export default function CreatePostModal({ editPost, onClose }: CreatePostModalPr
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     const accepted = [...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES];
-    const valid = files.filter((f) => accepted.includes(f.type));
+    const sizeLimit = MAX_MEDIA_SIZE_MB * 1024 * 1024;
+
+    const tooBig = files.filter((f) => f.size > sizeLimit);
+    if (tooBig.length > 0) {
+      toast.error(
+        tooBig.length === 1
+          ? `"${tooBig[0].name}" is too large (max ${MAX_MEDIA_SIZE_MB} MB).`
+          : `${tooBig.length} files exceed ${MAX_MEDIA_SIZE_MB} MB and were skipped.`,
+      );
+    }
+
+    const valid = files.filter((f) => accepted.includes(f.type) && f.size <= sizeLimit);
     const remaining = MAX_MEDIA_PER_POST - existingMediaUrls.length - mediaFiles.length;
     const toAdd = valid.slice(0, remaining);
 
