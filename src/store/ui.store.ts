@@ -34,6 +34,8 @@ interface UIState {
   // Modals & sheets
   createPostOpen: boolean;
   setCreatePostOpen: (open: boolean) => void;
+  createReelOpen: boolean;
+  setCreateReelOpen: (open: boolean) => void;
 
   // Registration flow state (in-memory, cleared on completion)
   registration: RegistrationState;
@@ -149,6 +151,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   createPostOpen: false,
   setCreatePostOpen: (open) => set({ createPostOpen: open }),
+
+  createReelOpen: false,
+  setCreateReelOpen: (open) => set({ createReelOpen: open }),
 
   registration: loadRegistration(),
   setRegistration: (data) =>

@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 import DesktopSideNav from './DesktopSideNav';
@@ -8,6 +9,8 @@ import SocketInitializer from './SocketInitializer';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import CallOverlayManager from '@/components/calls/CallOverlayManager';
 import OfflineBanner from './OfflineBanner';
+
+const CreateReelModal = dynamic(() => import('@/components/reels/CreateReelModal'), { ssr: false });
 
 /**
  * AppShell — single-render layout shell for the authenticated SPA dashboard.
@@ -61,6 +64,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Call overlays — rendered above everything (z-[100]) */}
       <CallOverlayManager />
+
+      {/* Reel creation — driven by zustand state so it can be opened from
+          anywhere (SideNav, ReelsSection FAB, etc.) */}
+      <CreateReelModal />
     </>
   );
 }
