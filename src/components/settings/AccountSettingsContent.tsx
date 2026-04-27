@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import {
   Lock, Shield, Trash2, ChevronRight, Eye, EyeOff, ArrowLeft,
   MonitorSmartphone, LogOut, Bell, Palette, UserX, Smartphone, Globe,
+  GraduationCap,
 } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -902,6 +903,43 @@ function DeleteAccountSection() {
   );
 }
 
+// ── Become a Corper (marketer-only entry) ────────────────────────────────────
+
+function BecomeCorperRow() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  if (!user || user.accountType !== 'MARKETER') return null;
+
+  const status = user.corperUpgradeStatus ?? null;
+
+  let statusText: string;
+  if (status === 'PENDING') {
+    statusText = 'Reviewing your upgrade…';
+  } else if (status === 'APPROVED') {
+    return null; // already corper, no need to surface
+  } else if (status === 'REJECTED') {
+    statusText = 'Re-submit upgrade';
+  } else {
+    statusText = 'Submit your NYSC details to unlock posts, stories & reels';
+  }
+
+  return (
+    <button
+      onClick={() => router.push('/become-corper')}
+      className="w-full flex items-center gap-3 px-4 py-4 bg-surface border border-border rounded-2xl hover:bg-primary/5 transition-colors text-left"
+    >
+      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <GraduationCap className="w-5 h-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-foreground">Become a Corper</p>
+        <p className="text-xs text-foreground-muted truncate">{statusText}</p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-foreground-muted flex-shrink-0" />
+    </button>
+  );
+}
+
 // ── Logout Button ─────────────────────────────────────────────────────────────
 
 function LogoutButton() {
@@ -1004,6 +1042,7 @@ export default function AccountSettingsContent({ onBack }: { onBack?: () => void
           <div>
             <SectionLabel>Account</SectionLabel>
             <div className="space-y-3">
+              <BecomeCorperRow />
               <LogoutButton />
             </div>
           </div>

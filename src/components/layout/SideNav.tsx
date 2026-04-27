@@ -70,7 +70,9 @@ export default function SideNav() {
 
       {/* Nav links */}
       <nav className="flex-1 space-y-0.5">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+        {NAV_ITEMS
+          .filter(({ href }) => !(isMarketer && href === '/messages'))
+          .map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           const badge =
             label === 'Messages'      ? unreadMessages :

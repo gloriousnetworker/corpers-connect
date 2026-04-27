@@ -3,6 +3,8 @@
 import { Home, Compass, Film, ShoppingBag, BookOpen, MessageCircle, User, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
+import { AccountType } from '@/types/enums';
 
 interface NavItem {
   section: ActiveSection;
@@ -22,6 +24,9 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function BottomNav() {
   const { activeSection, setActiveSection, unreadMessages } = useUIStore();
+  // Marketers reach buyer/seller chats from inside Mami Market — keep the
+  // global messages tab corper-only.
+  const isMarketer = useAuthStore((s) => s.user?.accountType === AccountType.MARKETER);
 
   return (
     <nav
@@ -29,7 +34,9 @@ export default function BottomNav() {
       aria-label="Main navigation"
     >
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-1">
-        {NAV_ITEMS.map(({ section, icon: Icon, label }) => {
+        {NAV_ITEMS
+          .filter(({ section }) => !(isMarketer && section === 'messages'))
+          .map(({ section, icon: Icon, label }) => {
           const active = activeSection === section;
           const showBadge = section === 'messages' && unreadMessages > 0;
 

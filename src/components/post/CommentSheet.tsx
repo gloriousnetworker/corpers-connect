@@ -49,6 +49,8 @@ export default function CommentSheet({
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
+  // Marketers can read comments but cannot post them.
+  const isMarketer = currentUser?.accountType === 'MARKETER';
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -213,7 +215,14 @@ export default function CommentSheet({
               </div>
             )}
 
-            {/* Input */}
+            {/* Input — corper-only. Marketers see a subtle read-only notice. */}
+            {isMarketer ? (
+              <div className="px-4 py-3 border-t border-border flex-shrink-0 text-center">
+                <p className="text-xs text-foreground-muted">
+                  Marketers can read comments but can't post them.
+                </p>
+              </div>
+            ) : (
             <form
               onSubmit={handleSubmit}
               className="flex items-center gap-3 px-4 py-3 border-t border-border flex-shrink-0"
@@ -258,6 +267,7 @@ export default function CommentSheet({
                 <Send className="w-4 h-4 text-white" />
               </button>
             </form>
+            )}
           </motion.div>
         </>
       )}

@@ -64,9 +64,12 @@ export default function DesktopSideNav() {
         </button>
       </div>
 
-      {/* Nav links */}
+      {/* Nav links — Messages is corper-only; marketers reach buyer/seller
+          chats through Mami Market's own inbox button. */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ section, icon: Icon, label }) => {
+        {NAV_ITEMS
+          .filter(({ section }) => !(isMarketer && section === 'messages'))
+          .map(({ section, icon: Icon, label }) => {
           const active = activeSection === section;
           const badge =
             section === 'messages'      ? unreadMessages :

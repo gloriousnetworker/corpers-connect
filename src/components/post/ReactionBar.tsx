@@ -10,6 +10,8 @@ import { REACTION_EMOJI } from '@/lib/constants';
 import { queryKeys } from '@/lib/query-keys';
 import { formatCount } from '@/lib/utils';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useAuthStore } from '@/store/auth.store';
+import { AccountType } from '@/types/enums';
 import type { Post } from '@/types/models';
 import type { ReactionType } from '@/types/enums';
 import ReactionPicker from './ReactionPicker';
@@ -25,6 +27,10 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
   const haptic = useHaptic();
+  // Marketers are read-only on the social feed — they can scroll posts but
+  // can't react, comment, or share. Bookmarks are personal-only so we keep
+  // them available.
+  const isMarketer = useAuthStore((s) => s.user?.accountType === AccountType.MARKETER);
 
   const invalidateFeed = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
@@ -157,6 +163,35 @@ export default function ReactionBar({ post, onCommentClick, onOptimisticUpdate }
 
   const hasReaction = !!post.myReaction;
   const reactionEmoji = post.myReaction ? REACTION_EMOJI[post.myReaction] : null;
+
+  if (isMarketer) {
+    // Read-only summary: show counts only, no clickable interactions.
+    return (
+      <div className="relative flex items-center gap-1 pt-2 border-t border-border text-foreground-muted text-xs">
+        {post.reactionsCount > 0 && (
+          <span className="px-2 py-1.5">{formatCount(post.reactionsCount)} reactions</span>
+        )}
+        {post.commentsCount > 0 && (
+          <span className="px-2 py-1.5">{formatCount(post.commentsCount)} comments</span>
+        )}
+        {(post.sharesCount || 0) > 0 && (
+          <span className="px-2 py-1.5">{formatCount(post.sharesCount || 0)} shares</span>
+        )}
+        {/* Bookmarks stay available — they're a personal save, not a social action. */}
+        <button
+          onClick={() => bookmarkMutation.mutate(!post.isBookmarked)}
+          className={`ml-auto flex items-center justify-center p-2 rounded-xl transition-colors ${
+            post.isBookmarked
+              ? 'text-gold bg-gold/10 hover:bg-gold/20'
+              : 'text-foreground-secondary hover:bg-surface-alt'
+          }`}
+          aria-label={post.isBookmarked ? 'Remove bookmark' : 'Bookmark post'}
+        >
+          <Bookmark className={`w-4 h-4 ${post.isBookmarked ? 'fill-current' : ''}`} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex items-center gap-1 pt-2 border-t border-border">
