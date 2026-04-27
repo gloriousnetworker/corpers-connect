@@ -5,15 +5,22 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, Plus, Store, MessageCircle } from 'lucide-react';
 import { getListings } from '@/lib/api/marketplace';
 import { useMarketplaceStore } from '@/store/marketplace.store';
+import { useAuthStore } from '@/store/auth.store';
 import type { ListingFilters } from '@/lib/api/marketplace';
 import type { MarketplaceListing } from '@/types/models';
-import { ListingCategory } from '@/types/enums';
+import { ListingCategory, AccountType, MarketerStatus } from '@/types/enums';
 import CategoryChips from './CategoryChips';
 import ListingCard from './ListingCard';
 import FilterSheet from './FilterSheet';
 
 export default function MarketplaceHome() {
   const { selectListing, setView, activeFilters, setFilters, clearFilters, openMarketplaceConversations } = useMarketplaceStore();
+  const user = useAuthStore((s) => s.user);
+  // Marketers can only sell once approved. Pending/rejected marketers see no
+  // "Sell" entry — they're not blocked from browsing/buying.
+  const isPendingOrRejectedMarketer =
+    user?.accountType === AccountType.MARKETER &&
+    user.marketerStatus !== MarketerStatus.APPROVED;
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<ListingCategory | 'ALL'>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -62,13 +69,15 @@ export default function MarketplaceHome() {
             >
               <MessageCircle size={20} />
             </button>
-            <button
-              onClick={() => setView('create')}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              <Plus size={15} />
-              Sell
-            </button>
+            {!isPendingOrRejectedMarketer && (
+              <button
+                onClick={() => setView('create')}
+                className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={15} />
+                Sell
+              </button>
+            )}
           </div>
         </div>
 
