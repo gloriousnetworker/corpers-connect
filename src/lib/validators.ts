@@ -106,6 +106,11 @@ export const marketerRegisterVerifySchema = z.object({
   otp: otpSchema,
 });
 
+// Marketer-to-corper upgrade — they submit their NYSC state code + document.
+export const requestCorperUpgradeSchema = z.object({
+  stateCode: stateCodeSchema,
+});
+
 export const verify2FASchema = z.object({
   totpCode: z.string().min(6).max(8),
 });
@@ -165,6 +170,7 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type TwoFAChallengeInput = z.infer<typeof twoFAChallengeSchema>;
 export type MarketerRegisterInitiateInput = z.infer<typeof marketerRegisterInitiateSchema>;
 export type MarketerRegisterVerifyInput = z.infer<typeof marketerRegisterVerifySchema>;
+export type RequestCorperUpgradeInput = z.infer<typeof requestCorperUpgradeSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type AddCommentInput = z.infer<typeof addCommentSchema>;

@@ -1,6 +1,9 @@
-import api from './client';
+import axios from 'axios';
+import api, { getAccessToken } from './client';
+import { WS_URL } from '@/lib/constants';
 import type { ApiResponse, PaginatedData } from '@/types/api';
 import type { User } from '@/types/models';
+import type { CorperUpgradeStatus, AccountType, MarketerStatus } from '@/types/enums';
 
 export async function getMe(): Promise<User> {
   const { data } = await api.get<ApiResponse<User>>('/users/me');
@@ -121,5 +124,52 @@ export async function initiateEmailChange(newEmail: string, currentPassword: str
 
 export async function verifyEmailChange(otp: string): Promise<User> {
   const { data } = await api.post<ApiResponse<User>>('/users/me/email/verify', { otp });
+  return data.data;
+}
+
+// ── Corper upgrade (marketer → corper) ──────────────────────────────────────
+
+export interface CorperUpgradeStatusInfo {
+  accountType: AccountType;
+  marketerStatus: MarketerStatus | null;
+  corperUpgradeStatus: CorperUpgradeStatus | null;
+  corperUpgradeDocumentUrl: string | null;
+  corperUpgradeRequestedStateCode: string | null;
+  corperUpgradeRequestedAt: string | null;
+  corperUpgradeReviewedAt: string | null;
+  corperUpgradeRejectionReason: string | null;
+}
+
+export async function getMyCorperUpgrade(): Promise<CorperUpgradeStatusInfo> {
+  const { data } = await api.get<ApiResponse<CorperUpgradeStatusInfo>>('/users/me/corper-upgrade');
+  return data.data;
+}
+
+/**
+ * Submit a Corper upgrade request. Multipart upload of the NYSC posting
+ * letter / ID card. Goes direct to Railway to bypass the Next.js proxy's
+ * ~4.5 MB body cap (same fix as media uploads).
+ */
+export async function requestCorperUpgrade(payload: {
+  stateCode: string;
+  document: File;
+}): Promise<{ corperUpgradeStatus: CorperUpgradeStatus; corperUpgradeDocumentUrl: string }> {
+  const form = new FormData();
+  form.append('stateCode', payload.stateCode);
+  form.append('media', payload.document);
+
+  const token = getAccessToken();
+  const { data } = await axios.post<ApiResponse<{
+    corperUpgradeStatus: CorperUpgradeStatus;
+    corperUpgradeDocumentUrl: string;
+  }>>(
+    `${WS_URL}/api/v1/users/me/corper-upgrade`,
+    form,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      timeout: 0,
+      withCredentials: false,
+    },
+  );
   return data.data;
 }
