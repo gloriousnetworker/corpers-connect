@@ -10,7 +10,9 @@ import { reactToPost, removeReaction, bookmarkPost, unbookmarkPost, sharePost } 
 import { followUser, unfollowUser } from '@/lib/api/users';
 import { queryKeys } from '@/lib/query-keys';
 import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
 import { getInitials, getAvatarUrl, formatCount, getOptimisedVideoUrl, getVideoPoster } from '@/lib/utils';
+import { AccountType } from '@/types/enums';
 import type { Post } from '@/types/models';
 import type { ReactionType } from '@/types/enums';
 
@@ -31,6 +33,8 @@ export default function ReelsSection() {
 
   const reels = data?.pages.flatMap((p) => p.items) ?? [];
   const setCreateReelOpen = useUIStore((s) => s.setCreateReelOpen);
+  // Marketers can't author reels — hide the FAB + the empty-state CTA.
+  const isMarketer = useAuthStore((s) => s.user?.accountType === AccountType.MARKETER);
 
   // Intersection observer for infinite scroll trigger
   useEffect(() => {
@@ -96,13 +100,15 @@ export default function ReelsSection() {
         </div>
         <p className="font-semibold text-foreground">No reels yet</p>
         <p className="text-sm text-foreground-muted">Be the first to share a reel!</p>
-        <button
-          onClick={() => setCreateReelOpen(true)}
-          className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-colors"
-        >
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
-          Create Reel
-        </button>
+        {!isMarketer && (
+          <button
+            onClick={() => setCreateReelOpen(true)}
+            className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-colors"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2.5} />
+            Create Reel
+          </button>
+        )}
       </div>
     );
   }
@@ -139,14 +145,16 @@ export default function ReelsSection() {
       )}
     </div>
 
-      {/* Floating Create Reel button */}
-      <button
-        onClick={() => setCreateReelOpen(true)}
-        className="absolute bottom-6 right-4 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-black/40 hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center"
-        aria-label="Create a new reel"
-      >
-        <Plus className="w-6 h-6" strokeWidth={2.5} />
-      </button>
+      {/* Floating Create Reel button — corper-only. */}
+      {!isMarketer && (
+        <button
+          onClick={() => setCreateReelOpen(true)}
+          className="absolute bottom-6 right-4 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-black/40 hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center"
+          aria-label="Create a new reel"
+        >
+          <Plus className="w-6 h-6" strokeWidth={2.5} />
+        </button>
+      )}
     </div>
   );
 }

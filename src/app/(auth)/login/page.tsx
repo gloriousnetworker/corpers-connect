@@ -106,6 +106,16 @@ function LoginForm() {
           Register
         </Link>
       </p>
+
+      <p className="text-center text-sm text-foreground-muted mt-3">
+        Selling on Mami Market?{' '}
+        <Link
+          href="/marketer-register"
+          className="text-amber-700 font-semibold touch-manipulation"
+        >
+          Sign up as a Mami Marketer
+        </Link>
+      </p>
     </div>
   );
 }

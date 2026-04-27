@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
+import { AccountType } from '@/types/enums';
 
 interface NavItem {
   href: string;
@@ -37,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function SideNav() {
   const pathname = usePathname();
   const { unreadMessages, unreadNotifications, setCreatePostOpen } = useUIStore();
+  const isMarketer = useAuthStore((s) => s.user?.accountType === AccountType.MARKETER);
 
   return (
     <aside
@@ -102,14 +105,16 @@ export default function SideNav() {
         })}
       </nav>
 
-      {/* Create post */}
-      <button
-        onClick={() => setCreatePostOpen(true)}
-        className="mt-4 w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 flex-shrink-0"
-      >
-        <PlusSquare className="h-5 w-5" />
-        Create Post
-      </button>
+      {/* Create post — corper-only. */}
+      {!isMarketer && (
+        <button
+          onClick={() => setCreatePostOpen(true)}
+          className="mt-4 w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 flex-shrink-0"
+        >
+          <PlusSquare className="h-5 w-5" />
+          Create Post
+        </button>
+      )}
     </aside>
   );
 }

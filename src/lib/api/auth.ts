@@ -1,4 +1,6 @@
+import axios from 'axios';
 import api from './client';
+import { WS_URL } from '@/lib/constants';
 import type { ApiResponse } from '@/types/api';
 import type {
   LoginResponse,
@@ -36,6 +38,64 @@ export async function registerVerify(payload: {
   const { data } = await api.post<ApiResponse<LoginResponse>>(
     '/auth/register/verify',
     payload
+  );
+  return data.data;
+}
+
+// ── Marketer (NIN-verified non-corper) registration ─────────────────────────
+
+export interface MarketerRegisterInitiateResponse {
+  email: string;
+  maskedEmail: string;
+  message: string;
+}
+
+/**
+ * Step 1 of marketer registration. The NIN photo + identity fields go up as
+ * multipart/form-data — and this endpoint bypasses /api/proxy because Vercel
+ * caps that route's body at ~4.5 MB. Going direct to Railway avoids that.
+ */
+export async function registerMarketerInitiate(payload: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nin: string;
+  password: string;
+  confirmPassword: string;
+  ninDocument: File;
+}): Promise<MarketerRegisterInitiateResponse> {
+  const form = new FormData();
+  form.append('firstName', payload.firstName);
+  form.append('lastName', payload.lastName);
+  form.append('email', payload.email);
+  form.append('phone', payload.phone);
+  form.append('nin', payload.nin);
+  form.append('password', payload.password);
+  form.append('confirmPassword', payload.confirmPassword);
+  form.append('media', payload.ninDocument);
+
+  const { data } = await axios.post<ApiResponse<MarketerRegisterInitiateResponse>>(
+    `${WS_URL}/api/v1/auth/register/marketer/initiate`,
+    form,
+    {
+      // No auth header (this is a public endpoint), no cookies, no timeout —
+      // marketer NIN photos can be a few MB on slow networks.
+      timeout: 0,
+      withCredentials: false,
+    },
+  );
+  return data.data;
+}
+
+export async function registerMarketerVerify(payload: {
+  email: string;
+  otp: string;
+}): Promise<LoginResponse> {
+  // Goes through the proxy like the corper verify — body is small (just OTP).
+  const { data } = await api.post<ApiResponse<LoginResponse>>(
+    '/auth/register/marketer/verify',
+    payload,
   );
   return data.data;
 }

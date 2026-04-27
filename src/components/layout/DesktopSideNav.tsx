@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActiveSection } from '@/store/ui.store';
+import { useAuthStore } from '@/store/auth.store';
+import { AccountType } from '@/types/enums';
 
 interface NavItem {
   section: ActiveSection;
@@ -42,6 +44,8 @@ export default function DesktopSideNav() {
     activeSection, setActiveSection, unreadMessages, unreadNotifications,
     setCreatePostOpen, setCreateReelOpen,
   } = useUIStore();
+  // Marketers can't create posts or reels — hide both Create buttons.
+  const isMarketer = useAuthStore((s) => s.user?.accountType === AccountType.MARKETER);
 
   return (
     <aside className="hidden lg:flex flex-col flex-shrink-0 w-64 border-r border-border bg-surface overflow-y-auto sticky top-0 h-dvh">
@@ -100,23 +104,25 @@ export default function DesktopSideNav() {
         })}
       </nav>
 
-      {/* Create buttons */}
-      <div className="px-4 py-5 flex-shrink-0 space-y-2">
-        <button
-          onClick={() => setCreatePostOpen(true)}
-          className="w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <PlusSquare className="h-5 w-5" />
-          Create Post
-        </button>
-        <button
-          onClick={() => setCreateReelOpen(true)}
-          className="w-full border border-primary/40 text-primary rounded-xl py-2.5 font-semibold text-[14px] hover:bg-primary/10 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <Film className="h-4 w-4" />
-          Create Reel
-        </button>
-      </div>
+      {/* Create buttons — corper-only. */}
+      {!isMarketer && (
+        <div className="px-4 py-5 flex-shrink-0 space-y-2">
+          <button
+            onClick={() => setCreatePostOpen(true)}
+            className="w-full bg-primary text-white rounded-xl py-3.5 font-semibold text-[15px] hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <PlusSquare className="h-5 w-5" />
+            Create Post
+          </button>
+          <button
+            onClick={() => setCreateReelOpen(true)}
+            className="w-full border border-primary/40 text-primary rounded-xl py-2.5 font-semibold text-[14px] hover:bg-primary/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <Film className="h-4 w-4" />
+            Create Reel
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

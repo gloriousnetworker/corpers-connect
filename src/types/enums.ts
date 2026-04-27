@@ -4,6 +4,25 @@ export enum UserLevel {
   CORPER = 'CORPER',
 }
 
+/** Persona discriminator. CORPER is the default; MARKETER is a NIN-verified
+ *  Nigerian non-corper who can only operate on the marketplace. */
+export enum AccountType {
+  CORPER = 'CORPER',
+  MARKETER = 'MARKETER',
+}
+
+export enum MarketerStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum CorperUpgradeStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export enum SubscriptionTier {
   FREE = 'FREE',
   PREMIUM = 'PREMIUM',

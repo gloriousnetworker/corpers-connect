@@ -18,19 +18,23 @@ import {
   ApplicationStatus,
   SubscriptionStatus,
   SubscriptionPlan,
+  AccountType,
+  MarketerStatus,
+  CorperUpgradeStatus,
 } from './enums';
 
 export interface User {
   id: string;
-  stateCode: string;
+  // NYSC identity is corper-only — null for MARKETER accounts.
+  stateCode: string | null;
   firstName: string;
   lastName: string;
   email: string;
   phone?: string | null;
-  servingState: string;
+  servingState: string | null;
   lga?: string | null;
   ppa?: string | null;
-  batch: string;
+  batch: string | null;
   profilePicture?: string | null;
   bannerImage?: string | null;
   bio?: string | null;
@@ -49,6 +53,13 @@ export interface User {
   postsCount?: number;
   isFollowing?: boolean;
   followsYou?: boolean;
+  /** Persona discriminator — drives gating across the app. */
+  accountType?: AccountType;
+  /** Marketer review state — null for corpers. */
+  marketerStatus?: MarketerStatus | null;
+  marketerRejectionReason?: string | null;
+  /** Marketer-to-corper upgrade lifecycle, if requested. */
+  corperUpgradeStatus?: CorperUpgradeStatus | null;
   createdAt: string;
   updatedAt: string;
 }

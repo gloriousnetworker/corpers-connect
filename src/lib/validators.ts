@@ -79,6 +79,33 @@ export const twoFAChallengeSchema = z.object({
   totpCode: otpSchema,
 });
 
+// ── Marketer (NIN-verified non-corper) registration ─────────────────────────
+export const marketerRegisterInitiateSchema = z
+  .object({
+    firstName: z.string().trim().min(1, 'First name is required').max(60),
+    lastName: z.string().trim().min(1, 'Last name is required').max(60),
+    email: z.string().trim().toLowerCase().email('A valid email is required'),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+?\d{10,15}$/, 'Phone must be 10-15 digits, optionally starting with +'),
+    nin: z
+      .string()
+      .trim()
+      .regex(/^\d{11}$/, 'NIN must be exactly 11 digits'),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
+export const marketerRegisterVerifySchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  otp: otpSchema,
+});
+
 export const verify2FASchema = z.object({
   totpCode: z.string().min(6).max(8),
 });
@@ -136,6 +163,8 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type TwoFAChallengeInput = z.infer<typeof twoFAChallengeSchema>;
+export type MarketerRegisterInitiateInput = z.infer<typeof marketerRegisterInitiateSchema>;
+export type MarketerRegisterVerifyInput = z.infer<typeof marketerRegisterVerifySchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type AddCommentInput = z.infer<typeof addCommentSchema>;

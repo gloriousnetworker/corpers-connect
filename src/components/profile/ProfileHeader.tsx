@@ -252,7 +252,7 @@ export default function ProfileHeader({
 
           <div className="flex items-center gap-2 flex-wrap">
             <LevelBadge level={user.level} size="sm" />
-            {user.corperTag && (
+            {user.corperTag && user.servingState && (
               <CorperTagBadge label={user.corperTagLabel} servingState={user.servingState} />
             )}
           </div>
