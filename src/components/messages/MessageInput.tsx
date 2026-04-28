@@ -117,11 +117,8 @@ export default function MessageInput({
   };
 
   // ── Image / video file upload ──────────────────────────────────────────────
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onSendMedia) return;
-    e.target.value = ''; // reset so same file can be re-selected
-
+  const uploadAndSend = useCallback(async (file: File) => {
+    if (!onSendMedia) return;
     setUploading(true);
     try {
       const { url, mediaType } = await uploadMessageMedia(file);
@@ -132,7 +129,36 @@ export default function MessageInput({
     } finally {
       setUploading(false);
     }
+  }, [onSendMedia]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onSendMedia) return;
+    e.target.value = ''; // reset so same file can be re-selected
+    await uploadAndSend(file);
   };
+
+  // Paste image (or video) directly from clipboard — common pattern after
+  // copying a screenshot or image from the browser.
+  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!onSendMedia || disabled) return;
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    for (const item of Array.from(items)) {
+      if (item.kind !== 'file') continue;
+      if (!item.type.startsWith('image/') && !item.type.startsWith('video/')) continue;
+
+      const blob = item.getAsFile();
+      if (!blob) continue;
+
+      e.preventDefault();
+      const ext = (blob.type.split('/')[1] || 'png').split(';')[0];
+      const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+      await uploadAndSend(file);
+      return;
+    }
+  }, [onSendMedia, disabled, uploadAndSend]);
 
   // ── Voice note ─────────────────────────────────────────────────────────────
   const handleVoiceSend = useCallback(async (blob: Blob, _durationMs: number) => {
@@ -221,6 +247,7 @@ export default function MessageInput({
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder="Type a message…"
             rows={1}
             disabled={disabled}
