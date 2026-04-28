@@ -11,7 +11,8 @@ import { getListing, deleteListing, startMarketplaceChat } from '@/lib/api/marke
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useAuthStore } from '@/store/auth.store';
 
-import { ListingStatus, ListingType } from '@/types/enums';
+import { ListingStatus, ListingType, AccountType } from '@/types/enums';
+import MarketerBadge from '@/components/persona/MarketerBadge';
 import Image from 'next/image';
 import { getAvatarUrl } from '@/lib/utils';
 import ImageGallery from './ImageGallery';
@@ -221,14 +222,17 @@ export default function ListingDetail() {
               </div>
             )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-sm flex items-center gap-1">
-              {listing.seller.firstName} {listing.seller.lastName}
+            <p className="font-semibold text-foreground text-sm flex items-center gap-1.5 flex-wrap">
+              <span>{listing.seller.firstName} {listing.seller.lastName}</span>
               {listing.seller.isVerified && (
                 <CheckCircle size={14} className="text-primary flex-shrink-0" />
               )}
+              <MarketerBadge accountType={listing.seller.accountType} size="sm" />
             </p>
             <p className="text-xs text-muted-foreground">
-              {listing.seller.servingState} · Corps member
+              {listing.seller.accountType === AccountType.MARKETER
+                ? 'Mami Marketer · verified seller'
+                : `${listing.seller.servingState} · Corps member`}
             </p>
           </div>
           <ArrowLeft size={16} className="text-muted-foreground rotate-180" />

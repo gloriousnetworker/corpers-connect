@@ -21,6 +21,7 @@ import { useMessagesStore } from '@/store/messages.store';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useUIStore } from '@/store/ui.store';
 import { getAvatarUrl, getInitials, formatRelativeTime } from '@/lib/utils';
+import MarketerBadge from '@/components/persona/MarketerBadge';
 import type { ListingComment as ListingCommentType } from '@/types/models';
 
 // ── User action mini sheet ────────────────────────────────────────────────────
@@ -299,6 +300,10 @@ function CommentItem({
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
               </span>
             )}
+            <MarketerBadge
+              accountType={(comment.author as { accountType?: string }).accountType}
+              size="sm"
+            />
             <span className="text-xs text-muted-foreground flex-shrink-0">
               {formatRelativeTime(comment.createdAt)}
             </span>

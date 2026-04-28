@@ -8,6 +8,7 @@ import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useAuthStore } from '@/store/auth.store';
 import { queryKeys } from '@/lib/query-keys';
 import { formatRelativeTime, getInitials, getAvatarUrl, truncate } from '@/lib/utils';
+import MarketerBadge from '@/components/persona/MarketerBadge';
 import type { MarketplaceConversationInfo } from '@/types/models';
 
 export default function MarketplaceConversations() {
@@ -150,8 +151,12 @@ function ConversationRow({ conv, currentUserId, onTap }: ConversationRowProps) {
             {formatRelativeTime(timestamp)}
           </span>
         </div>
-        <p className="text-xs text-foreground-muted truncate mt-0.5">
-          {isBuyer ? 'Seller' : 'Buyer'}: {otherName}
+        <p className="text-xs text-foreground-muted truncate mt-0.5 flex items-center gap-1.5">
+          <span className="truncate">{isBuyer ? 'Seller' : 'Buyer'}: {otherName}</span>
+          <MarketerBadge
+            accountType={(otherParty as { accountType?: string }).accountType}
+            size="sm"
+          />
         </p>
         <p className="text-xs text-foreground-muted truncate mt-0.5">
           {lastMessagePreview}

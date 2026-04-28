@@ -14,6 +14,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { useAuthStore } from '@/store/auth.store';
 import { formatRelativeTime, getInitials, getAvatarUrl } from '@/lib/utils';
+import MarketerBadge from '@/components/persona/MarketerBadge';
 import { MessageType } from '@/types/enums';
 import type { Message } from '@/types/models';
 import type { PaginatedData } from '@/types/api';
@@ -385,7 +386,13 @@ export default function MarketplaceChatView() {
                     ₦{mktConv.listing.price.toLocaleString('en-NG')}
                   </span>
                 )}
-                <span className="text-xs text-foreground-muted truncate">with {otherName}</span>
+                <span className="text-xs text-foreground-muted truncate inline-flex items-center gap-1.5">
+                  with {otherName}
+                  <MarketerBadge
+                    accountType={(otherParty as { accountType?: string } | null)?.accountType}
+                    size="sm"
+                  />
+                </span>
               </div>
             </div>
           </button>

@@ -10,6 +10,8 @@ import { uploadAvatar, uploadBanner } from '@/lib/api/users';
 import { useAuthStore } from '@/store/auth.store';
 import LevelBadge from './LevelBadge';
 import CorperTagBadge from './CorperTagBadge';
+import MarketerBadge from '@/components/persona/MarketerBadge';
+import { AccountType } from '@/types/enums';
 import type { User } from '@/types/models';
 
 interface ProfileHeaderProps {
@@ -248,18 +250,28 @@ export default function ProfileHeader({
             {user.isVerified && (
               <BadgeCheck className="w-4 h-4 text-info flex-shrink-0" aria-label="Verified" />
             )}
+            <MarketerBadge accountType={user.accountType} size="sm" />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <LevelBadge level={user.level} size="sm" />
-            {user.corperTag && user.servingState && (
-              <CorperTagBadge label={user.corperTagLabel} servingState={user.servingState} />
-            )}
-          </div>
+          {/* Corper-only level + tag row. Marketers don't have NYSC level. */}
+          {user.accountType !== AccountType.MARKETER && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <LevelBadge level={user.level} size="sm" />
+              {user.corperTag && user.servingState && (
+                <CorperTagBadge label={user.corperTagLabel} servingState={user.servingState} />
+              )}
+            </div>
+          )}
 
-          <p className="text-xs text-foreground-muted">
-            {user.stateCode} · Batch {user.batch} · {user.servingState}
-          </p>
+          {user.accountType === AccountType.MARKETER ? (
+            <p className="text-xs text-foreground-muted">
+              Mami Marketer · verified business account
+            </p>
+          ) : (
+            <p className="text-xs text-foreground-muted">
+              {user.stateCode} · Batch {user.batch} · {user.servingState}
+            </p>
+          )}
 
           {user.bio && (
             <p className="text-sm text-foreground leading-relaxed">{user.bio}</p>

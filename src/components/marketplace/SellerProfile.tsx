@@ -11,6 +11,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useMarketplaceStore } from '@/store/marketplace.store';
 import { SellerStatus } from '@/types/enums';
 import { getAvatarUrl, getInitials } from '@/lib/utils';
+import MarketerBadge from '@/components/persona/MarketerBadge';
 import type { MarketplaceListing } from '@/types/models';
 import ListingCard from './ListingCard';
 
@@ -152,8 +153,12 @@ export default function SellerProfileView() {
                 <CheckCircle size={18} className="text-emerald-500 flex-shrink-0" />
               )}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {profile.user.firstName} {profile.user.lastName}
+            <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5 flex-wrap">
+              <span>{profile.user.firstName} {profile.user.lastName}</span>
+              <MarketerBadge
+                accountType={(profile.user as { accountType?: string }).accountType}
+                size="sm"
+              />
             </p>
           </div>
         </div>
